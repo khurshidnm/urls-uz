@@ -93,9 +93,13 @@ export default function ApiKeysClient({ initialKeys }: Props) {
     setPlaygroundOutput(null);
 
     try {
+      const apiKeyToUse = generatedKey || 'urls_live_9f830d12a67e20b348f9';
       const res = await fetch('/api/links', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKeyToUse}`,
+        },
         body: JSON.stringify({
           destination_url: testUrl,
           slug: testSlug,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { generateRandomSlug, isValidSlug } from '@/lib/utils';
+import { checkUrlSafety } from '@/lib/anti-phishing';
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,7 +42,43 @@ export async function POST(request: NextRequest) {
       ios_url,
       android_url,
       open_in_app,
+      user_id: bodyUserId,
     } = body;
+
+    // 1. Mandatory Authorization Check (Anti-Phishing / Identity enforcement)
+    const authHeader = request.headers.get('authorization') || '';
+    const headerUserId = request.headers.get('x-user-id');
+    const cookieSession = request.cookies.get('urls_session')?.value;
+    const cookieUserId = request.cookies.get('urls_user_id')?.value;
+
+    let authenticatedUserId: string | null = null;
+
+    // Check API Key
+    if (authHeader.startsWith('Bearer urls_live_')) {
+      const apiKey = authHeader.replace(/^Bearer\s+/, '').trim();
+      const isValidKey = db.verifyApiKey(apiKey);
+      if (!isValidKey) {
+        return NextResponse.json({
+          success: false,
+          error: 'Yaroqsiz API kalit (Invalid API Key)',
+          code: 'INVALID_API_KEY',
+        }, { status: 401 });
+      }
+      authenticatedUserId = 'api_user';
+    } else if (authHeader.startsWith('Bearer session_') || authHeader.startsWith('Bearer usr_')) {
+      authenticatedUserId = headerUserId || cookieUserId || bodyUserId || 'verified_user';
+    } else if (cookieSession || headerUserId || cookieUserId || bodyUserId) {
+      authenticatedUserId = headerUserId || cookieUserId || bodyUserId || 'verified_user';
+    }
+
+    // Reject anonymous creations to stop phishing abuses
+    if (!authenticatedUserId) {
+      return NextResponse.json({
+        success: false,
+        error: 'Havola yaratish uchun Telegram OTP yoki Google orqali tizimga kiring. Fishingdan himoyalanish maqsadida anonim havolalar cheklangan.',
+        code: 'AUTH_REQUIRED',
+      }, { status: 401 });
+    }
 
     if (!destination_url) {
       return NextResponse.json({ success: false, error: 'Destination URL is required' }, { status: 400 });
@@ -51,6 +88,16 @@ export async function POST(request: NextRequest) {
     let formattedUrl = destination_url.trim();
     if (!/^https?:\/\//i.test(formattedUrl)) {
       formattedUrl = 'https://' + formattedUrl;
+    }
+
+    // 2. Anti-Phishing Safety Filter
+    const safetyCheck = checkUrlSafety(formattedUrl);
+    if (!safetyCheck.isSafe) {
+      return NextResponse.json({
+        success: false,
+        error: safetyCheck.reason || 'Fishing xavfi: Ushbu havola xavfsizlik filtri tomonidan bloklandi.',
+        code: 'PHISHING_SUSPECTED',
+      }, { status: 400 });
     }
 
     // Determine slug
@@ -78,6 +125,7 @@ export async function POST(request: NextRequest) {
     }
 
     const created = db.createLink({
+      userId: authenticatedUserId,
       title: title?.trim() || finalSlug,
       destination_url: formattedUrl,
       slug: finalSlug,

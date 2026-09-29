@@ -9,7 +9,7 @@ import { Locale } from '@/lib/translations';
 
 export default function Navbar() {
   const { locale, setLocale, t } = useLanguage();
-  const { user } = useAuth();
+  const { user, openAuthModal, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const locales: { code: Locale; label: string; flag: string }[] = [
@@ -80,17 +80,66 @@ export default function Navbar() {
             </div>
           </div>
 
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-gradient-btn rounded-xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition-all active:scale-[0.98]"
-          >
-            <span>{t.dashboard}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+          {user ? (
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300">
+                <img
+                  src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60'}
+                  alt={user.name}
+                  className="w-5 h-5 rounded-full object-cover"
+                />
+                <span className="font-medium text-white max-w-[100px] truncate">{user.name}</span>
+              </div>
+
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-gradient-btn rounded-xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition-all active:scale-[0.98]"
+              >
+                <span>{t.dashboard}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+
+              <button
+                onClick={logout}
+                title="Chiqish"
+                className="p-2 text-slate-400 hover:text-rose-400 bg-white/5 hover:bg-rose-500/10 rounded-xl border border-white/5 transition-colors"
+              >
+                <span className="sr-only">Chiqish</span>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => openAuthModal()}
+                className="px-3.5 py-2 text-xs font-semibold text-slate-200 hover:text-white bg-slate-800/80 hover:bg-slate-800 rounded-xl border border-white/10 transition-colors"
+              >
+                {locale === 'uz' ? 'Kirish' : locale === 'ru' ? 'Войти' : 'Sign in'}
+              </button>
+
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-gradient-btn rounded-xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition-all active:scale-[0.98]"
+              >
+                <span>{t.dashboard}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Mobile Hamburger Button */}
         <div className="md:hidden flex items-center gap-2">
+          {!user && (
+            <button
+              onClick={() => openAuthModal()}
+              className="px-2.5 py-1 text-xs font-medium text-white bg-indigo-600 rounded-lg"
+            >
+              Kirish
+            </button>
+          )}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-2 text-slate-400 hover:text-white rounded-lg bg-white/5"

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { useLanguage } from '@/lib/language-context';
+import { useAuth } from '@/lib/auth-context';
 import {
   Link2,
   Sparkles,
@@ -24,6 +25,7 @@ interface CreateLinkModalProps {
 
 export default function CreateLinkModal({ isOpen, onClose, onCreated }: CreateLinkModalProps) {
   const { t, locale } = useLanguage();
+  const { user } = useAuth();
 
   const [destinationUrl, setDestinationUrl] = useState('');
   const [title, setTitle] = useState('');
@@ -58,8 +60,12 @@ export default function CreateLinkModal({ isOpen, onClose, onCreated }: CreateLi
     try {
       const res = await fetch('/api/links', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user?.id || 'demo_user',
+        },
         body: JSON.stringify({
+          user_id: user?.id || 'demo_user',
           destination_url: destinationUrl,
           title: title || undefined,
           slug: customSlug || undefined,

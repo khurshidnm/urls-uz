@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { LanguageProvider } from '@/lib/language-context';
 import { AuthProvider } from '@/lib/auth-context';
+import AuthModal from '@/components/auth/auth-modal';
 
 export const metadata: Metadata = {
   title: 'urls.uz — Havolalarni qisqartirish, Smart Deep Linklar va QR Studio',
@@ -21,6 +22,7 @@ export default function RootLayout({
         <LanguageProvider>
           <AuthProvider>
             {children}
+            <AuthModal />
           </AuthProvider>
         </LanguageProvider>
       </body>

@@ -16,12 +16,13 @@ import {
   Settings,
   Sparkles,
   ExternalLink,
+  LogOut,
 } from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { t, locale } = useLanguage();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const navigation = [
     {
@@ -140,6 +141,14 @@ export default function Sidebar() {
             <p className="text-[10px] text-slate-400 truncate">{user?.email || 'admin@urls.uz'}</p>
           </div>
         </div>
+
+        <button
+          onClick={logout}
+          title="Chiqish"
+          className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors shrink-0"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
       </div>
     </aside>
   );

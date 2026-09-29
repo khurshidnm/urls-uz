@@ -6,6 +6,8 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  phone?: string;
+  provider?: 'telegram' | 'google' | 'email';
   plan: 'free' | 'pro' | 'enterprise';
   avatar?: string;
 }
@@ -13,23 +15,23 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, name?: string) => void;
+  loginWithTelegram: (phone: string, code: string, name?: string) => Promise<boolean>;
+  loginWithGoogle: (email?: string, name?: string, avatar?: string) => Promise<boolean>;
   logout: () => void;
   updatePlan: (plan: 'free' | 'pro' | 'enterprise') => void;
+  isAuthModalOpen: boolean;
+  openAuthModal: (pendingUrlToShorten?: string) => void;
+  closeAuthModal: () => void;
+  pendingUrl: string;
+  setPendingUrl: (url: string) => void;
 }
-
-const defaultUser: User = {
-  id: 'demo_user',
-  name: 'Khurshid Nurmukhamedov',
-  email: 'admin@urls.uz',
-  plan: 'pro',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(defaultUser);
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [pendingUrl, setPendingUrl] = useState('');
 
   useEffect(() => {
     const saved = localStorage.getItem('urls_user');
@@ -37,25 +39,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         setUser(JSON.parse(saved));
       } catch {
-        setUser(defaultUser);
+        setUser(null);
       }
     }
   }, []);
 
-  const login = (email: string, name = 'User') => {
-    const u: User = {
-      id: 'usr_' + Math.random().toString(36).substring(2, 9),
-      name,
-      email,
-      plan: 'pro',
-    };
-    setUser(u);
-    localStorage.setItem('urls_user', JSON.stringify(u));
+  const openAuthModal = (pendingUrlToShorten?: string) => {
+    if (pendingUrlToShorten) {
+      setPendingUrl(pendingUrlToShorten);
+    }
+    setIsAuthModalOpen(true);
+  };
+
+  const closeAuthModal = () => {
+    setIsAuthModalOpen(false);
+  };
+
+  const loginWithTelegram = async (phone: string, code: string, name?: string): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/auth/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify-otp', phone, code, name }),
+      });
+      const data = await res.json();
+      if (data.success && data.user) {
+        setUser(data.user);
+        localStorage.setItem('urls_user', JSON.stringify(data.user));
+        localStorage.setItem('urls_token', data.token);
+        setIsAuthModalOpen(false);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  const loginWithGoogle = async (email?: string, name?: string, avatar?: string): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name, avatar }),
+      });
+      const data = await res.json();
+      if (data.success && data.user) {
+        setUser(data.user);
+        localStorage.setItem('urls_user', JSON.stringify(data.user));
+        localStorage.setItem('urls_token', data.token);
+        setIsAuthModalOpen(false);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('urls_user');
+    localStorage.removeItem('urls_token');
   };
 
   const updatePlan = (plan: 'free' | 'pro' | 'enterprise') => {
@@ -67,7 +112,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, updatePlan }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        loginWithTelegram,
+        loginWithGoogle,
+        logout,
+        updatePlan,
+        isAuthModalOpen,
+        openAuthModal,
+        closeAuthModal,
+        pendingUrl,
+        setPendingUrl,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { Link2, ArrowRight, Copy, Check, QrCode, Smartphone, Sparkles, ExternalLink } from 'lucide-react';
+import { Link2, ArrowRight, Copy, Check, QrCode, Smartphone, Sparkles, ExternalLink, ShieldCheck, Lock, UserCheck } from 'lucide-react';
 import { useLanguage } from '@/lib/language-context';
+import { useAuth } from '@/lib/auth-context';
 import { QrCanvas } from '@/components/ui/qr-canvas';
 
 export default function ShortenCard() {
   const { t, locale } = useLanguage();
+  const { user, openAuthModal, pendingUrl, setPendingUrl } = useAuth();
   const [url, setUrl] = useState('');
   const [customSlug, setCustomSlug] = useState('');
   const [openInApp, setOpenInApp] = useState(true);
@@ -22,9 +24,18 @@ export default function ShortenCard() {
   const [copied, setCopied] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!url.trim()) return;
+  // Automatically execute shortening once user signs in if a pending URL exists
+  useEffect(() => {
+    if (user && pendingUrl) {
+      const urlToProcess = pendingUrl;
+      setPendingUrl('');
+      setUrl(urlToProcess);
+      performShorten(urlToProcess);
+    }
+  }, [user, pendingUrl]);
+
+  const performShorten = async (targetUrl: string) => {
+    if (!targetUrl.trim()) return;
 
     setLoading(true);
     setError('');
@@ -32,12 +43,16 @@ export default function ShortenCard() {
     try {
       const res = await fetch('/api/links', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(user ? { 'x-user-id': user.id } : {}),
+        },
         body: JSON.stringify({
-          destination_url: url,
+          destination_url: targetUrl,
           slug: customSlug || undefined,
           open_in_app: openInApp,
-          title: customSlug || 'Guest Short Link',
+          title: customSlug || 'Short Link',
+          user_id: user?.id,
         }),
       });
 
@@ -58,6 +73,8 @@ export default function ShortenCard() {
           origin: { y: 0.65 },
           colors: ['#6366f1', '#06b6d4', '#10b981'],
         });
+      } else if (data.code === 'AUTH_REQUIRED') {
+        openAuthModal(targetUrl);
       } else {
         setError(data.error || 'Xatolik yuz berdi. Qayta urinib ko‘ring.');
       }
@@ -66,6 +83,19 @@ export default function ShortenCard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!url.trim()) return;
+
+    // Stop anonymous creation to prevent phishing: prompt login
+    if (!user) {
+      openAuthModal(url.trim());
+      return;
+    }
+
+    await performShorten(url.trim());
   };
 
   const handleCopy = async () => {
@@ -140,6 +170,41 @@ export default function ShortenCard() {
                 {error}
               </p>
             )}
+
+            {/* Anti-Phishing Security Trust Badge */}
+            <div className="pt-3 mt-1 border-t border-white/5">
+              {user ? (
+                <div className="flex items-center justify-between text-[11px] text-slate-400 flex-wrap gap-2">
+                  <div className="flex items-center gap-1.5 text-emerald-400">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>
+                      Tasdiqlangan hisob: <strong className="text-white">{user.name}</strong> ({user.provider === 'telegram' ? 'Telegram OTP' : 'Google'})
+                    </span>
+                  </div>
+                  <span className="text-indigo-400 font-medium flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    <span>Fishingdan himoyalangan</span>
+                  </span>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px]">
+                  <div className="flex items-center gap-1.5 text-amber-300/90">
+                    <ShieldCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>
+                      urls.uz soxta havolalarni oldini oladi. Havola yaratish avtorizatsiyani talab qiladi.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openAuthModal(url)}
+                    className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 underline underline-offset-2 flex items-center gap-1"
+                  >
+                    <span>Telegram / Google orqali kirish</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
           </form>
 
           {/* Success Shortened Result Card */}
