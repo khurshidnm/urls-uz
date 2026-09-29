@@ -3,6 +3,14 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 
+export interface DeviceRoutingConfig {
+  iosUrl?: string;          // App Store yoki iOS Universal Link (apps.apple.com/...)
+  androidUrl?: string;      // Google Play yoki Android Intent/App Link (play.google.com/...)
+  huaweiUrl?: string;       // Huawei AppGallery linki (appgallery.huawei.com/...)
+  desktopUrl?: string;      // Windows / macOS / Linux uchun veb-sayt
+  fallbackUrl: string;      // Qolgan barcha holatlar uchun asosiy URL
+}
+
 export interface LinkRecord {
   id: string;
   user_id: string;
@@ -21,7 +29,11 @@ export interface LinkRecord {
   utm_content?: string | null;
   ios_url?: string | null;
   android_url?: string | null;
+  huawei_url?: string | null;
+  desktop_url?: string | null;
   open_in_app: number;
+  tags?: string;
+  is_archived?: number;
   created_at: string;
   updated_at: string;
 }
@@ -113,6 +125,8 @@ function getDatabase(): Database.Database {
       destination_url TEXT NOT NULL,
       slug TEXT UNIQUE NOT NULL,
       is_active INTEGER DEFAULT 1,
+      is_archived INTEGER DEFAULT 0,
+      tags TEXT DEFAULT '',
       password TEXT,
       expires_at DATETIME,
       click_limit INTEGER,
@@ -124,6 +138,8 @@ function getDatabase(): Database.Database {
       utm_content TEXT,
       ios_url TEXT,
       android_url TEXT,
+      huawei_url TEXT,
+      desktop_url TEXT,
       open_in_app INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -203,6 +219,12 @@ function getDatabase(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_clicks_created ON clicks(created_at);
     CREATE INDEX IF NOT EXISTS idx_bio_handle ON bio_pages(handle);
   `);
+
+  // Run dynamic schema migrations for existing databases
+  try { db.exec("ALTER TABLE links ADD COLUMN tags TEXT DEFAULT ''"); } catch {}
+  try { db.exec("ALTER TABLE links ADD COLUMN is_archived INTEGER DEFAULT 0"); } catch {}
+  try { db.exec("ALTER TABLE links ADD COLUMN huawei_url TEXT"); } catch {}
+  try { db.exec("ALTER TABLE links ADD COLUMN desktop_url TEXT"); } catch {}
 
   // Seed default demonstration records if empty
   const countStmt = db.prepare('SELECT COUNT(*) as count FROM links');
@@ -411,15 +433,19 @@ export const db = {
     utm_content?: string | null;
     ios_url?: string | null;
     android_url?: string | null;
+    huawei_url?: string | null;
+    desktop_url?: string | null;
     open_in_app?: boolean;
+    tags?: string;
+    is_archived?: number;
   }): LinkRecord {
     const id = 'link_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
     const stmt = getDatabase().prepare(`
       INSERT INTO links (
         id, user_id, title, destination_url, slug, password, expires_at,
         click_limit, utm_source, utm_medium, utm_campaign, utm_term, utm_content,
-        ios_url, android_url, open_in_app
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ios_url, android_url, huawei_url, desktop_url, open_in_app, tags, is_archived
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -438,7 +464,11 @@ export const db = {
       data.utm_content || null,
       data.ios_url || null,
       data.android_url || null,
-      data.open_in_app ? 1 : 0
+      data.huawei_url || null,
+      data.desktop_url || null,
+      data.open_in_app ? 1 : 0,
+      data.tags || '',
+      data.is_archived ? 1 : 0
     );
 
     return this.getLinkById(id)!;
@@ -452,6 +482,8 @@ export const db = {
     if (data.destination_url !== undefined) { fields.push('destination_url = ?'); values.push(data.destination_url); }
     if (data.slug !== undefined) { fields.push('slug = ?'); values.push(data.slug); }
     if (data.is_active !== undefined) { fields.push('is_active = ?'); values.push(data.is_active); }
+    if (data.is_archived !== undefined) { fields.push('is_archived = ?'); values.push(data.is_archived ? 1 : 0); }
+    if (data.tags !== undefined) { fields.push('tags = ?'); values.push(data.tags); }
     if (data.password !== undefined) { fields.push('password = ?'); values.push(data.password); }
     if (data.expires_at !== undefined) { fields.push('expires_at = ?'); values.push(data.expires_at); }
     if (data.click_limit !== undefined) { fields.push('click_limit = ?'); values.push(data.click_limit); }
@@ -460,6 +492,8 @@ export const db = {
     if (data.utm_campaign !== undefined) { fields.push('utm_campaign = ?'); values.push(data.utm_campaign); }
     if (data.ios_url !== undefined) { fields.push('ios_url = ?'); values.push(data.ios_url); }
     if (data.android_url !== undefined) { fields.push('android_url = ?'); values.push(data.android_url); }
+    if (data.huawei_url !== undefined) { fields.push('huawei_url = ?'); values.push(data.huawei_url); }
+    if (data.desktop_url !== undefined) { fields.push('desktop_url = ?'); values.push(data.desktop_url); }
     if (data.open_in_app !== undefined) { fields.push('open_in_app = ?'); values.push(data.open_in_app); }
 
     fields.push("updated_at = CURRENT_TIMESTAMP");

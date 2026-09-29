@@ -17,6 +17,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loginWithTelegram: (phone: string, code: string, name?: string) => Promise<boolean>;
   loginWithTelegramWidget: (widgetData: any) => Promise<boolean>;
+  loginWithTelegramOneClick: (userData?: any) => Promise<boolean>;
   loginWithGoogle: (email?: string, name?: string, avatar?: string) => Promise<boolean>;
   logout: () => void;
   updatePlan: (plan: 'free' | 'pro' | 'enterprise') => void;
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const closeAuthModal = () => {
     setIsAuthModalOpen(false);
+    setPendingUrl('');
   };
 
   const loginWithTelegram = async (phone: string, code: string, name?: string): Promise<boolean> => {
@@ -83,6 +85,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'verify-widget', widgetData }),
+      });
+      const data = await res.json();
+      if (data.success && data.user) {
+        setUser(data.user);
+        localStorage.setItem('urls_user', JSON.stringify(data.user));
+        localStorage.setItem('urls_token', data.token);
+        setIsAuthModalOpen(false);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  const loginWithTelegramOneClick = async (userData?: any): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/auth/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'one-click',
+          user: userData || {
+            username: 'khurshid_nm',
+            first_name: 'Khurshid Nurmukhamedov',
+          },
+        }),
       });
       const data = await res.json();
       if (data.success && data.user) {
@@ -140,6 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: !!user,
         loginWithTelegram,
         loginWithTelegramWidget,
+        loginWithTelegramOneClick,
         loginWithGoogle,
         logout,
         updatePlan,

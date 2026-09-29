@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { generateRandomSlug, isValidSlug } from '@/lib/utils';
+import { generateRandomSlug, isValidSlug, isReservedSlug } from '@/lib/utils';
 import { checkUrlSafety } from '@/lib/anti-phishing';
 
 export async function GET(request: NextRequest) {
@@ -29,7 +29,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       destination_url,
-      slug: customSlug,
       title,
       password,
       expires_at,
@@ -41,6 +40,8 @@ export async function POST(request: NextRequest) {
       utm_content,
       ios_url,
       android_url,
+      huawei_url,
+      desktop_url,
       open_in_app,
       user_id: bodyUserId,
     } = body;
@@ -71,11 +72,11 @@ export async function POST(request: NextRequest) {
       authenticatedUserId = headerUserId || cookieUserId || bodyUserId || 'verified_user';
     }
 
-    // Reject anonymous creations to stop phishing abuses
+    // Mandatory Authorization: links must belong to authenticated user
     if (!authenticatedUserId) {
       return NextResponse.json({
         success: false,
-        error: 'Havola yaratish uchun Telegram OTP yoki Google orqali tizimga kiring. Fishingdan himoyalanish maqsadida anonim havolalar cheklangan.',
+        error: 'Havolani qisqartirish uchun tizimga kiring.',
         code: 'AUTH_REQUIRED',
       }, { status: 401 });
     }
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
       formattedUrl = 'https://' + formattedUrl;
     }
 
-    // 2. Anti-Phishing Safety Filter
+    // Anti-Phishing Safety Filter
     const safetyCheck = checkUrlSafety(formattedUrl);
     if (!safetyCheck.isSafe) {
       return NextResponse.json({
@@ -100,28 +101,38 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Determine slug
-    let finalSlug = customSlug?.trim();
-    if (finalSlug) {
-      if (!isValidSlug(finalSlug)) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Slug must be 3-50 alphanumeric characters (letters, numbers, hyphens, underscores)' 
+    // Validate custom slug if provided, otherwise generate 5-character random ID
+    const requestedSlug = (body.slug || body.custom_slug)?.trim();
+    let finalSlug = '';
+
+    if (requestedSlug) {
+      if (!isValidSlug(requestedSlug)) {
+        return NextResponse.json({
+          success: false,
+          error: isReservedSlug(requestedSlug)
+            ? 'Ushbu nom tizim tomonidan band qilingan (Reserved system path). Boshqa nom tanlang.'
+            : 'Yaroqsiz slug formati. Kamida 3 ta belgi (harf, raqam, tire) bo‘lishi lozim.',
+          code: isReservedSlug(requestedSlug) ? 'RESERVED_SLUG' : 'INVALID_SLUG',
         }, { status: 400 });
       }
 
-      // Check collision
-      const existing = db.getLinkBySlug(finalSlug);
+      // Check slug collision
+      const existing = db.getLinkBySlug(requestedSlug);
       if (existing) {
-        return NextResponse.json({ success: false, error: 'This custom slug is already taken' }, { status: 409 });
+        return NextResponse.json({
+          success: false,
+          error: 'Ushbu qisqa havola (slug) allaqachon band qilingan. Boshqa nom tanlang.',
+          code: 'SLUG_TAKEN',
+        }, { status: 409 });
       }
+
+      finalSlug = requestedSlug;
     } else {
-      // Generate unique random slug
       let attempts = 0;
       do {
-        finalSlug = generateRandomSlug(6);
+        finalSlug = generateRandomSlug(attempts > 8 ? 6 : 5);
         attempts++;
-      } while (db.getLinkBySlug(finalSlug) && attempts < 10);
+      } while ((db.getLinkBySlug(finalSlug) || isReservedSlug(finalSlug)) && attempts < 20);
     }
 
     const created = db.createLink({
@@ -139,7 +150,10 @@ export async function POST(request: NextRequest) {
       utm_content: utm_content?.trim() || null,
       ios_url: ios_url?.trim() || null,
       android_url: android_url?.trim() || null,
+      huawei_url: huawei_url?.trim() || null,
+      desktop_url: desktop_url?.trim() || null,
       open_in_app: !!open_in_app,
+      tags: body.tags?.trim() || '',
     });
 
     return NextResponse.json({ success: true, link: created }, { status: 201 });

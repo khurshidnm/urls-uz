@@ -3,69 +3,82 @@
 import React from 'react';
 import { useLanguage } from '@/lib/language-context';
 import ShortenCard from './shorten-card';
-import { Zap, Smartphone, MapPin, Sparkles } from 'lucide-react';
+import { Zap, Smartphone, MapPin, Shield, Terminal } from 'lucide-react';
 
 export default function Hero() {
   const { t, locale } = useLanguage();
 
-  return (
-    <section className="relative pt-16 pb-20 md:pt-24 md:pb-28 overflow-hidden">
-      {/* Decorative Blur Backgrounds */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-indigo-600/15 blur-[120px] rounded-full pointer-events-none -z-10" />
-      <div className="absolute top-1/3 left-1/4 w-[300px] h-[250px] bg-cyan-500/10 blur-[90px] rounded-full pointer-events-none -z-10" />
+  const highlights = [
+    { icon: Zap, label: 'P99 LATENCY', value: '< 14ms Global Edge' },
+    { icon: Smartphone, label: 'DEEP LINKING', value: 'Zero-Webview Bypass' },
+    { icon: MapPin, label: 'GEO-TELEMETRY', value: '14 Viloyat Real-time' },
+    { icon: Shield, label: 'LINK ARMOR', value: 'SHA-256 & Rate Limiting' },
+  ];
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        {/* Top Badges */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold mb-6 shadow-sm backdrop-blur-md">
-          <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>
-            {locale === 'uz'
-              ? '🔥 40,000,000+ dan ortiq havolalar qisqartirilgan O‘zbekistondagi №1 servis'
-              : locale === 'ru'
-              ? '🔥 Более 40,000,000+ сокращенных ссылок · Сервис №1 в Узбекистане'
-              : '🔥 Over 40,000,000+ Links Shortened · Trusted Platform'}
-          </span>
+  return (
+    <section className="relative pt-16 pb-20 md:pt-24 md:pb-28 overflow-hidden bg-mesh border-b border-zinc-800/60">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        {/* Engineering Release Pill */}
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 text-[11px] font-mono mb-6">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-zinc-300 font-semibold">INFRASTRUCTURE V3.4</span>
+          <span className="text-zinc-600">·</span>
+          <span>40M+ Redirects Processed</span>
         </div>
 
-        {/* Hero Title */}
-        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-[1.15] mb-6">
+        {/* Hero Title (Confident, tight, weight 600, no blobby bold) */}
+        <h1 className="text-3xl sm:text-5xl lg:text-5xl font-semibold tracking-tight text-white max-w-3xl mx-auto leading-[1.15] mb-5 text-balance font-sans">
           {locale === 'uz' ? (
             <>
-              Havolalarni qisqartiring, <span className="text-gradient-primary">QR kodlar</span> va <span className="text-gradient-emerald">Bio sahifalar</span> yarating
+              Yuqori tezlikdagi havola va <br className="hidden sm:inline" />
+              <span className="text-zinc-400">dinamik QR infratuzilmasi</span>
             </>
           ) : locale === 'ru' ? (
             <>
-              Сокращайте ссылки, создавайте <span className="text-gradient-primary">QR-коды</span> и <span className="text-gradient-emerald">Link-in-Bio</span>
+              Высокопроизводительная инфраструктура <br className="hidden sm:inline" />
+              <span className="text-zinc-400">коротких ссылок и QR</span>
             </>
           ) : (
             <>
-              Shorten Links, Generate <span className="text-gradient-primary">Branded QRs</span> & Build <span className="text-gradient-emerald">Bio Pages</span>
+              High-throughput link routing and <br className="hidden sm:inline" />
+              <span className="text-zinc-400">dynamic QR infrastructure</span>
             </>
           )}
         </h1>
 
         {/* Subtitle */}
-        <p className="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-          {t.heroSubtitle}
+        <p className="text-xs sm:text-sm text-zinc-400 max-w-xl mx-auto mb-9 leading-relaxed">
+          {locale === 'uz'
+            ? 'Oddiy havolalarni <14ms kechikishdagi smart deep linklarga, brendlangan QR kodlarga va shaxsiy Link-in-Bio sahifalariga aylantiring.'
+            : locale === 'ru'
+            ? 'Создавайте быстрые диплинки с задержкой <14мс, векторные QR-коды и визитки Link-in-Bio с подробной аналитикой.'
+            : 'Turn destination URLs into sub-14ms smart deep links, vector QR codes, and bio portals with regional telemetry.'}
         </p>
 
-        {/* Hero Shorten Card */}
-        <ShortenCard />
+        {/* Omni-Shortener Command Bar */}
+        <div className="mb-12">
+          <ShortenCard />
+        </div>
 
-        {/* Feature Highlights Pills */}
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-4 text-xs font-medium text-slate-400">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-            <Zap className="w-3.5 h-3.5 text-amber-400" />
-            <span>&lt; 30ms ultra tezkor yo‘naltirish</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-            <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Telegram & Instagram Deep Link</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-            <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-            <span>O‘zbekiston viloyatlari analitikasi</span>
-          </div>
+        {/* Engineering Metric Tickers */}
+        <div className="pt-6 border-t border-zinc-800/40 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto">
+          {highlights.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={idx}
+                className="p-2.5 rounded-lg bg-zinc-900/40 border border-zinc-800/60 text-left transition-colors hover:border-zinc-700/80"
+              >
+                <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-500 uppercase tracking-wider mb-1">
+                  <Icon className="w-3 h-3 text-zinc-400" />
+                  <span>{item.label}</span>
+                </div>
+                <div className="text-xs font-mono font-medium text-zinc-200 truncate">
+                  {item.value}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

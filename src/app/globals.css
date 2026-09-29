@@ -1,127 +1,208 @@
 @import "tailwindcss";
 
+/* ========================================================
+   urls.uz — Staff Product Design System (Linear / Vercel Standard)
+   ======================================================== */
+
 @layer base {
   :root {
-    --background: #090d16;
-    --surface-1: #0f172a;
-    --surface-2: #1e293b;
-    --surface-3: #334155;
-    --border-subtle: rgba(255, 255, 255, 0.08);
-    --border-highlight: rgba(99, 102, 241, 0.3);
-    --foreground: #f8fafc;
-    --foreground-muted: #94a3b8;
-    --accent-primary: #6366f1;
-    --accent-secondary: #06b6d4;
+    /* Deep Obsidian / Zinc Canvas */
+    --background: #09090b;
+    --surface-0: #09090b;
+    --surface-1: #121215;
+    --surface-2: #18181b;
+    --surface-3: #27272a;
+    --surface-4: #3f3f46;
+
+    /* Crisp Precision Borders (1px hairline) */
+    --border-subtle: rgba(255, 255, 255, 0.07);
+    --border-default: #27272a;
+    --border-highlight: #3f3f46;
+    --border-hover: rgba(255, 255, 255, 0.18);
+
+    /* Text Hierarchy */
+    --foreground: #f4f4f5;
+    --foreground-secondary: #a1a1aa;
+    --foreground-muted: #71717a;
+    --foreground-subtle: #52525b;
+    --foreground-faint: #3f3f46;
+
+    /* Functional Accents with Strict Restraint */
+    --accent-primary: #ffffff;
+    --accent-blue: #0052ff;
     --accent-emerald: #10b981;
+    --accent-amber: #f59e0b;
+    --accent-rose: #f43f5e;
+
+    /* Radii: Tightened from puffy 24px/32px to crisp 6px-12px */
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 10px;
+    --radius-xl: 12px;
+    --radius-full: 9999px;
+
+    /* Precision Shadows */
+    --shadow-hairline: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+    --shadow-spec: inset 0 1px 0 0 rgba(255, 255, 255, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --shadow-elevated: inset 0 1px 0 0 rgba(255, 255, 255, 0.06), 0 12px 32px -8px rgba(0, 0, 0, 0.8);
+
+    /* Transitions */
+    --ease-fast: cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 
+/* Base resets & typography */
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   overflow-x: hidden;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-/* Ambient Background Glows */
+/* Numerical Data Alignment */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle Engineering Grid (No blurry purple/cyan blobs) */
 .bg-mesh {
-  background: 
-    radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
-    radial-gradient(circle at 85% 25%, rgba(6, 182, 212, 0.12) 0%, transparent 40%),
-    radial-gradient(circle at 50% 80%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
-    #090d16;
+  background-color: var(--background);
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255, 255, 255, 0.03), transparent 70%),
+    linear-gradient(to bottom, #09090b, #09090b);
 }
 
-/* Glassmorphic Panels */
+.bg-grid-pattern {
+  background-size: 32px 32px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+}
+
+/* Precision Cards (Linear/Vercel standard) */
+.spec-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-lg);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.spec-card:hover {
+  border-color: var(--border-highlight);
+  background: #151519;
+}
+
+/* Glassmorphic Components Replaced with High-Density Obsidian Panels */
 .glass-panel {
-  background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #111114;
+  border: 1px solid var(--border-default);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
 }
 
 .glass-card {
-  background: rgba(30, 41, 59, 0.5);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #111114;
+  border: 1px solid var(--border-default);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+  transition: border-color 0.15s ease;
 }
 
 .glass-card:hover {
-  background: rgba(30, 41, 59, 0.75);
-  border-color: rgba(99, 102, 241, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 30px -10px rgba(99, 102, 241, 0.15);
+  border-color: var(--border-highlight);
 }
 
-/* Glow Elements */
-.glow-primary {
-  box-shadow: 0 0 25px -4px rgba(99, 102, 241, 0.4);
-}
-
-.glow-cyan {
-  box-shadow: 0 0 25px -4px rgba(6, 182, 212, 0.4);
-}
-
-/* Custom Gradients */
-.text-gradient-primary {
-  background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 50%, #38bdf8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.text-gradient-emerald {
-  background: linear-gradient(135deg, #a7f3d0 0%, #10b981 50%, #06b6d4 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
+/* Primary Button (Vercel/Linear standard: Solid white on dark) */
 .bg-gradient-btn {
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #4338ca 100%);
-  transition: all 0.2s ease-in-out;
+  background-color: #ffffff;
+  color: #09090b;
+  font-weight: 500;
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  transition: background-color 0.15s ease, transform 0.1s ease;
 }
 
 .bg-gradient-btn:hover {
-  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 50%, #3730a3 100%);
-  box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
-  transform: translateY(-1px);
+  background-color: #e4e4e7;
 }
 
-/* Subtle Grid Background Pattern */
-.bg-grid-pattern {
-  background-size: 32px 32px;
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+.bg-gradient-btn:active {
+  transform: scale(0.98);
+  background-color: #d4d4d8;
 }
 
-/* Smooth custom scrollbars */
+/* Secondary Button (Obsidian with 1px border) */
+.btn-secondary {
+  background: #18181b;
+  color: #f4f4f5;
+  border: 1px solid var(--border-default);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+  transition: all 0.15s ease;
+}
+
+.btn-secondary:hover {
+  background: #27272a;
+  border-color: var(--border-highlight);
+}
+
+/* Text Gradients Replaced with Clean Typography */
+.text-gradient-primary {
+  color: #ffffff;
+}
+
+.text-gradient-emerald {
+  color: #10b981;
+}
+
+/* Precision Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: #09090b;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 9999px;
+  background: #27272a;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6366f1;
+  background: #3f3f46;
 }
 
-/* Animations */
-@keyframes pulseSlow {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.85; transform: scale(1.02); }
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #27272a transparent;
 }
 
-.animate-pulse-slow {
-  animation: pulseSlow 3s infinite ease-in-out;
+/* Keyframe animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.25s var(--ease-fast) forwards;
+}
+
+/* High-contrast focus rings */
+*:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #09090b, 0 0 0 4px #71717a;
 }

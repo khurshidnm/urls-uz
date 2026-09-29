@@ -49,7 +49,44 @@ export async function GET(request: NextRequest) {
     };
 
     const token = `session_g_${Date.now()}_${user.id}`;
-    const redirectResponse = NextResponse.redirect(`${origin}/dashboard`);
+    
+    // Check if there was a pending URL waiting for authorization
+    const pendingUrlCookie = request.cookies.get('urls_pending_url')?.value;
+    let redirectPath = '/dashboard';
+
+    if (pendingUrlCookie) {
+      try {
+        const decodedUrl = decodeURIComponent(pendingUrlCookie).trim();
+        let formattedUrl = decodedUrl;
+        if (!/^https?:\/\//i.test(formattedUrl)) {
+          formattedUrl = 'https://' + formattedUrl;
+        }
+
+        // Generate 5-character random slug
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let finalSlug = '';
+        let attempts = 0;
+        const { db } = await import('@/lib/db');
+        do {
+          finalSlug = Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+          attempts++;
+        } while (db.getLinkBySlug(finalSlug) && attempts < 15);
+
+        db.createLink({
+          userId: user.id,
+          title: finalSlug,
+          destination_url: formattedUrl,
+          slug: finalSlug,
+          open_in_app: false,
+        });
+
+        redirectPath = '/dashboard/links';
+      } catch (e) {
+        console.error('Failed to create pending link on Google callback:', e);
+      }
+    }
+
+    const redirectResponse = NextResponse.redirect(`${origin}${redirectPath}`);
 
     redirectResponse.cookies.set('urls_session', token, {
       path: '/',
@@ -63,6 +100,10 @@ export async function GET(request: NextRequest) {
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 30,
     });
+
+    if (pendingUrlCookie) {
+      redirectResponse.cookies.delete('urls_pending_url');
+    }
 
     return redirectResponse;
   } catch (err: any) {

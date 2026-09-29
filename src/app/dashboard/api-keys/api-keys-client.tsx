@@ -13,7 +13,7 @@ import {
   Send,
   Sparkles,
 } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
+import { formatDate, copyToClipboard as copyToClipboardUtil } from '@/lib/utils';
 import { Modal } from '@/components/ui/modal';
 
 interface Props {
@@ -83,9 +83,11 @@ export default function ApiKeysClient({ initialKeys }: Props) {
   };
 
   const copyToClipboard = async (text: string) => {
-    await navigator.clipboard.writeText(text);
-    setCopiedKey(true);
-    setTimeout(() => setCopiedKey(false), 2000);
+    const ok = await copyToClipboardUtil(text);
+    if (ok) {
+      setCopiedKey(true);
+      setTimeout(() => setCopiedKey(false), 2000);
+    }
   };
 
   const runPlaygroundTest = async () => {
@@ -160,8 +162,8 @@ print(response.json())`;
       {/* Title & Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">Dasturchilar & REST API</h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+          <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">Dasturchilar & REST API</h1>
+          <p className="text-xs text-zinc-400 mt-0.5">
             API kalitlar, interaktiv playground va tizimlaringiz bilan integratsiya
           </p>
         </div>
@@ -171,47 +173,97 @@ print(response.json())`;
             setGeneratedKey(null);
             setNewKeyModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-btn text-white text-xs font-semibold rounded-xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition-all active:scale-[0.98]"
+          className="flex items-center gap-1.5 px-3.5 py-2 bg-white text-zinc-950 text-xs font-semibold rounded-lg hover:bg-zinc-200 transition-colors active:scale-[0.98]"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5" />
           <span>Yangi API Kalit</span>
         </button>
       </div>
 
-      {/* API Keys Table */}
-      <div className="glass-panel p-6 rounded-3xl border border-white/5 space-y-4">
-        <h3 className="text-sm font-bold text-white tracking-tight">Faol API Kalitlar</h3>
+      {/* API Keys Table or Empty State */}
+      <div className="bg-zinc-900/40 p-5 sm:p-6 rounded-xl border border-zinc-800 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-white tracking-tight">Faol API Kalitlar</h3>
+          <span className="text-[11px] font-mono text-zinc-500">{keys.length} ta kalit</span>
+        </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
-                <th className="pb-3 font-semibold">Nomi</th>
-                <th className="pb-3 font-semibold">Prefiks</th>
-                <th className="pb-3 font-semibold">Yaratilgan sana</th>
-                <th className="pb-3 font-semibold text-right">Amallar</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60">
+        {keys.length > 0 ? (
+          <div>
+            {/* Desktop Table (hidden on mobile) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-zinc-800 text-zinc-500 uppercase text-[10px] tracking-wider">
+                    <th className="pb-3 font-medium">Nomi</th>
+                    <th className="pb-3 font-medium">Prefiks</th>
+                    <th className="pb-3 font-medium">Yaratilgan sana</th>
+                    <th className="pb-3 font-medium text-right">Amallar</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-800/80">
+                  {keys.map((k) => (
+                    <tr key={k.id} className="hover:bg-zinc-900/40">
+                      <td className="py-3 font-medium text-white">{k.name}</td>
+                      <td className="py-3 font-mono text-zinc-300">{k.key_prefix}••••••••••••</td>
+                      <td className="py-3 text-zinc-500">{formatDate(k.created_at)}</td>
+                      <td className="py-3 text-right">
+                        <button
+                          onClick={() => handleDeleteKey(k.id)}
+                          className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors"
+                          title="O‘chirish"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards (sm:hidden) */}
+            <div className="sm:hidden space-y-2.5">
               {keys.map((k) => (
-                <tr key={k.id} className="hover:bg-slate-900/40">
-                  <td className="py-3 font-semibold text-white">{k.name}</td>
-                  <td className="py-3 font-mono text-indigo-400">{k.key_prefix}••••••••••••</td>
-                  <td className="py-3 text-slate-400">{formatDate(k.created_at)}</td>
-                  <td className="py-3 text-right">
+                <div key={k.id} className="p-3 bg-zinc-950 rounded-lg border border-zinc-800/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-white text-xs">{k.name}</span>
                     <button
                       onClick={() => handleDeleteKey(k.id)}
-                      className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
-                      title="Bekor qilish"
+                      className="p-1 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors"
+                      title="O‘chirish"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                  </td>
-                </tr>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] font-mono">
+                    <span className="text-zinc-400">{k.key_prefix}••••••••••••</span>
+                    <span className="text-zinc-500">{formatDate(k.created_at)}</span>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-8 rounded-lg bg-zinc-950 border border-zinc-800/80 text-center">
+            <div className="w-10 h-10 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 flex items-center justify-center mx-auto mb-3">
+              <KeyRound className="w-5 h-5 text-zinc-300" />
+            </div>
+            <div className="text-xs font-semibold text-white mb-1">Hozircha faol API kalitlar yo‘q</div>
+            <p className="text-[11px] text-zinc-400 mb-4 max-w-xs mx-auto leading-relaxed">
+              urls.uz API dan foydalanish uchun birinchi xavfsiz kalitingizni yarating.
+            </p>
+            <button
+              onClick={() => {
+                setGeneratedKey(null);
+                setNewKeyModal(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-semibold transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Yangi API Kalit</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Interactive API Playground */}

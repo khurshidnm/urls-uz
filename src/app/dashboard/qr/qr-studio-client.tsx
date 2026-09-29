@@ -12,7 +12,10 @@ import {
   Sparkles,
   Download,
   Share2,
+  Globe,
+  Ban,
 } from 'lucide-react';
+import { TelegramIcon, InstagramIcon, YouTubeIcon } from '@/components/ui/icons';
 
 interface Props {
   links: any[];
@@ -176,18 +179,25 @@ export default function QrStudioClient({ links }: Props) {
               <span>Markaziy brend belgisi</span>
             </label>
 
-            <div className="grid grid-cols-5 gap-2">
-              {(['telegram', 'instagram', 'youtube', 'globe', 'none'] as const).map((logo) => (
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {[
+                { id: 'telegram' as const, label: 'Telegram', icon: <TelegramIcon className="w-3.5 h-3.5 text-[#229ED9]" /> },
+                { id: 'instagram' as const, label: 'Instagram', icon: <InstagramIcon className="w-3.5 h-3.5 text-[#E1306C]" /> },
+                { id: 'youtube' as const, label: 'YouTube', icon: <YouTubeIcon className="w-3.5 h-3.5 text-[#FF0000]" /> },
+                { id: 'globe' as const, label: 'Web', icon: <Globe className="w-3.5 h-3.5 text-indigo-400" /> },
+                { id: 'none' as const, label: 'Yo‘q', icon: <Ban className="w-3.5 h-3.5 text-slate-400" /> },
+              ].map((item) => (
                 <button
-                  key={logo}
-                  onClick={() => setCenterLogo(logo)}
-                  className={`py-2 px-2 text-xs font-semibold rounded-xl border text-center capitalize transition-all ${
-                    centerLogo === logo
-                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/20'
+                  key={item.id}
+                  onClick={() => setCenterLogo(item.id)}
+                  className={`flex items-center justify-center gap-1.5 py-2.5 px-2 text-xs font-semibold rounded-xl border text-center transition-all ${
+                    centerLogo === item.id
+                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/25 ring-1 ring-white/20'
                       : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-700'
                   }`}
                 >
-                  {logo === 'none' ? 'Yo‘q' : logo}
+                  {item.icon}
+                  <span>{item.label}</span>
                 </button>
               ))}
             </div>

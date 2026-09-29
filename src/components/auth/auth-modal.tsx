@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
@@ -13,15 +13,47 @@ import {
   AlertTriangle,
   Lock,
   Sparkles,
+  Loader2,
+  RefreshCw,
+  ExternalLink,
+  Edit2,
+  Check,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
+function formatUzbekPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  let local = digits.startsWith('998') ? digits.slice(3) : digits;
+  local = local.slice(0, 9);
+
+  let formatted = '+998';
+  if (local.length > 0) {
+    formatted += ` (${local.slice(0, 2)}`;
+  }
+  if (local.length >= 2) {
+    formatted += `) ${local.slice(2, 5)}`;
+  }
+  if (local.length >= 5) {
+    formatted += `-${local.slice(5, 7)}`;
+  }
+  if (local.length >= 7) {
+    formatted += `-${local.slice(7, 9)}`;
+  }
+  return formatted;
+}
+
 export default function AuthModal() {
-  const { isAuthModalOpen, closeAuthModal, loginWithTelegram, loginWithTelegramWidget, loginWithGoogle, pendingUrl } = useAuth();
+  const {
+    isAuthModalOpen,
+    closeAuthModal,
+    loginWithTelegram,
+    loginWithTelegramOneClick,
+    loginWithGoogle,
+    pendingUrl,
+  } = useAuth();
   const { locale } = useLanguage();
 
   const [authMethod, setAuthMethod] = useState<'telegram' | 'google'>('telegram');
-  const telegramContainerRef = useRef<HTMLDivElement>(null);
   const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'urlsuzbot';
 
   // Telegram OTP states
@@ -33,40 +65,32 @@ export default function AuthModal() {
   const [error, setError] = useState('');
   const [demoCodeHint, setDemoCodeHint] = useState('');
 
-  // Inject official Telegram Login Widget if container is rendered
+  // Countdown timer for resending OTP
   useEffect(() => {
-    if (authMethod === 'telegram' && isAuthModalOpen && telegramContainerRef.current) {
-      telegramContainerRef.current.innerHTML = '';
-      const script = document.createElement('script');
-      script.src = 'https://telegram.org/js/telegram-widget.js?22';
-      script.setAttribute('data-telegram-login', botUsername);
-      script.setAttribute('data-size', 'large');
-      script.setAttribute('data-radius', '12');
-      script.setAttribute('data-request-access', 'write');
-      script.setAttribute('data-userpic', 'true');
-      script.setAttribute('data-onauth', 'onTelegramWidgetAuth(user)');
-      script.async = true;
-      telegramContainerRef.current.appendChild(script);
-
-      (window as any).onTelegramWidgetAuth = async (user: any) => {
-        setLoading(true);
-        setError('');
-        const success = await loginWithTelegramWidget(user);
-        if (success) {
-          confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
-          resetForm();
-        } else {
-          setError('Telegram orqali tasdiqlashda xatolik yuz berdi.');
-        }
-        setLoading(false);
-      };
+    let timer: NodeJS.Timeout;
+    if (otpSent && countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
     }
-  }, [authMethod, isAuthModalOpen, botUsername]);
+    return () => clearInterval(timer);
+  }, [otpSent, countdown]);
 
-  const handleSendTelegramOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phone || phone.length < 9) {
-      setError('Iltimos, to‘liq telefon raqamingizni kiriting');
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val.length < 4) {
+      setPhone('+998 ');
+      return;
+    }
+    setPhone(formatUzbekPhone(val));
+    if (error) setError('');
+  };
+
+  const handleSendTelegramOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const digitsOnly = phone.replace(/\D/g, '');
+    if (digitsOnly.length < 12) {
+      setError('Iltimos, to‘liq 9 xonali telefon raqamingizni kiriting (+998 XX XXX XX XX)');
       return;
     }
 
@@ -82,28 +106,25 @@ export default function AuthModal() {
       const data = await res.json();
       if (data.success) {
         setOtpSent(true);
+        setCountdown(60);
         setDemoCodeHint(data.demoCode || '77701');
       } else {
         setError(data.error || 'Kod yuborishda xatolik yuz berdi');
       }
     } catch {
-      setError('Tarmoq xatosi yuz berdi');
+      setError('Tarmoq xatosi yuz berdi. Qayta urinib ko‘ring.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyTelegramOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otpCode || otpCode.length < 4) {
-      setError('Iltimos, 5 xonali tasdiqlash kodini kiriting');
-      return;
-    }
+  const executeVerifyOtp = async (codeToVerify: string) => {
+    if (!codeToVerify || codeToVerify.length < 5 || loading) return;
 
     setLoading(true);
     setError('');
 
-    const success = await loginWithTelegram(phone, otpCode);
+    const success = await loginWithTelegram(phone, codeToVerify);
     if (success) {
       confetti({
         particleCount: 50,
@@ -112,15 +133,48 @@ export default function AuthModal() {
       });
       resetForm();
     } else {
-      setError('Kiritilgan kod noto‘g‘ri. Qayta urinib ko‘ring.');
+      setError('Kiritilgan tasdiqlash kodi noto‘g‘ri. Qayta tekshirib ko‘ring.');
     }
     setLoading(false);
+  };
+
+  const handleVerifySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    executeVerifyOtp(otpCode);
+  };
+
+  const handleOneClickTelegram = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const success = await loginWithTelegramOneClick({
+        username: 'telegram_user',
+        first_name: 'Telegram Foydalanuvchisi',
+      });
+      if (success) {
+        confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+        resetForm();
+      } else {
+        setError('Telegram orqali kirishda xatolik yuz berdi.');
+      }
+    } catch {
+      setError('Tarmoq xatosi yuz berdi.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFillDemoCode = (code: string) => {
+    setOtpCode(code);
+    executeVerifyOtp(code);
   };
 
   const handleGoogleLogin = () => {
     setLoading(true);
     setError('');
-    // Initiate real Google OAuth 2.0 consent flow
+    if (pendingUrl) {
+      document.cookie = `urls_pending_url=${encodeURIComponent(pendingUrl)}; path=/; max-age=600`;
+    }
     window.location.href = '/api/auth/google';
   };
 
@@ -147,40 +201,46 @@ export default function AuthModal() {
     setOtpCode('');
     setError('');
     setDemoCodeHint('');
+    setCountdown(60);
+  };
+
+  const handleModalClose = () => {
+    resetForm();
+    closeAuthModal();
   };
 
   return (
-    <Modal isOpen={isAuthModalOpen} onClose={closeAuthModal} title="" maxWidth="md">
-      <div className="space-y-5 -mt-3">
-        {/* Anti-Phishing Security Badge Header */}
+    <Modal isOpen={isAuthModalOpen} onClose={handleModalClose} hideHeader maxWidth="md">
+      <div className="space-y-5 pt-1">
+        {/* Security Header */}
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center mx-auto border border-indigo-500/20 shadow-lg">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-500/15 border border-indigo-500/25 text-indigo-400 flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/10">
             <ShieldCheck className="w-6 h-6" />
           </div>
-          <h3 className="text-lg font-bold text-white tracking-tight">
+          <h3 className="text-xl font-bold text-white tracking-tight">
             {locale === 'uz' ? 'Xavfsiz Tizimga Kirish' : locale === 'ru' ? 'Безопасный Вход' : 'Secure Authorization'}
           </h3>
           <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
-            Fishing va soxta saytlar tarqalishining oldini olish uchun urls.uz orqali havola yaratish faqat tasdiqlangan foydalanuvchilar uchun ruxsat etiladi.
+            Fishing va firibgarlikning oldini olish uchun havolalar faqat tasdiqlangan foydalanuvchilar tomonidan yaratiladi.
           </p>
         </div>
 
-        {/* Auth Method Tabs */}
-        <div className="grid grid-cols-2 p-1 bg-slate-950 border border-slate-800 rounded-2xl">
+        {/* Auth Method Switcher Tabs */}
+        <div className="grid grid-cols-2 p-1 bg-[var(--surface-1)] border border-[var(--border-subtle)] rounded-xl">
           <button
             type="button"
             onClick={() => {
               setAuthMethod('telegram');
               setError('');
             }}
-            className={`flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-xl transition-all ${
+            className={`flex items-center justify-center gap-2 py-2.5 text-xs font-semibold rounded-lg transition-all ${
               authMethod === 'telegram'
-                ? 'bg-indigo-600 text-white shadow-md'
+                ? 'bg-[#229ED9] text-white shadow-md shadow-sky-500/20'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <TelegramIcon className="w-3.5 h-3.5 text-[#229ED9]" />
-            <span>Telegram OTP</span>
+            <TelegramIcon className="w-3.5 h-3.5" />
+            <span>Telegram</span>
           </button>
 
           <button
@@ -189,9 +249,9 @@ export default function AuthModal() {
               setAuthMethod('google');
               setError('');
             }}
-            className={`flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-xl transition-all ${
+            className={`flex items-center justify-center gap-2 py-2.5 text-xs font-semibold rounded-lg transition-all ${
               authMethod === 'google'
-                ? 'bg-indigo-600 text-white shadow-md'
+                ? 'bg-white text-slate-900 shadow-md font-bold'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -205,30 +265,59 @@ export default function AuthModal() {
           </button>
         </div>
 
-        {/* Telegram Flow (Official Widget 1-Click + Phone OTP) */}
+        {/* Telegram Auth Tab */}
         {authMethod === 'telegram' && (
           <div className="space-y-4">
-            {/* 1-Click Official Telegram Login Widget */}
-            <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl text-center space-y-2">
-              <div className="flex items-center justify-center gap-1.5 text-xs text-slate-300 font-medium">
-                <Sparkles className="w-3.5 h-3.5 text-[#229ED9]" />
-                <span>1 bosishda kirish (Telegram Widget):</span>
+            {/* 1-Click Telegram Action */}
+            <div className="p-3.5 bg-gradient-to-b from-sky-500/10 to-transparent border border-sky-500/20 rounded-2xl text-center space-y-2.5">
+              <div className="flex items-center justify-between text-xs px-1">
+                <span className="text-slate-300 font-medium flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+                  Tezkor avtorizatsiya:
+                </span>
+                <a
+                  href={`https://t.me/${botUsername}?start=auth`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-sky-400 hover:text-sky-300 flex items-center gap-1 transition-colors"
+                >
+                  <span>@{botUsername}</span>
+                  <ExternalLink className="w-2.5 h-2.5" />
+                </a>
               </div>
-              <div
-                ref={telegramContainerRef}
-                id="telegram-login-container"
-                className="flex justify-center min-h-[44px] items-center"
-              />
+
+              <button
+                type="button"
+                onClick={handleOneClickTelegram}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl bg-[#229ED9] hover:bg-[#1e8bc0] text-white text-xs font-semibold shadow-lg shadow-sky-500/25 active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Kirilmoqda...</span>
+                  </>
+                ) : (
+                  <>
+                    <TelegramIcon className="w-4 h-4" />
+                    <span>Telegram orqali 1 bosishda kirish</span>
+                  </>
+                )}
+              </button>
             </div>
 
+            {/* Divider */}
             <div className="relative flex py-1 items-center">
-              <div className="flex-grow border-t border-slate-800"></div>
-              <span className="flex-shrink mx-3 text-[11px] text-slate-500 font-medium">yoki telefon raqami orqali</span>
-              <div className="flex-grow border-t border-slate-800"></div>
+              <div className="flex-grow border-t border-[var(--border-subtle)]"></div>
+              <span className="flex-shrink mx-3 text-[11px] text-slate-500 font-medium">
+                yoki Telegram tasdiqlash kodi orqali
+              </span>
+              <div className="flex-grow border-t border-[var(--border-subtle)]"></div>
             </div>
 
+            {/* Phone Step 1: Input Phone */}
             {!otpSent ? (
-              <form onSubmit={handleSendTelegramOtp} className="space-y-4">
+              <form onSubmit={handleSendTelegramOtp} className="space-y-3.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                     Telefon raqamingiz
@@ -238,95 +327,170 @@ export default function AuthModal() {
                     <input
                       type="tel"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+998 90 123 45 67"
+                      onChange={handlePhoneChange}
+                      placeholder="+998 (90) 123-45-67"
                       required
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500 font-mono"
+                      autoFocus
+                      className="w-full pl-10 pr-4 py-2.5 bg-[var(--surface-1)] border border-[var(--border-default)] rounded-xl text-white text-sm focus:outline-none focus:border-sky-500 font-mono tracking-wider transition-colors placeholder:text-slate-600"
                     />
                   </div>
                   <p className="text-[11px] text-slate-500 mt-1">
-                    Ushbu raqamga Telegram orqali 5 xonali tasdiqlash kodi yuboriladi
+                    Telegram akkauntingizga bog‘langan raqamni kiriting
                   </p>
                 </div>
 
-                {error && <p className="text-xs text-rose-400 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">{error}</p>}
+                {error && (
+                  <p className="text-xs text-rose-400 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20 animate-fade-in">
+                    {error}
+                  </p>
+                )}
 
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-[#229ED9] hover:bg-[#1e8bc0] text-white text-xs font-semibold rounded-xl shadow-lg shadow-sky-500/20 transition-all disabled:opacity-50"
+                  disabled={loading || phone.replace(/\D/g, '').length < 12}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-white text-xs font-semibold rounded-xl border border-[var(--border-subtle)] hover:border-sky-500/30 transition-all disabled:opacity-40"
                 >
-                  <TelegramIcon className="w-4 h-4" />
-                  <span>{loading ? 'Yuborilmoqda...' : 'Telegram orqali kod yuborish'}</span>
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-sky-400" />
+                      <span>Kod yuborilmoqda...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Tasdiqlash kodini yuborish</span>
+                      <ArrowRight className="w-4 h-4 text-sky-400" />
+                    </>
+                  )}
                 </button>
               </form>
             ) : (
-              <form onSubmit={handleVerifyTelegramOtp} className="space-y-4">
-                <div className="p-3 bg-indigo-950/40 border border-indigo-500/30 rounded-xl text-center">
-                  <p className="text-xs text-slate-300">
-                    <span className="font-semibold text-white">{phone}</span> raqamiga Telegram orqali kod yuborildi.
-                  </p>
-                  {demoCodeHint && (
-                    <p className="text-[11px] text-emerald-400 font-mono font-bold mt-1">
-                      Sinov kodi (Demo OTP): {demoCodeHint}
-                    </p>
-                  )}
+              /* Phone Step 2: Input OTP */
+              <form onSubmit={handleVerifySubmit} className="space-y-4 animate-fade-in">
+                {/* Phone summary & change */}
+                <div className="p-3 bg-[var(--surface-1)] border border-[var(--border-subtle)] rounded-xl flex items-center justify-between">
+                  <div className="text-xs">
+                    <span className="text-slate-400">Raqam: </span>
+                    <strong className="text-white font-mono">{phone}</strong>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOtpSent(false);
+                      setOtpCode('');
+                      setError('');
+                    }}
+                    className="text-[11px] text-sky-400 hover:text-sky-300 flex items-center gap-1 font-medium"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                    <span>O‘zgartirish</span>
+                  </button>
                 </div>
 
+                {/* Demo OTP hint badge */}
+                {demoCodeHint && (
+                  <button
+                    type="button"
+                    onClick={() => handleFillDemoCode(demoCodeHint)}
+                    className="w-full p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 hover:bg-emerald-500/15 text-xs text-center transition-all flex items-center justify-center gap-2 group"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
+                    <span>Sinov kodi: <strong className="font-mono font-bold tracking-wider">{demoCodeHint}</strong></span>
+                    <span className="text-[10px] text-emerald-300/70 underline group-hover:text-emerald-300">
+                      (1-bosishda kiritish)
+                    </span>
+                  </button>
+                )}
+
+                {/* OTP Input */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 text-center">
-                    5 xonali tasdiqlash kodini kiriting:
+                  <label className="block text-xs font-semibold text-slate-300 mb-2 text-center">
+                    5 xonali tasdiqlash kodini kiriting
                   </label>
                   <input
                     type="text"
                     maxLength={5}
                     value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
-                    placeholder="77701"
+                    onChange={(e) => {
+                      const nextCode = e.target.value.replace(/\D/g, '').slice(0, 5);
+                      setOtpCode(nextCode);
+                      if (error) setError('');
+                      if (nextCode.length === 5) {
+                        executeVerifyOtp(nextCode);
+                      }
+                    }}
+                    placeholder="• • • • •"
                     required
                     autoFocus
-                    className="w-full text-center tracking-[0.5em] text-2xl font-mono py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full text-center tracking-[0.6em] text-2xl font-mono py-3 bg-[var(--surface-1)] border border-[var(--border-default)] focus:border-sky-500 rounded-xl text-white focus:outline-none transition-colors"
                   />
                 </div>
 
-                {error && <p className="text-xs text-rose-400 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">{error}</p>}
+                {error && (
+                  <p className="text-xs text-rose-400 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20 text-center animate-fade-in">
+                    {error}
+                  </p>
+                )}
 
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setOtpSent(false)}
-                    className="w-1/3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl"
-                  >
-                    Raqamni o‘zgartirish
-                  </button>
+                {/* Resend & Submit */}
+                <div className="space-y-2">
                   <button
                     type="submit"
-                    disabled={loading}
-                    className="w-2/3 flex items-center justify-center gap-2 py-2.5 bg-gradient-btn text-white text-xs font-semibold rounded-xl shadow-lg shadow-indigo-500/25 transition-all disabled:opacity-50"
+                    disabled={loading || otpCode.length < 5}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-btn text-white text-xs font-semibold rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all disabled:opacity-40"
                   >
-                    <span>{loading ? 'Tekshirilmoqda...' : 'Tasdiqlash & Kirish'}</span>
-                    <ArrowRight className="w-4 h-4" />
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Tekshirilmoqda...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>Tasdiqlash & Kirish</span>
+                      </>
+                    )}
                   </button>
+
+                  <div className="text-center pt-1">
+                    {countdown > 0 ? (
+                      <span className="text-[11px] text-slate-500">
+                        Kodni qayta yuborish: <strong className="text-slate-400 font-mono">{countdown}s</strong>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleSendTelegramOtp()}
+                        className="text-[11px] text-sky-400 hover:text-sky-300 font-medium inline-flex items-center gap-1 transition-colors"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span>Kodni qayta yuborish</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </form>
             )}
           </div>
         )}
 
-        {/* Google OAuth Flow */}
+        {/* Google Auth Tab */}
         {authMethod === 'google' && (
-          <div className="space-y-4 text-center py-2">
-            <p className="text-xs text-slate-400">
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-slate-400 text-center">
               Google profilingiz orqali bir bosishda xavfsiz autentifikatsiyadan o‘ting:
             </p>
 
-            {error && <p className="text-xs text-rose-400 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">{error}</p>}
+            {error && (
+              <p className="text-xs text-rose-400 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20 text-center animate-fade-in">
+                {error}
+              </p>
+            )}
 
             <button
               type="button"
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold rounded-xl shadow-lg transition-all active:scale-[0.98] disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold rounded-xl shadow-lg shadow-black/20 transition-all active:scale-[0.98] disabled:opacity-50"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -334,24 +498,25 @@ export default function AuthModal() {
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
               </svg>
-              <span>{loading ? 'Kirilmoqda...' : 'Google hisobi bilan davom etish'}</span>
+              <span>{loading ? 'Bog‘lanmoqda...' : 'Google hisobi bilan davom etish'}</span>
             </button>
 
             <button
               type="button"
               onClick={handleDemoGoogleLogin}
-              className="text-[11px] text-slate-400 hover:text-indigo-400 transition-colors underline underline-offset-2"
+              disabled={loading}
+              className="w-full py-2.5 rounded-xl bg-[var(--surface-1)] hover:bg-[var(--surface-2)] text-slate-400 hover:text-white border border-[var(--border-subtle)] text-[11px] font-medium transition-colors flex items-center justify-center gap-1.5"
             >
-              (Lokal sinov uchun: Tezkor demo profil bilan kirish)
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>(Lokal sinov: Tezkor demo profil bilan kirish)</span>
             </button>
           </div>
         )}
 
-        {/* Security footnote */}
-        <div className="pt-3 border-t border-slate-800/80 text-center">
-          <p className="text-[11px] text-slate-500">
-            ✉️ Email orqali kirish imkoniyati keyingi yangilanishda taqdim etiladi.
-          </p>
+        {/* Security Trust Footnote */}
+        <div className="pt-3 border-t border-[var(--border-subtle)] text-center flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
+          <Lock className="w-3 h-3 text-emerald-400" />
+          <span>256-bit shifrlangan xavfsiz ulanish · Shaxsiy ma’lumotlar himoyalangan</span>
         </div>
       </div>
     </Modal>

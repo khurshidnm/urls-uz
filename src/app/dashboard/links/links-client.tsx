@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useLanguage } from '@/lib/language-context';
+import { useToast } from '@/components/ui/toast';
+import { Badge } from '@/components/ui/badge';
+import { QrCanvas } from '@/components/ui/qr-canvas';
 import {
   Link2,
   Search,
-  Plus,
   Copy,
   Check,
   QrCode,
@@ -14,350 +16,891 @@ import {
   Trash2,
   Smartphone,
   Shield,
-  Calendar,
-  Layers,
+  Download,
+  CheckSquare,
+  Square,
+  Archive,
+  ArchiveRestore,
+  Tag,
+  X,
+  Save,
+  Loader2,
+  Plus,
 } from 'lucide-react';
 import { formatNumber, formatDate } from '@/lib/utils';
-import { QrCanvas } from '@/components/ui/qr-canvas';
-import CreateLinkModal from '@/components/dashboard/create-link-modal';
-import { Modal } from '@/components/ui/modal';
 
 interface Props {
   initialLinks: any[];
 }
 
 export default function LinksManagerClient({ initialLinks }: Props) {
-  const { t, locale } = useLanguage();
+  const { t } = useLanguage();
+  const { showToast } = useToast();
   const [links, setLinks] = useState(initialLinks);
+
+  // Sync links when initialLinks change or fetch latest
+  React.useEffect(() => {
+    setLinks(initialLinks);
+    fetch('/api/links')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.links)) {
+          setLinks(data.links);
+        }
+      })
+      .catch(() => {});
+  }, [initialLinks]);
+
   const [search, setSearch] = useState('');
-  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'archived'>('all');
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+
   const [activeQrLink, setActiveQrLink] = useState<any | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Edit Modal State
-  const [editingLink, setEditingLink] = useState<any | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [editDestination, setEditDestination] = useState('');
-  const [editOpenInApp, setEditOpenInApp] = useState(false);
-  const [editPassword, setEditPassword] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
+  // Multi-select
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const isMultiSelectMode = selectedIds.size > 0;
+  const [showBatchTagModal, setShowBatchTagModal] = useState(false);
+  const [batchTagInput, setBatchTagInput] = useState('');
 
-  const filteredLinks = links.filter((l) =>
-    l.title.toLowerCase().includes(search.toLowerCase()) ||
-    l.slug.toLowerCase().includes(search.toLowerCase()) ||
-    l.destination_url.toLowerCase().includes(search.toLowerCase())
-  );
+  // Inline edit title
+  const [inlineEditingTitleId, setInlineEditingTitleId] = useState<string | null>(null);
+  const [inlineTitleValue, setInlineTitleValue] = useState('');
 
+  // Inline add tag
+  const [inlineTagId, setInlineTagId] = useState<string | null>(null);
+  const [inlineTagValue, setInlineTagValue] = useState('');
+
+  // Extract all unique tags
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    links.forEach((l) => {
+      if (l.tags) {
+        l.tags.split(',').forEach((t: string) => {
+          const trimmed = t.trim();
+          if (trimmed) tagSet.add(trimmed);
+        });
+      }
+    });
+    return Array.from(tagSet);
+  }, [links]);
+
+  // Filtered links
+  const filteredLinks = useMemo(() => {
+    return links.filter((l) => {
+      // Search
+      const matchesSearch =
+        !search ||
+        l.title.toLowerCase().includes(search.toLowerCase()) ||
+        l.slug.toLowerCase().includes(search.toLowerCase()) ||
+        l.destination_url.toLowerCase().includes(search.toLowerCase()) ||
+        (l.tags && l.tags.toLowerCase().includes(search.toLowerCase()));
+
+      // Status
+      const matchesStatus =
+        statusFilter === 'all'
+          ? true
+          : statusFilter === 'archived'
+          ? l.is_archived === 1
+          : l.is_archived !== 1;
+
+      // Tag
+      const matchesTag =
+        !selectedTag ||
+        (l.tags && l.tags.split(',').map((t: string) => t.trim()).includes(selectedTag));
+
+      return matchesSearch && matchesStatus && matchesTag;
+    });
+  }, [links, search, statusFilter, selectedTag]);
+
+  // Tactile Copy
   const handleCopy = async (id: string, slug: string) => {
     const url = `${window.location.origin}/${slug}`;
-    await navigator.clipboard.writeText(url);
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      const el = document.createElement('textarea');
+      el.value = url;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
     setCopiedId(id);
+    showToast('copied', `${url} nusxalandi!`);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Haqiqatan ham ushbu havolani o‘chirmoqchimisiz?')) return;
+  // Inline Title Save
+  const saveInlineTitle = async (id: string) => {
+    if (!inlineTitleValue.trim()) {
+      setInlineEditingTitleId(null);
+      return;
+    }
 
+    try {
+      const res = await fetch(`/api/links/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: inlineTitleValue.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLinks(links.map((l) => (l.id === id ? { ...l, title: inlineTitleValue.trim() } : l)));
+        showToast('success', 'Nomi yangilandi');
+      }
+    } catch {
+      showToast('error', 'Saqlashda xatolik');
+    } finally {
+      setInlineEditingTitleId(null);
+    }
+  };
+
+  // Inline Tag Add
+  const addInlineTag = async (linkId: string) => {
+    if (!inlineTagValue.trim()) {
+      setInlineTagId(null);
+      return;
+    }
+
+    const targetLink = links.find((l) => l.id === linkId);
+    if (!targetLink) return;
+
+    const currentTags = targetLink.tags
+      ? targetLink.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
+      : [];
+
+    const newTag = inlineTagValue.trim().toLowerCase();
+    if (!currentTags.includes(newTag)) {
+      currentTags.push(newTag);
+    }
+
+    const updatedTagsString = currentTags.join(', ');
+
+    try {
+      const res = await fetch(`/api/links/${linkId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tags: updatedTagsString }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLinks(links.map((l) => (l.id === linkId ? { ...l, tags: updatedTagsString } : l)));
+        showToast('success', `Teg #${newTag} qo‘shildi`);
+      }
+    } catch {
+      showToast('error', 'Teg saqlashda xatolik');
+    } finally {
+      setInlineTagId(null);
+      setInlineTagValue('');
+    }
+  };
+
+  // Inline Tag Remove
+  const removeInlineTag = async (linkId: string, tagToRemove: string) => {
+    const targetLink = links.find((l) => l.id === linkId);
+    if (!targetLink || !targetLink.tags) return;
+
+    const currentTags = targetLink.tags
+      .split(',')
+      .map((t: string) => t.trim())
+      .filter((t: string) => t && t !== tagToRemove);
+
+    const updatedTagsString = currentTags.join(', ');
+
+    try {
+      const res = await fetch(`/api/links/${linkId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tags: updatedTagsString }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLinks(links.map((l) => (l.id === linkId ? { ...l, tags: updatedTagsString } : l)));
+        showToast('info', `Teg #${tagToRemove} olib tashlandi`);
+      }
+    } catch {
+      showToast('error', 'Tegni o‘chirishda xatolik');
+    }
+  };
+
+  // Delete Single Link
+  const handleDelete = async (id: string) => {
+    if (!confirm("Haqiqatan ham ushbu havolani o'chirmoqchimisiz?")) return;
     try {
       const res = await fetch(`/api/links/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         setLinks(links.filter((l) => l.id !== id));
+        showToast('success', "Havola o'chirildi");
       }
     } catch {
-      alert('O‘chirishda xatolik yuz berdi');
+      showToast('error', "O'chirishda xatolik yuz berdi");
     }
   };
 
-  const openEdit = (link: any) => {
-    setEditingLink(link);
-    setEditTitle(link.title);
-    setEditDestination(link.destination_url);
-    setEditOpenInApp(!!link.open_in_app);
-    setEditPassword(link.password || '');
-  };
-
-  const handleSaveEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingLink) return;
-
-    setIsSaving(true);
+  // Archive Single Link
+  const handleToggleArchive = async (id: string, currentArchived: number = 0) => {
+    const nextStatus = currentArchived === 1 ? 0 : 1;
     try {
-      const res = await fetch(`/api/links/${editingLink.id}`, {
+      const res = await fetch(`/api/links/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: editTitle,
-          destination_url: editDestination,
-          open_in_app: editOpenInApp ? 1 : 0,
-          password: editPassword || null,
-        }),
+        body: JSON.stringify({ is_archived: nextStatus }),
       });
       const data = await res.json();
       if (data.success) {
-        setLinks(links.map((l) => (l.id === editingLink.id ? data.link : l)));
-        setEditingLink(null);
+        setLinks(links.map((l) => (l.id === id ? { ...l, is_archived: nextStatus } : l)));
+        showToast('success', nextStatus === 1 ? 'Havola arxivlandi' : 'Havola faollashtirildi');
       }
     } catch {
-      alert('Saqlashda xatolik yuz berdi');
-    } finally {
-      setIsSaving(false);
+      showToast('error', 'Statusni o‘zgartirishda xatolik');
     }
   };
 
-  const refreshLinks = async () => {
-    try {
-      const res = await fetch('/api/links');
-      const data = await res.json();
-      if (data.success) {
-        setLinks(data.links);
+  // Multi-Select Toggle
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredLinks.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredLinks.map((l) => l.id)));
+    }
+  };
+
+  // Batch Delete
+  const handleBatchDelete = async () => {
+    if (!confirm(`${selectedIds.size} ta havolani o'chirmoqchimisiz?`)) return;
+    for (const id of selectedIds) {
+      await fetch(`/api/links/${id}`, { method: 'DELETE' });
+    }
+    setLinks(links.filter((l) => !selectedIds.has(l.id)));
+    setSelectedIds(new Set());
+    showToast('success', `${selectedIds.size} ta havola o'chirildi`);
+  };
+
+  // Batch Archive
+  const handleBatchArchive = async (archive: boolean = true) => {
+    for (const id of selectedIds) {
+      await fetch(`/api/links/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_archived: archive ? 1 : 0 }),
+      });
+    }
+    setLinks(
+      links.map((l) => (selectedIds.has(l.id) ? { ...l, is_archived: archive ? 1 : 0 } : l))
+    );
+    setSelectedIds(new Set());
+    showToast('success', `${selectedIds.size} ta havola ${archive ? 'arxivlandi' : 'faollashtirildi'}`);
+  };
+
+  // Batch Tag Apply
+  const applyBatchTag = async () => {
+    if (!batchTagInput.trim()) return;
+    const tagToAdd = batchTagInput.trim().toLowerCase();
+
+    for (const id of selectedIds) {
+      const link = links.find((l) => l.id === id);
+      if (link) {
+        const curTags = link.tags ? link.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
+        if (!curTags.includes(tagToAdd)) {
+          curTags.push(tagToAdd);
+          const updated = curTags.join(', ');
+          await fetch(`/api/links/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tags: updated }),
+          });
+        }
       }
-    } catch {}
+    }
+
+    setLinks(
+      links.map((l) => {
+        if (!selectedIds.has(l.id)) return l;
+        const curTags = l.tags ? l.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
+        if (!curTags.includes(tagToAdd)) curTags.push(tagToAdd);
+        return { ...l, tags: curTags.join(', ') };
+      })
+    );
+
+    setShowBatchTagModal(false);
+    setBatchTagInput('');
+    setSelectedIds(new Set());
+    showToast('success', `${selectedIds.size} ta havolaga #${tagToAdd} tegi qo‘shildi`);
+  };
+
+  // Batch CSV Export
+  const handleBatchExport = () => {
+    const selected = links.filter((l) => selectedIds.has(l.id));
+    let csv = 'Title,Short URL,Destination URL,Clicks,Tags,Archived,Created At\n';
+    selected.forEach((l) => {
+      csv += `"${l.title}","urls.uz/${l.slug}","${l.destination_url}",${l.click_count},"${l.tags || ''}",${l.is_archived === 1 ? 'Yes' : 'No'},"${l.created_at}"\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `urls-uz-export-${Date.now()}.csv`;
+    a.click();
+    showToast('success', `${selected.length} ta havola eksport qilindi`);
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="space-y-5">
+      {/* Header & Status Tabs */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">{t.myLinks}</h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Barcha qisqa havolalar ro‘yxati, tahrirlash va QR kodlar
+          <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">{t.myLinks}</h1>
+          <p className="text-xs text-[var(--foreground-muted)] mt-0.5">
+            {filteredLinks.length} ta havola ko‘rsatilmoqda · Tahrirlash, teglar, batch amallar va QR kodlar
           </p>
         </div>
 
-        <button
-          onClick={() => setCreateModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-btn text-white text-xs font-semibold rounded-xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition-all active:scale-[0.98]"
-        >
-          <Plus className="w-4 h-4" />
-          <span>{t.createNewLink}</span>
-        </button>
+        {/* Status Filter Pills */}
+        <div className="flex bg-[var(--surface-1)] border border-[var(--border-subtle)] p-1 rounded-xl text-xs">
+          <button
+            onClick={() => setStatusFilter('all')}
+            className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+              statusFilter === 'all'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Barchasi ({links.length})
+          </button>
+          <button
+            onClick={() => setStatusFilter('active')}
+            className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+              statusFilter === 'active'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Faol ({links.filter((l) => l.is_archived !== 1).length})
+          </button>
+          <button
+            onClick={() => setStatusFilter('archived')}
+            className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+              statusFilter === 'archived'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Arxivlangan ({links.filter((l) => l.is_archived === 1).length})
+          </button>
+        </div>
       </div>
 
-      {/* Search Input Bar */}
-      <div className="relative">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Havola nomi, slug yoki URL bo‘yicha qidirish..."
-          className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
-        />
-      </div>
-
-      {/* Links List Cards */}
-      <div className="space-y-3">
-        {filteredLinks.length > 0 ? (
-          filteredLinks.map((link) => {
-            const shortUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://urls.uz'}/${link.slug}`;
-            const isCopied = copiedId === link.id;
-
-            return (
-              <div
-                key={link.id}
-                className="glass-card p-5 rounded-2xl border border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
-              >
-                {/* Link Info */}
-                <div className="space-y-1.5 min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-white text-sm hover:text-indigo-300 transition-colors">
-                      {link.title}
-                    </span>
-                    {link.open_in_app === 1 && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                        <Smartphone className="w-3 h-3" />
-                        <span>Smart Deep Link</span>
-                      </span>
-                    )}
-                    {link.password && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                        <Shield className="w-3 h-3" />
-                        <span>Parolli</span>
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Short and Original URLs */}
-                  <div className="flex items-center gap-2 text-xs">
-                    <a
-                      href={`/${link.slug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-mono font-semibold text-indigo-400 hover:underline flex items-center gap-1"
-                    >
-                      <span>{shortUrl}</span>
-                      <ExternalLink className="w-3 h-3 opacity-60" />
-                    </a>
-                  </div>
-
-                  <p className="text-xs text-slate-400 truncate max-w-xl">
-                    <span className="text-slate-500">Manzil: </span>
-                    {link.destination_url}
-                  </p>
-
-                  <div className="flex items-center gap-4 text-[11px] text-slate-500 pt-1">
-                    <span>Yaratilgan: {formatDate(link.created_at)}</span>
-                    <span>•</span>
-                    <span className="text-slate-300 font-semibold">{formatNumber(link.click_count)} ta bosish</span>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2 self-end md:self-center shrink-0">
-                  <button
-                    onClick={() => handleCopy(link.id, link.slug)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 text-xs font-semibold border border-indigo-500/30 transition-all"
-                  >
-                    {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{isCopied ? 'Nusxalandi' : 'Nusxa'}</span>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveQrLink(link)}
-                    className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-colors"
-                    title="QR Kod"
-                  >
-                    <QrCode className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    onClick={() => openEdit(link)}
-                    className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-colors"
-                    title="Tahrirlash"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    onClick={() => handleDelete(link.id)}
-                    className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-colors"
-                    title="O‘chirish"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="glass-panel p-12 rounded-3xl text-center border border-white/5">
-            <Link2 className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-            <h3 className="text-base font-bold text-white mb-1">Havolalar topilmadi</h3>
-            <p className="text-xs text-slate-400 mb-4">Birinchi qisqa havolangizni yarating!</p>
+      {/* Tag Filters Row */}
+      {allTags.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap text-xs">
+          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mr-1">
+            Teglar:
+          </span>
+          <button
+            onClick={() => setSelectedTag(null)}
+            className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+              selectedTag === null
+                ? 'bg-indigo-600/20 text-indigo-300 border-indigo-500/30'
+                : 'bg-[var(--surface-1)] text-slate-400 border-[var(--border-subtle)] hover:text-white'
+            }`}
+          >
+            Barchasi
+          </button>
+          {allTags.map((tag) => (
             <button
-              onClick={() => setCreateModalOpen(true)}
-              className="px-4 py-2 bg-gradient-btn text-white text-xs font-semibold rounded-xl"
+              key={tag}
+              onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                selectedTag === tag
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                  : 'bg-[var(--surface-1)] text-slate-300 border-[var(--border-subtle)] hover:border-indigo-500/30'
+              }`}
             >
-              Havola yaratish
+              <span>#{tag}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Search & Batch Actions Toolbar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Qidirish: nom, slug, manzil URL yoki #teg..."
+            className="w-full pl-10 pr-4 py-2.5 bg-[var(--surface-1)] border border-[var(--border-default)] rounded-xl text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all font-mono"
+          />
+        </div>
+
+        {/* Multi-Select Batch Actions Bar */}
+        {isMultiSelectMode && (
+          <div className="flex items-center gap-1.5 flex-wrap p-1.5 bg-[var(--surface-1)] border border-indigo-500/30 rounded-xl animate-fade-in">
+            <Badge variant="indigo" size="sm" className="font-mono">
+              {selectedIds.size} tanlandi
+            </Badge>
+
+            {/* Batch Tag Button */}
+            <button
+              onClick={() => setShowBatchTagModal(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-200 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] rounded-lg border border-[var(--border-subtle)] transition-colors"
+              title="Tanlanganlarga teg qo‘shish"
+            >
+              <Tag className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Teg</span>
+            </button>
+
+            {/* Batch Archive Button */}
+            <button
+              onClick={() => handleBatchArchive(statusFilter !== 'archived')}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-200 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] rounded-lg border border-[var(--border-subtle)] transition-colors"
+              title="Arxivlash / Qayta tiklash"
+            >
+              <Archive className="w-3.5 h-3.5 text-amber-400" />
+              <span>{statusFilter === 'archived' ? 'Faollashtirish' : 'Arxivlash'}</span>
+            </button>
+
+            {/* Batch Export */}
+            <button
+              onClick={handleBatchExport}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-200 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] rounded-lg border border-[var(--border-subtle)] transition-colors"
+              title="CSV yuklab olish"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-400" />
+              <span>CSV</span>
+            </button>
+
+            {/* Batch Delete */}
+            <button
+              onClick={handleBatchDelete}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 rounded-lg border border-rose-500/20 transition-colors"
+              title="O‘chirish"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>O‘chirish</span>
+            </button>
+
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+              title="Bekor qilish"
+            >
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
       </div>
 
-      {/* QR Modal */}
+      {/* Links List */}
+      <div className="space-y-2">
+        {/* Select All Row */}
+        {filteredLinks.length > 0 && (
+          <div className="flex items-center justify-between px-3 py-1 text-[11px] text-slate-500">
+            <button
+              onClick={toggleSelectAll}
+              className="flex items-center gap-2 hover:text-slate-300 transition-colors"
+            >
+              {selectedIds.size === filteredLinks.length ? (
+                <CheckSquare className="w-3.5 h-3.5 text-indigo-400" />
+              ) : (
+                <Square className="w-3.5 h-3.5" />
+              )}
+              <span>
+                {selectedIds.size === filteredLinks.length
+                  ? 'Barchasini bekor qilish'
+                  : `Barchasini tanlash (${filteredLinks.length})`}
+              </span>
+            </button>
+          </div>
+        )}
+
+        {filteredLinks.length > 0 ? (
+          filteredLinks.map((link) => {
+            const shortUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://urls.uz'}/${link.slug}`;
+            const isCopied = copiedId === link.id;
+            const isSelected = selectedIds.has(link.id);
+            const isTitleEditing = inlineEditingTitleId === link.id;
+            const isAddingTag = inlineTagId === link.id;
+
+            const linkTags = link.tags
+              ? link.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
+              : [];
+
+            return (
+              <div
+                key={link.id}
+                className={`p-3.5 rounded-lg border transition-all ${
+                  isSelected
+                    ? 'bg-zinc-800/60 border-zinc-600'
+                    : 'bg-zinc-900/40 border-zinc-800 hover:bg-zinc-900/80 hover:border-zinc-700'
+                } ${link.is_archived === 1 ? 'opacity-60' : ''}`}
+              >
+                <div className="flex items-start gap-3">
+                  {/* Select Checkbox */}
+                  <button
+                    onClick={() => toggleSelect(link.id)}
+                    className="mt-1 shrink-0 text-slate-500 hover:text-indigo-400 transition-colors"
+                  >
+                    {isSelected ? (
+                      <CheckSquare className="w-4 h-4 text-indigo-400" />
+                    ) : (
+                      <Square className="w-4 h-4" />
+                    )}
+                  </button>
+
+                  {/* Main Link Info */}
+                  <div className="flex-1 min-w-0">
+                    {/* Title with Inline Edit */}
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      {isTitleEditing ? (
+                        <div className="flex items-center gap-1.5 flex-1 max-w-md animate-fade-in">
+                          <input
+                            type="text"
+                            value={inlineTitleValue}
+                            onChange={(e) => setInlineTitleValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveInlineTitle(link.id);
+                              if (e.key === 'Escape') setInlineEditingTitleId(null);
+                            }}
+                            autoFocus
+                            className="w-full px-2.5 py-1 bg-[var(--surface-1)] border border-indigo-500 rounded-lg text-xs text-white focus:outline-none"
+                            placeholder="Havola nomi..."
+                          />
+                          <button
+                            onClick={() => saveInlineTitle(link.id)}
+                            className="p-1 rounded bg-indigo-600 text-white hover:bg-indigo-500"
+                            title="Saqlash (Enter)"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setInlineEditingTitleId(null)}
+                            className="p-1 rounded text-slate-400 hover:text-white"
+                            title="Bekor qilish (Esc)"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 group">
+                          <span
+                            onDoubleClick={() => {
+                              setInlineEditingTitleId(link.id);
+                              setInlineTitleValue(link.title);
+                            }}
+                            className="font-bold text-white text-sm hover:text-indigo-300 transition-colors cursor-pointer"
+                            title="Nomi tahrirlash uchun ikki marta bosing"
+                          >
+                            {link.title}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setInlineEditingTitleId(link.id);
+                              setInlineTitleValue(link.title);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-white transition-opacity"
+                            title="Nomini tahrirlash"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+
+                      {link.is_archived === 1 && (
+                        <Badge variant="warning" size="xs">
+                          Arxivlangan
+                        </Badge>
+                      )}
+                      {link.open_in_app === 1 && (
+                        <Badge variant="cyan" size="xs" icon={<Smartphone className="w-3 h-3" />}>
+                          Deep Link
+                        </Badge>
+                      )}
+                      {link.password && (
+                        <Badge variant="warning" size="xs" icon={<Shield className="w-3 h-3" />}>
+                          Parolli
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Short URL & External Target */}
+                    <div className="flex items-center gap-2 text-xs mb-1">
+                      <a
+                        href={`/${link.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors"
+                      >
+                        <span>{shortUrl}</span>
+                        <ExternalLink className="w-3 h-3 opacity-50" />
+                      </a>
+                    </div>
+
+                    <p className="text-[11px] text-slate-500 truncate max-w-lg mb-2">
+                      → {link.destination_url}
+                    </p>
+
+                    {/* Tags Inline Section */}
+                    <div className="flex items-center gap-1.5 flex-wrap my-1.5">
+                      {linkTags.map((tagItem: string) => (
+                        <span
+                          key={tagItem}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-800/80 text-zinc-300 text-[10px] font-mono border border-zinc-700/60 group"
+                        >
+                          <span>#{tagItem}</span>
+                          <button
+                            onClick={() => removeInlineTag(link.id, tagItem)}
+                            className="text-zinc-500 hover:text-rose-400 transition-colors"
+                            title="Tegni o‘chirish"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </span>
+                      ))}
+
+                      {/* Inline Add Tag Input / Button */}
+                      {isAddingTag ? (
+                        <div className="inline-flex items-center gap-1 animate-fade-in">
+                          <input
+                            type="text"
+                            value={inlineTagValue}
+                            onChange={(e) => setInlineTagValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') addInlineTag(link.id);
+                              if (e.key === 'Escape') setInlineTagId(null);
+                            }}
+                            autoFocus
+                            placeholder="teg nomi..."
+                            className="w-20 px-1.5 py-0.5 bg-zinc-900 border border-zinc-700 rounded text-[10px] text-white focus:outline-none font-mono"
+                          />
+                          <button
+                            onClick={() => addInlineTag(link.id)}
+                            className="p-0.5 rounded bg-white text-zinc-950 hover:bg-zinc-200"
+                          >
+                            <Check className="w-2.5 h-2.5" />
+                          </button>
+                          <button
+                            onClick={() => setInlineTagId(null)}
+                            className="p-0.5 rounded text-zinc-400 hover:text-white"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setInlineTagId(link.id);
+                            setInlineTagValue('');
+                          }}
+                          className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 text-[10px] font-mono border border-zinc-800 transition-colors"
+                        >
+                          <Plus className="w-2.5 h-2.5" />
+                          <span>Teg</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Metadata Footer */}
+                    <div className="flex items-center gap-4 text-[11px] text-zinc-500 mt-2">
+                      <span className="font-mono">{formatDate(link.created_at)}</span>
+                      <span className="text-zinc-700">•</span>
+                      <span className="text-zinc-200 font-medium font-mono tabular-nums">
+                        {formatNumber(link.click_count)} clicks
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions (One-click copy with distinct tactile feedback) */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => handleCopy(link.id, link.slug)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150 active:scale-95 ${
+                        isCopied
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-white hover:bg-zinc-200 text-zinc-950 border border-transparent'
+                      }`}
+                      title="Havolani nusxalash"
+                    >
+                      {isCopied ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                      <span className="hidden sm:inline font-mono">{isCopied ? 'Copied' : 'Copy'}</span>
+                    </button>
+
+                    {/* QR Button */}
+                    <button
+                      onClick={() => setActiveQrLink(link)}
+                      className="p-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition-colors"
+                      title="QR Kod"
+                    >
+                      <QrCode className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Archive Toggle Button */}
+                    <button
+                      onClick={() => handleToggleArchive(link.id, link.is_archived)}
+                      className="p-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition-colors"
+                      title={link.is_archived === 1 ? 'Qayta tiklash' : 'Arxivlash'}
+                    >
+                      {link.is_archived === 1 ? (
+                        <ArchiveRestore className="w-3.5 h-3.5 text-amber-400" />
+                      ) : (
+                        <Archive className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+
+                    {/* Delete Single Button */}
+                    <button
+                      onClick={() => handleDelete(link.id)}
+                      className="p-1.5 rounded-md bg-zinc-900 hover:bg-rose-500/10 text-zinc-400 hover:text-rose-400 border border-zinc-800 hover:border-rose-500/20 transition-colors"
+                      title="O‘chirish"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          /* Empty State (Senior Linear Design Standard) */
+          <div className="p-10 rounded-xl bg-zinc-900/40 border border-zinc-800 text-center">
+            <div className="w-12 h-12 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 flex items-center justify-center mx-auto mb-3.5 shadow-sm">
+              <Link2 className="w-5 h-5 text-zinc-300" />
+            </div>
+            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono text-zinc-500 bg-zinc-900 border border-zinc-800 mb-2">
+              STATUS // NO_RECORDS_FOUND
+            </span>
+            <h3 className="text-sm font-semibold text-white mb-1">
+              {search || statusFilter !== 'all' || selectedTag
+                ? 'Filtrlar bo‘yicha havola topilmadi'
+                : 'Hali hech qanday qisqa havola yaratilmagan'}
+            </h3>
+            <p className="text-xs text-zinc-400 mb-5 max-w-sm mx-auto leading-relaxed">
+              {search || statusFilter !== 'all' || selectedTag
+                ? 'Qidiruv so‘rovi yoki holat filtrini tozalab qayta urinib ko‘ring.'
+                : 'Birinchi qisqa havolangizni yarating. Global hotkey: C tugmasini bosing.'}
+            </p>
+            <div className="flex items-center justify-center gap-2">
+              {search || statusFilter !== 'all' || selectedTag ? (
+                <button
+                  onClick={() => {
+                    setSearch('');
+                    setStatusFilter('all');
+                    setSelectedTag(null);
+                  }}
+                  className="px-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-mono transition-colors"
+                >
+                  Filtrlarni tozalash
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new CustomEvent('open-create-link'));
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-semibold transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Yangi havola yaratish</span>
+                  <kbd className="ml-1 px-1 py-0.2 bg-zinc-200 text-[10px] rounded font-mono">C</kbd>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Batch Tagging Modal */}
+      {showBatchTagModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+            onClick={() => setShowBatchTagModal(false)}
+          />
+          <div className="relative w-full max-w-sm bg-[var(--surface-0)] border border-[var(--border-default)] rounded-2xl p-6 z-10 shadow-2xl animate-scale-in">
+            <h3 className="text-base font-bold text-white mb-1">Teg qo‘shish</h3>
+            <p className="text-xs text-slate-400 mb-4">
+              Tanlangan {selectedIds.size} ta havolaga teg biriktirish:
+            </p>
+            <input
+              type="text"
+              value={batchTagInput}
+              onChange={(e) => setBatchTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') applyBatchTag();
+              }}
+              placeholder="masalan: marketing, promo, telegram"
+              autoFocus
+              className="w-full px-3.5 py-2.5 bg-[var(--surface-1)] border border-[var(--border-default)] rounded-xl text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 mb-4"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowBatchTagModal(false)}
+                className="px-4 py-2 text-xs text-slate-400 hover:text-white"
+              >
+                Bekor
+              </button>
+              <button
+                type="button"
+                onClick={applyBatchTag}
+                className="px-4 py-2 bg-gradient-btn text-white text-xs font-semibold rounded-xl"
+              >
+                Tegni qo‘llash
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR Modal with PNG/SVG/PDF Export */}
       {activeQrLink && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setActiveQrLink(null)} />
-          <div className="relative w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 z-10 text-center shadow-2xl">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+            onClick={() => setActiveQrLink(null)}
+          />
+          <div className="relative w-full max-w-sm bg-[var(--surface-0)] border border-[var(--border-default)] rounded-2xl p-6 z-10 text-center shadow-2xl animate-scale-in">
             <h3 className="text-base font-bold text-white mb-1">{activeQrLink.title}</h3>
-            <p className="text-xs text-slate-400 mb-4">urls.uz/{activeQrLink.slug}</p>
-            <QrCanvas
-              url={`${typeof window !== 'undefined' ? window.location.origin : 'https://urls.uz'}/${activeQrLink.slug}`}
-              size={240}
-              fgColor="#0f172a"
-              bgColor="#ffffff"
-              centerLogo={activeQrLink.open_in_app ? 'telegram' : 'none'}
-              frameText={activeQrLink.title}
-              frameStyle="bottom"
-            />
+            <p className="text-xs text-slate-400 mb-4 font-mono">urls.uz/{activeQrLink.slug}</p>
+            <div className="flex justify-center p-4 bg-white rounded-xl shadow-inner">
+              <QrCanvas
+                url={`${typeof window !== 'undefined' ? window.location.origin : 'https://urls.uz'}/${activeQrLink.slug}`}
+                size={220}
+                fgColor="#0f172a"
+                bgColor="#ffffff"
+                centerLogo={activeQrLink.open_in_app ? 'telegram' : 'none'}
+                frameText={activeQrLink.title}
+                frameStyle="bottom"
+              />
+            </div>
             <button
               onClick={() => setActiveQrLink(null)}
-              className="mt-4 px-4 py-1.5 text-xs text-slate-400 hover:text-white"
+              className="mt-4 px-4 py-2 text-xs font-medium text-slate-400 hover:text-white transition-colors"
             >
               Yopish
             </button>
           </div>
         </div>
       )}
-
-      {/* Edit Link Modal */}
-      {editingLink && (
-        <Modal isOpen={!!editingLink} onClose={() => setEditingLink(null)} title="Havolani tahrirlash">
-          <form onSubmit={handleSaveEdit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Havola nomi</label>
-              <input
-                type="text"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                required
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Asosiy manzil URL</label>
-              <input
-                type="text"
-                value={editDestination}
-                onChange={(e) => setEditDestination(e.target.value)}
-                required
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs"
-              />
-            </div>
-
-            <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between">
-              <div>
-                <div className="text-xs font-semibold text-white">Smart Deep Link</div>
-                <div className="text-[10px] text-slate-400">Telegram va Instagramda darhol ochish</div>
-              </div>
-              <input
-                type="checkbox"
-                checked={editOpenInApp}
-                onChange={(e) => setEditOpenInApp(e.target.checked)}
-                className="w-4 h-4 rounded text-indigo-600 bg-slate-900 border-slate-700"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Parol (ixtiyoriy)</label>
-              <input
-                type="text"
-                value={editPassword}
-                onChange={(e) => setEditPassword(e.target.value)}
-                placeholder="Parol qo‘yish yoki olib tashlash..."
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => setEditingLink(null)}
-                className="px-4 py-2 text-xs text-slate-400 hover:text-white"
-              >
-                Bekor qilish
-              </button>
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="px-5 py-2 bg-gradient-btn text-white text-xs font-semibold rounded-xl"
-              >
-                {isSaving ? 'Saqlanmoqda...' : 'Saqlash'}
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
-
-      {/* Create Modal */}
-      <CreateLinkModal
-        isOpen={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onCreated={refreshLinks}
-      />
     </div>
   );
 }

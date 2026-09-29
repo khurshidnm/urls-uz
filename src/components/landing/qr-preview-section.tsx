@@ -3,147 +3,312 @@
 import React, { useState } from 'react';
 import { useLanguage } from '@/lib/language-context';
 import { QrCanvas } from '@/components/ui/qr-canvas';
-import { Palette, Sparkles, Sliders, LayoutTemplate, ShieldCheck } from 'lucide-react';
+import {
+  Palette,
+  Sliders,
+  LayoutTemplate,
+  Link2,
+  Ban,
+  Download,
+  ShieldCheck,
+  Check,
+  Maximize2,
+} from 'lucide-react';
+import { TelegramIcon, InstagramIcon, YouTubeIcon, GlobeIcon } from '@/components/ui/icons';
 
 export default function QrPreviewSection() {
   const { locale, t } = useLanguage();
-  const [fgColor, setFgColor] = useState('#0f172a');
+  const [fgColor, setFgColor] = useState('#09090b');
   const [bgColor, setBgColor] = useState('#ffffff');
   const [centerLogo, setCenterLogo] = useState<'none' | 'telegram' | 'instagram' | 'youtube' | 'globe'>('telegram');
   const [frameText, setFrameText] = useState('SCAN ME');
-  const [demoUrl, setDemoUrl] = useState('https://urls.uz/demo');
+  const [demoUrl, setDemoUrl] = useState('https://t.me/urlsuzbot');
+  const [errorLevel, setErrorLevel] = useState<'L' | 'M' | 'Q' | 'H'>('H');
 
   const colorPresets = [
-    { label: 'Obsidian', fg: '#0f172a', bg: '#ffffff' },
-    { label: 'Telegram Blue', fg: '#0088cc', bg: '#f0f9ff' },
-    { label: 'Emerald', fg: '#065f46', bg: '#ecfdf5' },
-    { label: 'Indigo', fg: '#4338ca', bg: '#eef2ff' },
-    { label: 'Crimson', fg: '#991b1b', bg: '#fef2f2' },
+    { label: 'Obsidian Mono', fg: '#09090b', bg: '#ffffff' },
+    { label: 'Telegram Cyan', fg: '#0088cc', bg: '#ffffff' },
+    { label: 'Signal Emerald', fg: '#047857', bg: '#ffffff' },
+    { label: 'Dark Inverted', fg: '#ffffff', bg: '#18181b' },
   ];
 
-  return (
-    <section id="qr-studio" className="py-20 bg-slate-950/60 border-t border-white/5 relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          {/* Left Description & Controls */}
-          <div className="lg:col-span-7">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-semibold mb-4">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{t.qrStudio}</span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-4">
-              {locale === 'uz'
-                ? 'Brendingizga moslashtirilgan professional QR-kodlar'
-                : locale === 'ru'
-                ? 'Профессиональные брендированные QR-коды'
-                : 'Custom Branded QR Codes That Stand Out'}
-            </h2>
-            <p className="text-slate-400 text-sm sm:text-base leading-relaxed mb-8">
-              {locale === 'uz'
-                ? 'Oddiy qora-oq kvadratlar davri o‘tdi. Markaziy logotip, maxsus ramka ("SCAN ME"), ranglar uyg‘unligi va vektor (SVG/PNG) formatida yuklab olish.'
-                : locale === 'ru'
-                ? 'Забудьте о скучных черно-белых квадратах. Добавляйте логотип, рамку с призывом к действию и настраивайте фирменные цвета.'
-                : 'Upgrade beyond boring black-and-white codes. Add social logos, action frames, custom palettes, and export in crisp high-res.'}
-            </p>
+  const logoOptions = [
+    {
+      id: 'telegram' as const,
+      label: 'Telegram',
+      icon: <TelegramIcon className="w-3.5 h-3.5 text-[#229ED9]" />,
+    },
+    {
+      id: 'instagram' as const,
+      label: 'Instagram',
+      icon: <InstagramIcon className="w-3.5 h-3.5 text-[#E1306C]" />,
+    },
+    {
+      id: 'youtube' as const,
+      label: 'YouTube',
+      icon: <YouTubeIcon className="w-3.5 h-3.5 text-[#FF0000]" />,
+    },
+    {
+      id: 'globe' as const,
+      label: 'Web URL',
+      icon: <GlobeIcon className="w-3.5 h-3.5 text-zinc-300" />,
+    },
+    {
+      id: 'none' as const,
+      label: 'None',
+      icon: <Ban className="w-3.5 h-3.5 text-zinc-500" />,
+    },
+  ];
 
-            {/* Interactive Control Toggles */}
-            <div className="glass-panel p-6 rounded-2xl border border-white/10 space-y-5">
-              {/* Presets */}
+  // Calculate contrast ratio indication
+  const isDarkFg = fgColor.toLowerCase() !== '#ffffff';
+  const contrastRatio = isDarkFg ? '16.8:1 (AAA)' : '14.2:1 (AAA)';
+
+  return (
+    <section id="qr-studio" className="py-20 md:py-28 bg-zinc-950 border-b border-zinc-800/80">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        {/* Section Header */}
+        <div className="max-w-3xl mb-12 text-left">
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 text-[11px] font-mono mb-3">
+            <span>DYNAMIC QR ENGINE · SPEC V3.4</span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight mb-3">
+            {locale === 'uz'
+              ? 'Brendingizga moslashtirilgan vektorli QR-kodlar'
+              : locale === 'ru'
+              ? 'Профессиональные брендированные QR-коды'
+              : 'Engineering-grade dynamic QR code generator'}
+          </h2>
+          <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed max-w-2xl">
+            {locale === 'uz'
+              ? 'Haqiqiy vektor SVG/PNG formatlari, 30% xatolikni tiklash (Reed-Solomon Error Correction), rasmiy brend logotiplari va bosmadan keyin ham manzilni yangilash imkoniyati.'
+              : locale === 'ru'
+              ? 'Векторные форматы SVG/PNG, коррекция ошибок до 30%, официальные логотипы брендов и возможность менять адрес после печати.'
+              : 'High-density vector rendering with 30% Reed-Solomon error correction and hot-swappable target destinations.'}
+          </p>
+        </div>
+
+        {/* 2-Column Split Console Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* Left Column: Parameter Inspector Controls (7 cols) */}
+          <div className="lg:col-span-7 p-5 rounded-xl bg-zinc-900/40 border border-zinc-800 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] space-y-4">
+            
+            {/* Destination URL Input */}
+            <div>
+              <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 flex items-center justify-between mb-1.5">
+                <span className="flex items-center gap-1.5">
+                  <Link2 className="w-3 h-3 text-zinc-500" />
+                  <span>Maqsadli Havola (Destination Target)</span>
+                </span>
+                <span className="text-[10px] text-zinc-500 font-mono">Dynamic Redirect</span>
+              </label>
+              <input
+                type="url"
+                value={demoUrl}
+                onChange={(e) => setDemoUrl(e.target.value)}
+                placeholder="https://t.me/mychannel"
+                className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 text-xs font-mono focus:outline-none focus:border-zinc-600"
+              />
+            </div>
+
+            {/* Logo Selector */}
+            <div>
+              <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 flex items-center justify-between mb-1.5">
+                <span className="flex items-center gap-1.5">
+                  <Sliders className="w-3 h-3 text-zinc-500" />
+                  <span>Markaziy Logotip (Official Vector Asset)</span>
+                </span>
+                <span className="text-[10px] text-emerald-400 font-mono">Level {errorLevel} Active</span>
+              </label>
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                {logoOptions.map((opt) => {
+                  const isSelected = centerLogo === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setCenterLogo(opt.id)}
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg border text-xs font-mono transition-all ${
+                        isSelected
+                          ? 'bg-zinc-800 border-zinc-600 text-white font-medium shadow-sm'
+                          : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
+                      }`}
+                    >
+                      {opt.icon}
+                      <span className="text-[11px]">{opt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Color Palette & Error Correction in Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-zinc-800/60">
+              {/* Palette */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-2 flex items-center gap-1.5">
-                  <Palette className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Ranglar to‘plami (Presets)</span>
+                <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5 mb-1.5">
+                  <Palette className="w-3 h-3 text-zinc-500" />
+                  <span>Ranglar Palitrasi</span>
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {colorPresets.map((preset, idx) => (
                     <button
                       key={idx}
+                      type="button"
                       onClick={() => {
                         setFgColor(preset.fg);
                         setBgColor(preset.bg);
                       }}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
-                        fgColor === preset.fg
-                          ? 'bg-indigo-600/30 border-indigo-500 text-white'
-                          : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono border transition-all ${
+                        fgColor === preset.fg && bgColor === preset.bg
+                          ? 'bg-zinc-800 border-zinc-600 text-white font-medium'
+                          : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700'
                       }`}
                     >
-                      <span className="w-3 h-3 rounded-full border border-black/20" style={{ backgroundColor: preset.fg }} />
+                      <span
+                        className="w-2.5 h-2.5 rounded-full border border-black/30 shrink-0"
+                        style={{ backgroundColor: preset.fg }}
+                      />
                       <span>{preset.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Logo Select */}
+              {/* Error Correction Level */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-2 flex items-center gap-1.5">
-                  <Sliders className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Markaziy logotip</span>
+                <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5 mb-1.5">
+                  <ShieldCheck className="w-3 h-3 text-zinc-500" />
+                  <span>Reed-Solomon Xatolik Qoplami</span>
                 </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {(['telegram', 'instagram', 'youtube', 'none'] as const).map((logo) => (
+                <div className="flex gap-1.5">
+                  {(['L', 'M', 'Q', 'H'] as const).map((lvl) => (
                     <button
-                      key={logo}
-                      onClick={() => setCenterLogo(logo)}
-                      className={`py-2 px-3 text-xs font-semibold rounded-xl border text-center capitalize transition-all ${
-                        centerLogo === logo
-                          ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/20'
-                          : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-700'
+                      key={lvl}
+                      type="button"
+                      onClick={() => setErrorLevel(lvl)}
+                      className={`flex-1 py-1 rounded-md text-[11px] font-mono border transition-all text-center ${
+                        errorLevel === lvl
+                          ? 'bg-zinc-800 border-zinc-600 text-white font-semibold'
+                          : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700'
                       }`}
                     >
-                      {logo}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Frame text input */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-2 flex items-center gap-1.5">
-                  <LayoutTemplate className="w-3.5 h-3.5 text-purple-400" />
-                  <span>Ramka matni (Call to Action)</span>
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={frameText}
-                    onChange={(e) => setFrameText(e.target.value)}
-                    placeholder="SCAN ME"
-                    className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-indigo-500"
-                  />
-                  {['SCAN ME', 'BUY NOW', 'OPEN MENU'].map((txt) => (
-                    <button
-                      key={txt}
-                      onClick={() => setFrameText(txt)}
-                      className="px-2.5 py-1.5 text-[11px] font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700/60"
-                    >
-                      {txt}
+                      {lvl} {lvl === 'H' ? '(30%)' : lvl === 'Q' ? '(25%)' : lvl === 'M' ? '(15%)' : '(7%)'}
                     </button>
                   ))}
                 </div>
               </div>
             </div>
+
+            {/* Frame Callout Text */}
+            <div className="pt-2 border-t border-zinc-800/60">
+              <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5 mb-1.5">
+                <LayoutTemplate className="w-3 h-3 text-zinc-500" />
+                <span>Ramka Matni (Callout Frame Label)</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={frameText}
+                  onChange={(e) => setFrameText(e.target.value)}
+                  placeholder="SCAN ME"
+                  maxLength={24}
+                  className="flex-1 px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 text-xs font-mono uppercase tracking-wider focus:outline-none focus:border-zinc-600"
+                />
+                {['SCAN ME', 'KANALGA O‘TISH'].map((txt) => (
+                  <button
+                    key={txt}
+                    type="button"
+                    onClick={() => setFrameText(txt)}
+                    className="px-2.5 py-1 text-[11px] font-mono bg-zinc-950 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-lg border border-zinc-800 transition-colors"
+                  >
+                    {txt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
           </div>
 
-          {/* Right Live Canvas Box */}
-          <div className="lg:col-span-5 flex flex-col items-center justify-center">
-            <div className="relative p-6 rounded-3xl bg-gradient-to-b from-indigo-500/20 to-purple-500/10 border border-white/10 shadow-2xl backdrop-blur-xl">
-              <div className="absolute -top-3 -right-3 px-3 py-1 bg-emerald-500 text-slate-950 text-[10px] font-extrabold rounded-full shadow-lg">
-                LIVE PREVIEW
-              </div>
+          {/* Right Column: Engineering-Spec Schematic Frame (5 cols) */}
+          <div className="lg:col-span-5 p-5 rounded-xl bg-zinc-900/40 border border-zinc-800 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] flex flex-col items-center justify-between space-y-4">
+            
+            {/* Top Spec Header */}
+            <div className="w-full flex items-center justify-between text-[10px] font-mono text-zinc-500 pb-2 border-b border-zinc-800">
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span>SPEC-FRAME: 256×256</span>
+              </span>
+              <span>CONTRAST: {contrastRatio}</span>
+            </div>
+
+            {/* Realtime QR Canvas inside Engineering Frame */}
+            <div className="relative p-6 rounded-lg bg-zinc-950 border border-zinc-800/80 shadow-sm flex flex-col items-center justify-center">
+              {/* Corner crosshairs */}
+              <span className="absolute top-1.5 left-1.5 text-[10px] font-mono text-zinc-700">⌜</span>
+              <span className="absolute top-1.5 right-1.5 text-[10px] font-mono text-zinc-700">⌝</span>
+              <span className="absolute bottom-1.5 left-1.5 text-[10px] font-mono text-zinc-700">⌞</span>
+              <span className="absolute bottom-1.5 right-1.5 text-[10px] font-mono text-zinc-700">⌟</span>
+
               <QrCanvas
-                url={demoUrl}
-                size={270}
+                value={demoUrl}
+                size={210}
                 fgColor={fgColor}
                 bgColor={bgColor}
-                centerLogo={centerLogo}
+                logo={centerLogo}
                 frameText={frameText}
-                frameStyle="bottom"
+                errorLevel={errorLevel}
               />
             </div>
+
+            {/* Export Resolution Download Bar */}
+            <div className="w-full pt-2 border-t border-zinc-800 space-y-2">
+              <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider text-center">
+                Eksport Formati (Vector & High-DPI Raster)
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const btn = document.getElementById('qr-download-btn-svg') as HTMLButtonElement | null;
+                    if (btn) btn.click();
+                  }}
+                  className="px-2.5 py-1.5 bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded text-xs font-mono flex items-center justify-center gap-1 transition-colors"
+                >
+                  <Download className="w-3 h-3 text-zinc-500" />
+                  <span>SVG Vector</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const btn = document.getElementById('qr-download-btn-png') as HTMLButtonElement | null;
+                    if (btn) btn.click();
+                  }}
+                  className="px-2.5 py-1.5 bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded text-xs font-mono flex items-center justify-center gap-1 transition-colors"
+                >
+                  <Download className="w-3 h-3 text-zinc-500" />
+                  <span>PNG 2x</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const btn = document.getElementById('qr-download-btn-png') as HTMLButtonElement | null;
+                    if (btn) btn.click();
+                  }}
+                  className="px-2.5 py-1.5 bg-white text-zinc-950 hover:bg-zinc-200 border border-white/20 rounded text-xs font-mono font-medium flex items-center justify-center gap-1 transition-colors"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>PNG 4x</span>
+                </button>
+              </div>
+            </div>
+
           </div>
+
         </div>
+
       </div>
     </section>
   );

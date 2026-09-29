@@ -2,10 +2,11 @@ import React from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { db } from '@/lib/db';
-import { detectAndBuildDeepLink } from '@/lib/deep-link';
+import { detectAndBuildDeepLink, resolveDeviceRedirect } from '@/lib/deep-link';
 import { resolveRegionFromHeaders } from '@/lib/geo';
+import { isReservedSlug, appendUtmParams } from '@/lib/utils';
 import { UAParser } from 'ua-parser-js';
-import { Lock, AlertCircle, ExternalLink, Smartphone } from 'lucide-react';
+import { Lock, AlertCircle, ArrowLeft } from 'lucide-react';
 import PasswordUnlockForm from './password-form';
 import DeepLinkRedirector from './deep-link-redirector';
 
@@ -16,8 +17,8 @@ interface Props {
 export default async function SlugRedirectPage({ params }: Props) {
   const { slug } = await params;
 
-  // Reserved paths guard
-  if (['dashboard', 'api', 'b', 'favicon.ico', '_next'].includes(slug)) {
+  // Reserved paths guard (e.g. /api, /dashboard, /login, /settings, /bio, etc.)
+  if (isReservedSlug(slug) || ['favicon.ico', '_next', 'robots.txt'].includes(slug)) {
     notFound();
   }
 
@@ -30,20 +31,24 @@ export default async function SlugRedirectPage({ params }: Props) {
   // 1. Check expiration
   if (link.expires_at && new Date(link.expires_at) < new Date()) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-        <div className="max-w-md w-full glass-panel rounded-2xl p-8 text-center border border-slate-800">
-          <div className="w-14 h-14 bg-amber-500/10 text-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
-            <AlertCircle className="w-7 h-7" />
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-zinc-900/90 rounded-xl p-8 text-center border border-zinc-800 shadow-xl">
+          <div className="w-12 h-12 bg-amber-500/10 text-amber-400 rounded-lg flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
+            <AlertCircle className="w-6 h-6" />
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">Havola muddati tugagan</h2>
-          <p className="text-slate-400 text-sm mb-6">
+          <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-mono font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 mb-3">
+            STATUS // EXPIRED_LINK
+          </span>
+          <h2 className="text-lg font-semibold text-white mb-2 tracking-tight">Havola muddati tugagan</h2>
+          <p className="text-zinc-400 text-xs mb-6 leading-relaxed">
             Ushbu qisqa havolaning amal qilish muddati o‘tib ketgan. Yangi maʼlumot olish uchun havola egasi bilan bog‘laning.
           </p>
           <a
             href="/"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-medium transition-colors"
           >
-            urls.uz Bosh sahifasiga qaytish
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>urls.uz Bosh sahifasi</span>
           </a>
         </div>
       </div>
@@ -53,20 +58,24 @@ export default async function SlugRedirectPage({ params }: Props) {
   // 2. Check click limit
   if (link.click_limit && link.click_count >= link.click_limit) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-        <div className="max-w-md w-full glass-panel rounded-2xl p-8 text-center border border-slate-800">
-          <div className="w-14 h-14 bg-rose-500/10 text-rose-400 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-rose-500/20">
-            <AlertCircle className="w-7 h-7" />
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-zinc-900/90 rounded-xl p-8 text-center border border-zinc-800 shadow-xl">
+          <div className="w-12 h-12 bg-rose-500/10 text-rose-400 rounded-lg flex items-center justify-center mx-auto mb-4 border border-rose-500/20">
+            <AlertCircle className="w-6 h-6" />
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">Bosishlar limiti tugagan</h2>
-          <p className="text-slate-400 text-sm mb-6">
+          <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-mono font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20 mb-3">
+            STATUS // CLICK_LIMIT_REACHED
+          </span>
+          <h2 className="text-lg font-semibold text-white mb-2 tracking-tight">Bosishlar limiti tugagan</h2>
+          <p className="text-zinc-400 text-xs mb-6 leading-relaxed">
             Ushbu havola uchun ajratilgan maksimal tashriflar soniga yetib bo‘lingan.
           </p>
           <a
             href="/"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-medium transition-colors"
           >
-            urls.uz Bosh sahifasiga qaytish
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>urls.uz Bosh sahifasi</span>
           </a>
         </div>
       </div>
@@ -76,15 +85,20 @@ export default async function SlugRedirectPage({ params }: Props) {
   // 3. Password protection
   if (link.password) {
     return (
-      <div className="min-h-screen bg-mesh flex items-center justify-center p-4">
-        <div className="max-w-md w-full glass-panel rounded-2xl p-8 border border-white/10 shadow-2xl">
-          <div className="w-14 h-14 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-indigo-500/20">
-            <Lock className="w-7 h-7" />
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-zinc-900/90 rounded-xl p-8 border border-zinc-800 shadow-xl">
+          <div className="w-12 h-12 bg-zinc-800 text-zinc-200 rounded-lg flex items-center justify-center mx-auto mb-4 border border-zinc-700">
+            <Lock className="w-6 h-6" />
           </div>
-          <h2 className="text-xl font-bold text-white text-center mb-1">Havola parol bilan himoyalangan</h2>
-          <p className="text-slate-400 text-sm text-center mb-6">
-            Manzilga o‘tish uchun belgilangan parolni kiriting.
-          </p>
+          <div className="text-center mb-6">
+            <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-mono font-medium bg-zinc-800 text-zinc-300 border border-zinc-700 mb-2">
+              AUTH // SECURED_REDIRECT
+            </span>
+            <h2 className="text-lg font-semibold text-white tracking-tight">Havola parol bilan himoyalangan</h2>
+            <p className="text-zinc-400 text-xs mt-1">
+              Manzilga xavfsiz o‘tish uchun belgilangan parolni kiriting.
+            </p>
+          </div>
           <PasswordUnlockForm slug={slug} destinationUrl={link.destination_url} />
         </div>
       </div>
@@ -103,38 +117,44 @@ export default async function SlugRedirectPage({ params }: Props) {
 
   const geoInfo = resolveRegionFromHeaders(headerList);
 
-  // Record click in database
-  db.recordClick({
-    link_id: link.id,
-    referer: refererStr.includes('t.me') ? 'Telegram' : refererStr.includes('instagram') ? 'Instagram' : refererStr.includes('google') ? 'Google' : 'Direct',
-    country: geoInfo.country,
-    region: geoInfo.region,
-    city: geoInfo.city,
-    device_type: deviceType,
-    os: osName,
-    browser: browserName,
-  });
-
-  // 5. Device targeting routing
-  let targetUrl = link.destination_url;
-  if (osName.toLowerCase().includes('ios') && link.ios_url) {
-    targetUrl = link.ios_url;
-  } else if (osName.toLowerCase().includes('android') && link.android_url) {
-    targetUrl = link.android_url;
-  }
-
-  // Append UTM parameters if defined
+  // 4. Analytics Async Isolation: Tracking failures must never interrupt the redirect flow
   try {
-    const urlObj = new URL(targetUrl);
-    if (link.utm_source) urlObj.searchParams.set('utm_source', link.utm_source);
-    if (link.utm_medium) urlObj.searchParams.set('utm_medium', link.utm_medium);
-    if (link.utm_campaign) urlObj.searchParams.set('utm_campaign', link.utm_campaign);
-    if (link.utm_term) urlObj.searchParams.set('utm_term', link.utm_term);
-    if (link.utm_content) urlObj.searchParams.set('utm_content', link.utm_content);
-    targetUrl = urlObj.toString();
-  } catch {
-    // If invalid URL, keep targetUrl
+    db.recordClick({
+      link_id: link.id,
+      referer: refererStr.includes('t.me') ? 'Telegram' : refererStr.includes('instagram') ? 'Instagram' : refererStr.includes('google') ? 'Google' : 'Direct',
+      country: geoInfo.country,
+      region: geoInfo.region,
+      city: geoInfo.city,
+      device_type: deviceType,
+      os: osName,
+      browser: browserName,
+    });
+  } catch (trackingErr) {
+    // Non-fatal telemetry failure log; client redirect proceeds unaffected
+    console.error('[Analytics Async Isolation] Telemetry warning:', trackingErr);
   }
+
+  // 5. Intelligent Device Routing (iOS, Huawei, Android, Desktop, Fallback)
+  const deviceResolution = resolveDeviceRedirect(
+    {
+      destination_url: link.destination_url,
+      ios_url: link.ios_url,
+      android_url: link.android_url,
+      huawei_url: link.huawei_url,
+      desktop_url: link.desktop_url,
+    },
+    userAgentStr,
+    osName
+  );
+
+  // 6. UTM Parameter Integrity: Append query parameters while preserving any existing ones
+  const targetUrl = appendUtmParams(deviceResolution.targetUrl, {
+    source: link.utm_source,
+    medium: link.utm_medium,
+    campaign: link.utm_campaign,
+    term: link.utm_term,
+    content: link.utm_content,
+  });
 
   // 6. Smart deep link detection
   const deepLink = detectAndBuildDeepLink(targetUrl);
@@ -145,10 +165,11 @@ export default async function SlugRedirectPage({ params }: Props) {
         deepLink={deepLink}
         title={link.title}
         targetUrl={targetUrl}
+        matchedDevice={deviceResolution.matchedRule}
       />
     );
   }
 
-  // Direct fast redirect (sub-30ms)
+  // Direct fast HTTP 307 redirect (sub-15ms)
   redirect(targetUrl);
 }

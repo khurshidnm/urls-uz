@@ -1,27 +1,31 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Smartphone, ExternalLink, ArrowRight } from 'lucide-react';
+import { Smartphone, ExternalLink, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { DeepLinkResult } from '@/lib/deep-link';
 
 interface DeepLinkRedirectorProps {
   deepLink: DeepLinkResult;
   title: string;
   targetUrl: string;
+  matchedDevice?: 'ios' | 'android' | 'huawei' | 'desktop' | 'fallback';
 }
 
 export default function DeepLinkRedirector({
   deepLink,
   title,
   targetUrl,
+  matchedDevice = 'fallback',
 }: DeepLinkRedirectorProps) {
   const [seconds, setSeconds] = useState(2);
+  const [schemeFired, setSchemeFired] = useState(false);
 
   useEffect(() => {
     // Attempt automatic scheme opening
     const timer = setTimeout(() => {
       window.location.href = deepLink.nativeScheme;
-    }, 400);
+      setSchemeFired(true);
+    }, 300);
 
     const countdown = setInterval(() => {
       setSeconds((prev) => {
@@ -40,47 +44,65 @@ export default function DeepLinkRedirector({
   }, [deepLink.nativeScheme]);
 
   return (
-    <div className="min-h-screen bg-mesh flex items-center justify-center p-4">
-      <div className="max-w-md w-full glass-panel rounded-3xl p-8 border border-white/10 shadow-2xl text-center">
-        {/* Animated App Icon Glow */}
-        <div className="relative mx-auto w-20 h-20 mb-6">
-          <div className="absolute inset-0 bg-indigo-500/20 rounded-2xl blur-xl animate-pulse" />
-          <div className="relative w-full h-full bg-slate-900 border border-indigo-500/30 rounded-2xl flex items-center justify-center shadow-lg">
-            <Smartphone className="w-10 h-10 text-indigo-400" />
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-zinc-900/90 rounded-xl p-6 sm:p-8 border border-zinc-800 shadow-xl text-center">
+        {/* Engineering Indicator */}
+        <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 mb-6 pb-3 border-b border-zinc-800">
+          <span className="flex items-center gap-1.5 text-emerald-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            ENGINE // SMART_DISPATCH
+          </span>
+          <span className="uppercase text-zinc-400">DEVICE: {matchedDevice}</span>
+        </div>
+
+        {/* App Icon Node */}
+        <div className="relative mx-auto w-16 h-16 mb-5">
+          <div className="w-full h-full bg-zinc-950 border border-zinc-700 rounded-xl flex items-center justify-center shadow-md">
+            <Smartphone className="w-8 h-8 text-white" />
           </div>
         </div>
 
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold mb-3">
-          <span>Smart Deep Link</span>
-        </div>
-
-        <h2 className="text-xl font-bold text-white mb-2">{title}</h2>
-        <p className="text-slate-400 text-sm mb-6">
-          {deepLink.appName} ilovasi ochilmoqda... Agar avtomatik ochilmasa, quyidagi tugmani bosing.
+        <h2 className="text-base sm:text-lg font-semibold text-white mb-1 tracking-tight">{title}</h2>
+        <p className="text-zinc-400 text-xs mb-4">
+          <span className="text-zinc-200 font-medium">{deepLink.appName}</span> ilovasi ochilmoqda... Agar ilova avtomatik ochilmasa, pastdagi tugmani bosing.
         </p>
 
+        {/* Monospace Deep Link Scheme Preview */}
+        <div className="p-2.5 bg-zinc-950 rounded-lg border border-zinc-800 text-left mb-5">
+          <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 mb-1">
+            <span>TARGET_SCHEME</span>
+            <span>{seconds > 0 ? `AUTO_FIRE IN ${seconds}s` : 'DISPATCHED'}</span>
+          </div>
+          <code className="text-[11px] font-mono text-zinc-300 break-all select-all">
+            {deepLink.nativeScheme}
+          </code>
+        </div>
+
         {/* Action Buttons */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           <a
             href={deepLink.nativeScheme}
-            className="w-full flex items-center justify-center gap-2 py-3 px-5 bg-gradient-btn text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all text-sm"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-white hover:bg-zinc-200 text-zinc-950 font-medium rounded-lg transition-colors text-xs"
           >
             <span>{deepLink.appName} ilovasida ochish</span>
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-3.5 h-3.5" />
           </a>
 
           <a
             href={targetUrl}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 font-medium rounded-xl border border-slate-700/60 transition-colors text-xs"
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-zinc-950 hover:bg-zinc-800 text-zinc-400 hover:text-white font-medium rounded-lg border border-zinc-800 transition-colors text-xs font-mono"
           >
-            <ExternalLink className="w-3.5 h-3.5" />
-            <span>Brauzerda davom etish</span>
+            <ExternalLink className="w-3 h-3" />
+            <span>Brauzer orqali davom etish</span>
           </a>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-center gap-1.5 text-xs text-slate-500">
-          <span>Quvvatlanadi:</span>
-          <span className="font-semibold text-slate-400">urls.uz</span>
+        <div className="mt-6 pt-4 border-t border-zinc-800/80 flex items-center justify-between text-[11px] font-mono text-zinc-500">
+          <span className="flex items-center gap-1">
+            <ShieldCheck className="w-3 h-3 text-emerald-400" />
+            <span>Anti-Phishing Verified</span>
+          </span>
+          <span className="text-zinc-400">urls.uz engine</span>
         </div>
       </div>
     </div>

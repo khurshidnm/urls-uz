@@ -2,6 +2,7 @@ import Navbar from '@/components/landing/navbar';
 import Hero from '@/components/landing/hero';
 import StatsBand from '@/components/landing/stats-band';
 import Features from '@/components/landing/features';
+import SmartDeepLinkSection from '@/components/landing/smart-deep-link-section';
 import QrPreviewSection from '@/components/landing/qr-preview-section';
 import BioPreviewSection from '@/components/landing/bio-preview-section';
 import PricingSection from '@/components/landing/pricing-section';
@@ -14,6 +15,7 @@ export default function HomePage() {
       <Hero />
       <StatsBand />
       <Features />
+      <SmartDeepLinkSection />
       <QrPreviewSection />
       <BioPreviewSection />
       <PricingSection />

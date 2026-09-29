@@ -1,44 +1,90 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import confetti from 'canvas-confetti';
-import { Link2, ArrowRight, Copy, Check, QrCode, Smartphone, Sparkles, ExternalLink, ShieldCheck, Lock, UserCheck } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import {
+  Link2,
+  ArrowRight,
+  Copy,
+  Check,
+  QrCode,
+  ExternalLink,
+  ShieldCheck,
+  Loader2,
+  ClipboardPaste,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
+  Lock,
+  Calendar,
+  Tag,
+} from 'lucide-react';
 import { useLanguage } from '@/lib/language-context';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/components/ui/toast';
 import { QrCanvas } from '@/components/ui/qr-canvas';
 
 export default function ShortenCard() {
+  const router = useRouter();
   const { t, locale } = useLanguage();
   const { user, openAuthModal, pendingUrl, setPendingUrl } = useAuth();
+  const { showToast } = useToast();
+
   const [url, setUrl] = useState('');
-  const [customSlug, setCustomSlug] = useState('');
-  const [openInApp, setOpenInApp] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showOptions, setShowOptions] = useState(false);
+
+  // Advanced Options State
+  const [password, setPassword] = useState('');
+  const [expiresAt, setExpiresAt] = useState('');
+  const [utmSource, setUtmSource] = useState('');
+  const [utmMedium, setUtmMedium] = useState('');
+  const [utmCampaign, setUtmCampaign] = useState('');
+
   const [shortenedResult, setShortenedResult] = useState<{
     slug: string;
     shortUrl: string;
     originalUrl: string;
-    qrUrl: string;
   } | null>(null);
   const [copied, setCopied] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
 
-  // Automatically execute shortening once user signs in if a pending URL exists
-  useEffect(() => {
-    if (user && pendingUrl) {
-      const urlToProcess = pendingUrl;
-      setPendingUrl('');
-      setUrl(urlToProcess);
-      performShorten(urlToProcess);
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        setUrl(text.trim());
+        showToast('info', 'URL vafurli xotiradan joylashtirildi');
+      }
+    } catch {
+      showToast('error', 'Clipboard ruxsati berilmagan');
     }
-  }, [user, pendingUrl]);
+  };
+
+  const buildTargetUrl = (rawUrl: string) => {
+    let finalUrl = rawUrl.trim();
+    if (!/^https?:\/\//i.test(finalUrl)) {
+      finalUrl = 'https://' + finalUrl;
+    }
+    try {
+      const urlObj = new URL(finalUrl);
+      if (utmSource.trim()) urlObj.searchParams.set('utm_source', utmSource.trim());
+      if (utmMedium.trim()) urlObj.searchParams.set('utm_medium', utmMedium.trim());
+      if (utmCampaign.trim()) urlObj.searchParams.set('utm_campaign', utmCampaign.trim());
+      return urlObj.toString();
+    } catch {
+      return finalUrl;
+    }
+  };
 
   const performShorten = async (targetUrl: string) => {
     if (!targetUrl.trim()) return;
 
     setLoading(true);
     setError('');
+
+    const processedUrl = buildTargetUrl(targetUrl);
 
     try {
       const res = await fetch('/api/links', {
@@ -48,11 +94,10 @@ export default function ShortenCard() {
           ...(user ? { 'x-user-id': user.id } : {}),
         },
         body: JSON.stringify({
-          destination_url: targetUrl,
-          slug: customSlug || undefined,
-          open_in_app: openInApp,
-          title: customSlug || 'Short Link',
+          destination_url: processedUrl,
           user_id: user?.id,
+          password: password.trim() || undefined,
+          expires_at: expiresAt || undefined,
         }),
       });
 
@@ -63,33 +108,45 @@ export default function ShortenCard() {
           slug: data.link.slug,
           shortUrl: fullShortUrl,
           originalUrl: data.link.destination_url,
-          qrUrl: fullShortUrl,
         });
 
-        // Trigger celebratory confetti
-        confetti({
-          particleCount: 50,
-          spread: 60,
-          origin: { y: 0.65 },
-          colors: ['#6366f1', '#06b6d4', '#10b981'],
-        });
+        try {
+          await navigator.clipboard.writeText(fullShortUrl);
+          setCopied(true);
+          showToast('copied', `${fullShortUrl} nusxalandi!`);
+          setTimeout(() => setCopied(false), 2500);
+        } catch {
+          showToast('success', 'Havola muvaffaqiyatli yaratildi!');
+        }
+
+        setTimeout(() => {
+          router.push('/dashboard/links');
+        }, 1200);
       } else if (data.code === 'AUTH_REQUIRED') {
-        openAuthModal(targetUrl);
+        openAuthModal(targetUrl.trim());
       } else {
-        setError(data.error || 'Xatolik yuz berdi. Qayta urinib ko‘ring.');
+        setError(data.error || "Xatolik yuz berdi. Qayta urinib ko'ring.");
       }
     } catch {
-      setError('Tarmoq xatosi. Iltimos qaytadan urinib ko‘ring.');
+      setError("Tarmoq xatosi. Iltimos qaytadan urinib ko'ring.");
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (user && pendingUrl) {
+      const urlToProcess = pendingUrl;
+      setPendingUrl('');
+      setUrl(urlToProcess);
+      performShorten(urlToProcess);
+    }
+  }, [user, pendingUrl]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) return;
 
-    // Stop anonymous creation to prevent phishing: prompt login
     if (!user) {
       openAuthModal(url.trim());
       return;
@@ -98,182 +155,238 @@ export default function ShortenCard() {
     await performShorten(url.trim());
   };
 
-  const handleCopy = async () => {
-    if (!shortenedResult) return;
-    await navigator.clipboard.writeText(shortenedResult.shortUrl);
+  const handleCopyLink = async (shortUrl: string) => {
+    try {
+      await navigator.clipboard.writeText(shortUrl);
+    } catch {
+      const el = document.createElement('textarea');
+      el.value = shortUrl;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
     setCopied(true);
+    showToast('copied', `${shortUrl} nusxalandi!`);
     setTimeout(() => setCopied(false), 2500);
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
-      <div className="relative p-1 rounded-3xl bg-gradient-to-r from-indigo-500/30 via-purple-500/20 to-cyan-500/30 shadow-2xl backdrop-blur-xl">
-        <div className="bg-slate-900/95 border border-white/10 rounded-[22px] p-5 sm:p-7 shadow-inner">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Main Input Row */}
-            <div className="flex flex-col sm:flex-row items-stretch gap-2.5">
-              <div className="relative flex-1">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Link2 className="w-5 h-5 text-indigo-400" />
-                </div>
-                <input
-                  type="text"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder={t.shortenPlaceholder}
-                  required
-                  className="w-full pl-11 pr-4 py-3.5 bg-slate-950/80 border border-slate-700/80 rounded-2xl text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-inner"
-                />
-              </div>
+    <div className="w-full max-w-2xl mx-auto space-y-3">
+      {/* Omni-Shortener Command Bar (Linear/Vercel standard) */}
+      <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06),0_8px_24px_rgba(0,0,0,0.5)] p-1.5 transition-all duration-150 focus-within:border-zinc-700">
+        <form onSubmit={handleSubmit} className="space-y-1.5">
+          {/* Main Input Row */}
+          <div className="flex items-center gap-2 pl-3 pr-1 py-1">
+            <Link2 className="w-4 h-4 text-zinc-500 shrink-0" />
 
+            <input
+              type="text"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://example.com/very/long/url-slug-123..."
+              required
+              className="w-full bg-transparent text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none font-mono"
+            />
+
+            {/* Paste Button Helper */}
+            {!url && (
               <button
-                type="submit"
-                disabled={loading}
-                className="flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-btn text-white text-sm font-semibold rounded-2xl shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 active:scale-[0.98] transition-all disabled:opacity-50"
+                type="button"
+                onClick={handlePaste}
+                className="hidden sm:flex items-center gap-1 px-2 py-1 text-[11px] font-mono text-zinc-400 hover:text-zinc-200 bg-zinc-800/60 hover:bg-zinc-800 rounded border border-zinc-700/60 transition-colors shrink-0"
+                title="Vaqtinchalik xotiradan qo‘yish (Cmd+V)"
               >
-                <span>{loading ? '...' : t.shortenButton}</span>
-                <ArrowRight className="w-4 h-4" />
+                <ClipboardPaste className="w-3 h-3 text-zinc-500" />
+                <span>Paste</span>
               </button>
-            </div>
-
-            {/* Options Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-1 text-xs">
-              {/* Custom Slug input */}
-              <div className="flex items-center gap-2 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800">
-                <span className="text-slate-400 font-medium">urls.uz/</span>
-                <input
-                  type="text"
-                  value={customSlug}
-                  onChange={(e) => setCustomSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
-                  placeholder={locale === 'uz' ? 'maxsus-nom' : locale === 'ru' ? 'svoy-alias' : 'custom-alias'}
-                  className="w-28 sm:w-36 bg-transparent text-white focus:outline-none placeholder:text-slate-600 font-medium"
-                />
-              </div>
-
-              {/* Smart Deep Link Toggle */}
-              <label className="flex items-center gap-2 cursor-pointer select-none text-slate-300 hover:text-white">
-                <input
-                  type="checkbox"
-                  checked={openInApp}
-                  onChange={(e) => setOpenInApp(e.target.checked)}
-                  className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="flex items-center gap-1.5">
-                  <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>{t.openInApp}</span>
-                </span>
-              </label>
-            </div>
-
-            {error && (
-              <p className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 px-3 py-2 rounded-xl">
-                {error}
-              </p>
             )}
 
-            {/* Anti-Phishing Security Trust Badge */}
-            <div className="pt-3 mt-1 border-t border-white/5">
-              {user ? (
-                <div className="flex items-center justify-between text-[11px] text-slate-400 flex-wrap gap-2">
-                  <div className="flex items-center gap-1.5 text-emerald-400">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>
-                      Tasdiqlangan hisob: <strong className="text-white">{user.name}</strong> ({user.provider === 'telegram' ? 'Telegram OTP' : 'Google'})
-                    </span>
-                  </div>
-                  <span className="text-indigo-400 font-medium flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" />
-                    <span>Fishingdan himoyalangan</span>
-                  </span>
-                </div>
-              ) : (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px]">
-                  <div className="flex items-center gap-1.5 text-amber-300/90">
-                    <ShieldCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span>
-                      urls.uz soxta havolalarni oldini oladi. Havola yaratish avtorizatsiyani talab qiladi.
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => openAuthModal(url)}
-                    className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 underline underline-offset-2 flex items-center gap-1"
-                  >
-                    <span>Telegram / Google orqali kirish</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
+            {/* Domain Suffix Indicator */}
+            <div className="hidden md:flex items-center gap-1 px-2 py-1 bg-zinc-950 rounded border border-zinc-800 text-[11px] font-mono text-zinc-400 shrink-0">
+              <span className="text-zinc-300">urls.uz/</span>
+              <span className="text-zinc-500">···</span>
             </div>
-          </form>
 
-          {/* Success Shortened Result Card */}
-          {shortenedResult && (
-            <div className="mt-5 p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 animate-in fade-in slide-in-from-top-2 duration-300">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                    <Check className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs text-indigo-300/80 font-medium">{t.shortenedSuccess}</p>
-                    <a
-                      href={shortenedResult.shortUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-base font-bold text-white hover:text-indigo-300 flex items-center gap-1 truncate"
-                    >
-                      <span>{shortenedResult.shortUrl}</span>
-                      <ExternalLink className="w-3.5 h-3.5 opacity-60" />
-                    </a>
-                  </div>
+            {/* Solid High-Contrast CTA Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex items-center justify-center gap-1.5 px-4 py-2 bg-white text-zinc-950 hover:bg-zinc-200 active:scale-[0.98] text-xs font-semibold rounded-lg shadow-sm transition-all disabled:opacity-50 shrink-0"
+            >
+              {loading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <>
+                  <span>{t.shortenButton}</span>
+                  <ArrowRight className="w-3 h-3 text-zinc-900" />
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Quick Expandable Options Tray Header */}
+          <div className="flex items-center justify-between px-3 py-1.5 border-t border-zinc-800/60 text-[11px] text-zinc-500 font-mono">
+            <button
+              type="button"
+              onClick={() => setShowOptions(!showOptions)}
+              className="flex items-center gap-1.5 text-zinc-400 hover:text-zinc-200 transition-colors"
+            >
+              <SlidersHorizontal className="w-3 h-3 text-zinc-500" />
+              <span>{showOptions ? 'Yopish: Qo‘shimcha parametrlar' : '+ Qo‘shimcha parametrlar (UTM, Parol, Muddat)'}</span>
+              {showOptions ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+
+            <span className="text-zinc-500 hidden sm:inline">
+              Avtomatik 5-belgili ID · &lt; 15ms Edge
+            </span>
+          </div>
+
+          {/* Expandable Options Panel */}
+          {showOptions && (
+            <div className="p-3 bg-zinc-950/80 rounded-lg border border-zinc-800/80 space-y-3 animate-fade-in text-xs">
+              {/* UTM Tags Row */}
+              <div>
+                <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1 mb-1.5">
+                  <Tag className="w-3 h-3 text-zinc-500" />
+                  <span>UTM Parametrlari (Marketing analitikasi)</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <input
+                    type="text"
+                    value={utmSource}
+                    onChange={(e) => setUtmSource(e.target.value)}
+                    placeholder="utm_source (telegram)"
+                    className="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded text-zinc-200 placeholder:text-zinc-600 font-mono text-[11px] focus:outline-none focus:border-zinc-700"
+                  />
+                  <input
+                    type="text"
+                    value={utmMedium}
+                    onChange={(e) => setUtmMedium(e.target.value)}
+                    placeholder="utm_medium (cpc / bio)"
+                    className="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded text-zinc-200 placeholder:text-zinc-600 font-mono text-[11px] focus:outline-none focus:border-zinc-700"
+                  />
+                  <input
+                    type="text"
+                    value={utmCampaign}
+                    onChange={(e) => setUtmCampaign(e.target.value)}
+                    placeholder="utm_campaign (spring_promo)"
+                    className="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded text-zinc-200 placeholder:text-zinc-600 font-mono text-[11px] focus:outline-none focus:border-zinc-700"
+                  />
+                </div>
+              </div>
+
+              {/* Password & Expiry Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-zinc-800/60">
+                <div>
+                  <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1 mb-1">
+                    <Lock className="w-3 h-3 text-zinc-500" />
+                    <span>Himoya paroli (Ixtiyoriy)</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Parol o‘rnating..."
+                    className="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded text-zinc-200 placeholder:text-zinc-600 font-mono text-[11px] focus:outline-none focus:border-zinc-700"
+                  />
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleCopy}
-                    className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition-all"
-                  >
-                    {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copied ? t.copied : t.copy}</span>
-                  </button>
-
-                  <button
-                    onClick={() => setShowQrModal(true)}
-                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 transition-colors"
-                  >
-                    <QrCode className="w-3.5 h-3.5" />
-                    <span>QR</span>
-                  </button>
+                <div>
+                  <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1 mb-1">
+                    <Calendar className="w-3 h-3 text-zinc-500" />
+                    <span>Amal qilish muddati (Ixtiyoriy)</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={expiresAt}
+                    onChange={(e) => setExpiresAt(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded text-zinc-200 font-mono text-[11px] focus:outline-none focus:border-zinc-700"
+                  />
                 </div>
               </div>
             </div>
           )}
-        </div>
+
+          {error && (
+            <p className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 rounded font-mono">
+              {error}
+            </p>
+          )}
+        </form>
+
+        {/* Success Confirmation Bar */}
+        {shortenedResult && (
+          <div className="mt-2 p-3 rounded-lg bg-zinc-950 border border-emerald-500/30 text-xs">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                <span className="text-zinc-400 text-[11px]">Yaratildi:</span>
+                <a
+                  href={shortenedResult.shortUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono font-medium text-emerald-400 hover:underline truncate"
+                >
+                  {shortenedResult.shortUrl}
+                </a>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleCopyLink(shortenedResult.shortUrl)}
+                  className="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 rounded text-[11px] font-mono flex items-center gap-1 transition-colors"
+                >
+                  {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  <span>{copied ? 'Nusxalandi' : 'Nusxa'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowQrModal(true)}
+                  className="p-1 text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-700 rounded"
+                  title="QR Kod"
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* QR Preview Modal */}
+      {/* Trust & Meta Footer Note */}
+      <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 px-1">
+        {user ? (
+          <span className="flex items-center gap-1.5 text-zinc-400">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Foydalanuvchi: <strong className="text-zinc-200">{user.name}</strong></span>
+          </span>
+        ) : (
+          <span>Qisqartirilgan havolalar avtomatik hisobingizga biriktiriladi</span>
+        )}
+        <span>SLA 99.99% · DNS Anycast</span>
+      </div>
+
+      {/* Quick QR Code Modal */}
       {showQrModal && shortenedResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setShowQrModal(false)} />
-          <div className="relative w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 z-10 text-center shadow-2xl">
-            <h3 className="text-base font-bold text-white mb-1">Havola QR Kodi</h3>
-            <p className="text-xs text-slate-400 mb-4">{shortenedResult.shortUrl}</p>
-            <QrCanvas
-              url={shortenedResult.shortUrl}
-              size={240}
-              fgColor="#0f172a"
-              bgColor="#ffffff"
-              centerLogo="telegram"
-              frameText="SCAN ME"
-              frameStyle="bottom"
-            />
-            <button
-              onClick={() => setShowQrModal(false)}
-              className="mt-4 px-4 py-1.5 text-xs text-slate-400 hover:text-white"
-            >
-              Yopish
-            </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 max-w-sm w-full space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
+              <h3 className="text-xs font-mono uppercase tracking-wider text-zinc-200">Dinamik QR Kod</h3>
+              <button
+                onClick={() => setShowQrModal(false)}
+                className="text-zinc-500 hover:text-white text-sm"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex justify-center p-4 bg-white rounded-lg">
+              <QrCanvas value={shortenedResult.shortUrl} size={180} />
+            </div>
+            <div className="text-center">
+              <p className="text-xs font-mono text-zinc-400 truncate">{shortenedResult.shortUrl}</p>
+            </div>
           </div>
         </div>
       )}
