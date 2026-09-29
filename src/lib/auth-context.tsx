@@ -16,6 +16,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   loginWithTelegram: (phone: string, code: string, name?: string) => Promise<boolean>;
+  loginWithTelegramWidget: (widgetData: any) => Promise<boolean>;
   loginWithGoogle: (email?: string, name?: string, avatar?: string) => Promise<boolean>;
   logout: () => void;
   updatePlan: (plan: 'free' | 'pro' | 'enterprise') => void;
@@ -76,6 +77,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const loginWithTelegramWidget = async (widgetData: any): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/auth/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify-widget', widgetData }),
+      });
+      const data = await res.json();
+      if (data.success && data.user) {
+        setUser(data.user);
+        localStorage.setItem('urls_user', JSON.stringify(data.user));
+        localStorage.setItem('urls_token', data.token);
+        setIsAuthModalOpen(false);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   const loginWithGoogle = async (email?: string, name?: string, avatar?: string): Promise<boolean> => {
     try {
       const res = await fetch('/api/auth/google', {
@@ -117,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         isAuthenticated: !!user,
         loginWithTelegram,
+        loginWithTelegramWidget,
         loginWithGoogle,
         logout,
         updatePlan,
