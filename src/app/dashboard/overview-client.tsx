@@ -102,6 +102,30 @@ export default function DashboardOverviewClient({
         </button>
       </div>
 
+      {/* 40M+ Milestone Banner */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-950/60 via-purple-950/40 to-slate-900 border border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-sm border border-indigo-500/30 shrink-0">
+            40M+
+          </div>
+          <div>
+            <div className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+              <span>urls.uz yirik marrani zabt etdi!</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                40,698,620+ LINK
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Hozirgacha platforma orqali 40 milliondan ortiq havola muvaffaqiyatli qisqartirildi va yuzlab million bosishlar qayd etildi.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-xs font-mono font-bold text-indigo-400">
+          <TrendingUp className="w-4 h-4 text-emerald-400" />
+          <span>99.99% Uptime</span>
+        </div>
+      </div>
+
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card, idx) => {

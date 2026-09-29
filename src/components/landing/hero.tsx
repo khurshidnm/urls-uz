@@ -16,9 +16,15 @@ export default function Hero() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         {/* Top Badges */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold mb-6 shadow-sm">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>{locale === 'uz' ? 'Yangi avlod urls.uz platformasi' : locale === 'ru' ? 'Новое поколение urls.uz' : 'Next-Gen urls.uz Platform'}</span>
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold mb-6 shadow-sm backdrop-blur-md">
+          <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>
+            {locale === 'uz'
+              ? '🔥 40,000,000+ dan ortiq havolalar qisqartirilgan O‘zbekistondagi №1 servis'
+              : locale === 'ru'
+              ? '🔥 Более 40,000,000+ сокращенных ссылок · Сервис №1 в Узбекистане'
+              : '🔥 Over 40,000,000+ Links Shortened · Trusted Platform'}
+          </span>
         </div>
 
         {/* Hero Title */}
