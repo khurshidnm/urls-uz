@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
@@ -17,10 +17,12 @@ import {
 import confetti from 'canvas-confetti';
 
 export default function AuthModal() {
-  const { isAuthModalOpen, closeAuthModal, loginWithTelegram, loginWithGoogle, pendingUrl } = useAuth();
+  const { isAuthModalOpen, closeAuthModal, loginWithTelegram, loginWithTelegramWidget, loginWithGoogle, pendingUrl } = useAuth();
   const { locale } = useLanguage();
 
   const [authMethod, setAuthMethod] = useState<'telegram' | 'google'>('telegram');
+  const telegramContainerRef = useRef<HTMLDivElement>(null);
+  const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'urlsuzbot';
 
   // Telegram OTP states
   const [phone, setPhone] = useState('+998 ');
@@ -30,6 +32,36 @@ export default function AuthModal() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [demoCodeHint, setDemoCodeHint] = useState('');
+
+  // Inject official Telegram Login Widget if container is rendered
+  useEffect(() => {
+    if (authMethod === 'telegram' && isAuthModalOpen && telegramContainerRef.current) {
+      telegramContainerRef.current.innerHTML = '';
+      const script = document.createElement('script');
+      script.src = 'https://telegram.org/js/telegram-widget.js?22';
+      script.setAttribute('data-telegram-login', botUsername);
+      script.setAttribute('data-size', 'large');
+      script.setAttribute('data-radius', '12');
+      script.setAttribute('data-request-access', 'write');
+      script.setAttribute('data-userpic', 'true');
+      script.setAttribute('data-onauth', 'onTelegramWidgetAuth(user)');
+      script.async = true;
+      telegramContainerRef.current.appendChild(script);
+
+      (window as any).onTelegramWidgetAuth = async (user: any) => {
+        setLoading(true);
+        setError('');
+        const success = await loginWithTelegramWidget(user);
+        if (success) {
+          confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+          resetForm();
+        } else {
+          setError('Telegram orqali tasdiqlashda xatolik yuz berdi.');
+        }
+        setLoading(false);
+      };
+    }
+  }, [authMethod, isAuthModalOpen, botUsername]);
 
   const handleSendTelegramOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,9 +205,28 @@ export default function AuthModal() {
           </button>
         </div>
 
-        {/* Telegram OTP Flow */}
+        {/* Telegram Flow (Official Widget 1-Click + Phone OTP) */}
         {authMethod === 'telegram' && (
-          <div>
+          <div className="space-y-4">
+            {/* 1-Click Official Telegram Login Widget */}
+            <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl text-center space-y-2">
+              <div className="flex items-center justify-center gap-1.5 text-xs text-slate-300 font-medium">
+                <Sparkles className="w-3.5 h-3.5 text-[#229ED9]" />
+                <span>1 bosishda kirish (Telegram Widget):</span>
+              </div>
+              <div
+                ref={telegramContainerRef}
+                id="telegram-login-container"
+                className="flex justify-center min-h-[44px] items-center"
+              />
+            </div>
+
+            <div className="relative flex py-1 items-center">
+              <div className="flex-grow border-t border-slate-800"></div>
+              <span className="flex-shrink mx-3 text-[11px] text-slate-500 font-medium">yoki telefon raqami orqali</span>
+              <div className="flex-grow border-t border-slate-800"></div>
+            </div>
+
             {!otpSent ? (
               <form onSubmit={handleSendTelegramOtp} className="space-y-4">
                 <div>
