@@ -1,5 +1,5 @@
 /**
- * Uzbekistan Regions & Geo Analytics Helper
+ * Uzbekistan & Global Geo Analytics Helper
  */
 
 export const UZBEKISTAN_REGIONS = [
@@ -21,6 +21,34 @@ export const UZBEKISTAN_REGIONS = [
 
 export type UzbekistanRegion = typeof UZBEKISTAN_REGIONS[number];
 
+export const COUNTRY_META: Record<string, { nameUz: string; nameRu: string; nameEn: string; flag: string }> = {
+  UZ: { nameUz: 'O‘zbekiston', nameRu: 'Узбекистан', nameEn: 'Uzbekistan', flag: '🇺🇿' },
+  RU: { nameUz: 'Rossiya', nameRu: 'Россия', nameEn: 'Russia', flag: '🇷🇺' },
+  KZ: { nameUz: 'Qozog‘iston', nameRu: 'Казахстан', nameEn: 'Kazakhstan', flag: '🇰🇿' },
+  TR: { nameUz: 'Turkiya', nameRu: 'Турция', nameEn: 'Turkey', flag: '🇹🇷' },
+  US: { nameUz: 'AQSH', nameRu: 'США', nameEn: 'United States', flag: '🇺🇸' },
+  AE: { nameUz: 'BAA (Dubay)', nameRu: 'ОАЭ (Дубай)', nameEn: 'UAE', flag: '🇦🇪' },
+  KR: { nameUz: 'Janubiy Koreya', nameRu: 'Южная Корея', nameEn: 'South Korea', flag: '🇰🇷' },
+  DE: { nameUz: 'Germaniya', nameRu: 'Германия', nameEn: 'Germany', flag: '🇩🇪' },
+  GB: { nameUz: 'Buyuk Britaniya', nameRu: 'Великобритания', nameEn: 'United Kingdom', flag: '🇬🇧' },
+  KG: { nameUz: 'Qirg‘iziston', nameRu: 'Кыргызстан', nameEn: 'Kyrgyzstan', flag: '🇰🇬' },
+  TJ: { nameUz: 'Tojikiston', nameRu: 'Таджикистан', nameEn: 'Tajikistan', flag: '🇹🇯' },
+  CN: { nameUz: 'Xitoy', nameRu: 'Китай', nameEn: 'China', flag: '🇨🇳' },
+  PL: { nameUz: 'Polsha', nameRu: 'Польша', nameEn: 'Poland', flag: '🇵🇱' },
+};
+
+export function getCountryInfo(countryCode: string) {
+  const code = (countryCode || 'UZ').toUpperCase();
+  return (
+    COUNTRY_META[code] || {
+      nameUz: code,
+      nameRu: code,
+      nameEn: code,
+      flag: '🌐',
+    }
+  );
+}
+
 export function resolveRegionFromHeaders(headers: Headers): {
   country: string;
   region: string;
@@ -30,10 +58,11 @@ export function resolveRegionFromHeaders(headers: Headers): {
   const cfCity = headers.get('cf-ipcity') || headers.get('x-vercel-ip-city') || 'Tashkent';
   const cfRegion = headers.get('cf-region') || headers.get('x-vercel-ip-country-region') || 'Toshkent shahri';
 
-  if (cfCountry.toUpperCase() === 'UZ') {
-    // Check if matched region or fallback to realistic region distribution
-    const matched = UZBEKISTAN_REGIONS.find(r => 
-      cfRegion.toLowerCase().includes(r.toLowerCase()) || 
+  const countryUpper = cfCountry.toUpperCase();
+
+  if (countryUpper === 'UZ') {
+    const matched = UZBEKISTAN_REGIONS.find((r) =>
+      cfRegion.toLowerCase().includes(r.toLowerCase()) ||
       cfCity.toLowerCase().includes(r.toLowerCase())
     );
     return {
@@ -43,9 +72,11 @@ export function resolveRegionFromHeaders(headers: Headers): {
     };
   }
 
+  // International traffic
+  const countryData = COUNTRY_META[countryUpper];
   return {
-    country: cfCountry || 'Global',
-    region: cfRegion || 'International',
+    country: countryUpper,
+    region: cfRegion || countryData?.nameUz || countryUpper,
     city: cfCity || 'Unknown',
   };
 }

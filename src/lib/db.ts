@@ -304,6 +304,39 @@ function seedDemoData(db: Database.Database) {
     }
   }
 
+  // Seed International Clicks
+  const globalCountries = [
+    { code: 'RU', region: 'Moskva', city: 'Moscow', weight: 22 },
+    { code: 'KZ', region: 'Almati', city: 'Almaty', weight: 14 },
+    { code: 'TR', region: 'Istanbul', city: 'Istanbul', weight: 11 },
+    { code: 'US', region: 'California', city: 'Los Angeles', weight: 8 },
+    { code: 'AE', region: 'Dubay', city: 'Dubai', weight: 7 },
+    { code: 'KR', region: 'Seul', city: 'Seoul', weight: 5 },
+    { code: 'DE', region: 'Berlin', city: 'Berlin', weight: 4 },
+  ];
+
+  for (const gc of globalCountries) {
+    for (let i = 0; i < gc.weight; i++) {
+      const ref = referrers[i % referrers.length];
+      const dev = devices[i % devices.length];
+      const os = osList[i % osList.length];
+      const timeOffset = `-${(i % 10)} days`;
+      insertClick.run(
+        `click_${clickId++}`,
+        'link_1',
+        `hash_${clickId}`,
+        ref,
+        gc.code,
+        gc.region,
+        gc.city,
+        dev,
+        os,
+        'Chrome',
+        timeOffset
+      );
+    }
+  }
+
   // Seed Bio Page
   const insertBio = db.prepare(`
     INSERT INTO bio_pages (id, user_id, handle, title, bio, avatar_url, theme, verified, social_links, view_count)
@@ -492,11 +525,22 @@ export const db = {
     const regionsStmt = getDatabase().prepare(`
       SELECT region, COUNT(*) as count 
       FROM clicks 
+      WHERE country = 'UZ'
       GROUP BY region 
       ORDER BY count DESC 
       LIMIT 14
     `);
     const regions = regionsStmt.all() as { region: string; count: number }[];
+
+    // Global Countries breakdown
+    const countriesStmt = getDatabase().prepare(`
+      SELECT country, COUNT(*) as count 
+      FROM clicks 
+      GROUP BY country 
+      ORDER BY count DESC 
+      LIMIT 12
+    `);
+    const countries = countriesStmt.all() as { country: string; count: number }[];
 
     // Referrers breakdown
     const referrersStmt = getDatabase().prepare(`
@@ -541,6 +585,7 @@ export const db = {
       totalLinks,
       totalBioViews,
       regions,
+      countries,
       referrers,
       devices,
       os,
