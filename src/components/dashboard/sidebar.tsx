@@ -76,6 +76,8 @@ export default function Sidebar({ onCreateLink, bioHandle }: SidebarProps) {
       href: '/dashboard/settings',
       icon: Settings,
     },
+    // Platform admin panel (users, activity, payments); the page itself checks the role too
+    ...(isSuperAdmin ? [{ name: 'Admin', href: '/dashboard/admin', icon: Shield }] : []),
   ];
 
   return (

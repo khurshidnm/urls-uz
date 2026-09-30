@@ -40,11 +40,16 @@ function listFromEnv(name: string): string[] {
     .filter(Boolean);
 }
 
-/** Admin rights come only from server configuration, never from the client. */
-export function roleFor(identity: { email?: string | null; telegramId?: string | null }): UserRole {
+/**
+ * Admin rights come only from server configuration, never from the client:
+ * ADMIN_EMAILS (Google), ADMIN_TELEGRAM_IDS and ADMIN_PHONES (digits, e.g. 998901234567).
+ */
+export function roleFor(identity: { email?: string | null; telegramId?: string | null; phone?: string | null }): UserRole {
   const email = identity.email?.toLowerCase();
   if (email && listFromEnv('ADMIN_EMAILS').includes(email)) return 'superadmin';
   if (identity.telegramId && listFromEnv('ADMIN_TELEGRAM_IDS').includes(identity.telegramId)) return 'superadmin';
+  const phone = identity.phone?.replace(/\D/g, '');
+  if (phone && listFromEnv('ADMIN_PHONES').map((p) => p.replace(/\D/g, '')).includes(phone)) return 'superadmin';
   return 'user';
 }
 
@@ -69,6 +74,12 @@ export async function getSessionUser(): Promise<UserRecord | null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   return (await db.getUserBySessionToken(token)) ?? null;
+}
+
+/** The logged-in platform superadmin, or null (admin pages 404 and admin APIs 403 for everyone else). */
+export async function getSuperAdmin(): Promise<UserRecord | null> {
+  const user = await getSessionUser();
+  return user?.role === 'superadmin' ? user : null;
 }
 
 /** Current user from an API key (Authorization header) or the session cookie. */

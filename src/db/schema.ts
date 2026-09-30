@@ -49,6 +49,8 @@ export const users = pgTable(
     role: platformRole('role').notNull().default('user'),
     created_at: createdAt(),
     last_login_at: timestamp('last_login_at', { withTimezone: true }),
+    /** Last request with a session, updated at most hourly (activity for the admin panel). */
+    last_seen_at: timestamp('last_seen_at', { withTimezone: true }),
   },
   // Logins are looked up in user_identities; this only records the first login method
   (t) => [index('users_provider_identity').on(t.provider, t.provider_id)]
@@ -94,6 +96,8 @@ export const workspaces = pgTable('workspaces', {
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
   plan: plan('plan').notNull().default('free'),
+  /** When a paid plan ends; null = no end (free, or granted without a period). Expired plans act as free. */
+  plan_expires_at: timestamp('plan_expires_at', { withTimezone: true }),
   /** The seeded, read-only showcase shown to visitors who aren't logged in. */
   is_demo: boolean('is_demo').notNull().default(false),
   created_at: createdAt(),
@@ -319,6 +323,35 @@ export const bioLinks = pgTable(
     is_active: boolean('is_active').notNull().default(true),
   },
   (t) => [index('bio_links_page').on(t.bio_page_id, t.sort_order)]
+);
+
+// ---------------------------------------------------------------------------
+// Billing
+// ---------------------------------------------------------------------------
+
+export const paymentMethod = pgEnum('payment_method', ['manual', 'payme', 'click', 'uzum']);
+
+/**
+ * A payment for a paid plan period. For now admins record them by hand
+ * (method 'manual'); Payme / Click webhooks will add rows the same way.
+ */
+export const payments = pgTable(
+  'payments',
+  {
+    id: text('id').primaryKey(),
+    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    plan: plan('plan').notNull(),
+    /** In so‘m. */
+    amount: integer('amount').notNull(),
+    method: paymentMethod('method').notNull(),
+    period_start: timestamp('period_start', { withTimezone: true }).notNull(),
+    period_end: timestamp('period_end', { withTimezone: true }).notNull(),
+    note: text('note'),
+    /** The admin who recorded a manual payment. */
+    recorded_by: text('recorded_by').references(() => users.id, { onDelete: 'set null' }),
+    created_at: createdAt(),
+  },
+  (t) => [index('payments_workspace').on(t.workspace_id, t.created_at), index('payments_time').on(t.created_at)]
 );
 
 // ---------------------------------------------------------------------------

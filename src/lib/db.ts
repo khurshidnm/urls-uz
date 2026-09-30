@@ -173,6 +173,15 @@ function fillTimeline(rows: { date: string; count: number }[], range: AnalyticsR
 export type Executor = typeof pg | Parameters<Parameters<typeof pg.transaction>[0]>[0];
 
 
+/**
+ * A paid plan past its end date acts as free. Applied wherever a workspace is
+ * loaded, so plan limits, API access and the UI all follow it.
+ */
+export function withEffectivePlan(workspace: WorkspaceRecord): WorkspaceRecord {
+  const expired = workspace.plan !== 'free' && workspace.plan_expires_at !== null && workspace.plan_expires_at < new Date();
+  return expired ? { ...workspace, plan: 'free' } : workspace;
+}
+
 // ---------------------------------------------------------------------------
 // Repository
 // ---------------------------------------------------------------------------
@@ -747,7 +756,12 @@ export const db = {
       .from(sessions)
       .innerJoin(users, eq(users.id, sessions.user_id))
       .where(and(eq(sessions.id, sha256(token)), gte(sessions.expires_at, sql`now()`)));
-    return row?.user;
+    const user = row?.user;
+    // Activity for the admin panel, written at most once an hour per user
+    if (user && (!user.last_seen_at || Date.now() - user.last_seen_at.getTime() > 60 * 60 * 1000)) {
+      await pg.update(users).set({ last_seen_at: new Date() }).where(eq(users.id, user.id));
+    }
+    return user;
   },
 
   async deleteSession(token: string) {
@@ -758,7 +772,7 @@ export const db = {
 
   async getWorkspace(id: string): Promise<WorkspaceRecord | undefined> {
     const [row] = await pg.select().from(workspaces).where(eq(workspaces.id, id));
-    return row;
+    return row && withEffectivePlan(row);
   },
 
   async listWorkspacesForUser(userId: string) {
@@ -767,7 +781,8 @@ export const db = {
       .from(memberships)
       .innerJoin(workspaces, eq(workspaces.id, memberships.workspace_id))
       .where(eq(memberships.user_id, userId))
-      .orderBy(asc(memberships.created_at));
+      .orderBy(asc(memberships.created_at))
+      .then((rows) => rows.map((r) => ({ ...r, workspace: withEffectivePlan(r.workspace) })));
   },
 
   async getMembershipRole(workspaceId: string, userId: string): Promise<MemberRole | undefined> {

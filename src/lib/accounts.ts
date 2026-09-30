@@ -161,12 +161,13 @@ async function fillProfile(tx: Tx, userId: string, profile: LoginProfile) {
 async function refreshRole(user: UserRecord): Promise<UserRecord> {
   const identities = await listIdentities(user.id);
   const admin =
-    roleFor({ email: user.email }) === 'superadmin' ||
+    roleFor({ email: user.email, phone: user.phone }) === 'superadmin' ||
     identities.some(
       (i) =>
         roleFor({
           email: i.provider === 'google' ? i.label : null,
           telegramId: i.provider === 'telegram' ? i.provider_id : null,
+          phone: i.provider === 'phone' ? i.provider_id : null,
         }) === 'superadmin'
     );
   const role = admin ? 'superadmin' : 'user';

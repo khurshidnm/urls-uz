@@ -13,7 +13,8 @@ export const E2E_ENV = {
   GOOGLE_CLIENT_ID: 'e2e-google-client',
   GOOGLE_CLIENT_SECRET: 'e2e-google-secret',
   ADMIN_EMAILS: '',
-  ADMIN_TELEGRAM_IDS: '',
+  // The admin-panel tests log in as this Telegram user
+  ADMIN_TELEGRAM_IDS: '900000990',
   // Clicks are written in batches after the redirect; keep the wait short in tests
   CLICK_FLUSH_MS: '50',
   CRON_SECRET: 'e2e-cron-secret',
