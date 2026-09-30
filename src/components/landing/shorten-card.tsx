@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   Link2,
   ArrowRight,
@@ -22,10 +22,11 @@ import {
 import { useLanguage } from '@/lib/language-context';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/components/ui/toast';
+import { shortUrl as toShortUrl } from '@/lib/utils';
+import { createPayload, EMPTY_LINK_FORM } from '@/components/links/link-form-model';
 import { QrCanvas } from '@/components/ui/qr-canvas';
 
 export default function ShortenCard() {
-  const router = useRouter();
   const { t, locale } = useLanguage();
   const { user, openAuthModal } = useAuth();
   const { showToast } = useToast();
@@ -43,9 +44,9 @@ export default function ShortenCard() {
   const [utmCampaign, setUtmCampaign] = useState('');
 
   const [shortenedResult, setShortenedResult] = useState<{
+    id: string;
     slug: string;
     shortUrl: string;
-    originalUrl: string;
   } | null>(null);
   const [copied, setCopied] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
@@ -55,26 +56,10 @@ export default function ShortenCard() {
       const text = await navigator.clipboard.readText();
       if (text) {
         setUrl(text.trim());
-        showToast('info', 'URL vafurli xotiradan joylashtirildi');
+        showToast('info', 'URL xotiradan joylashtirildi');
       }
     } catch {
       showToast('error', 'Clipboard ruxsati berilmagan');
-    }
-  };
-
-  const buildTargetUrl = (rawUrl: string) => {
-    let finalUrl = rawUrl.trim();
-    if (!/^https?:\/\//i.test(finalUrl)) {
-      finalUrl = 'https://' + finalUrl;
-    }
-    try {
-      const urlObj = new URL(finalUrl);
-      if (utmSource.trim()) urlObj.searchParams.set('utm_source', utmSource.trim());
-      if (utmMedium.trim()) urlObj.searchParams.set('utm_medium', utmMedium.trim());
-      if (utmCampaign.trim()) urlObj.searchParams.set('utm_campaign', utmCampaign.trim());
-      return urlObj.toString();
-    } catch {
-      return finalUrl;
     }
   };
 
@@ -84,29 +69,30 @@ export default function ShortenCard() {
     setLoading(true);
     setError('');
 
-    const processedUrl = buildTargetUrl(targetUrl);
-
     try {
+      // Same payload builder as the dashboard; UTM stays in its own fields so it can be edited later
+      const payload = createPayload(
+        {
+          ...EMPTY_LINK_FORM,
+          destination_url: targetUrl,
+          password,
+          expires_at: expiresAt,
+          utm_source: utmSource,
+          utm_medium: utmMedium,
+          utm_campaign: utmCampaign,
+        },
+        'landing'
+      );
       const res = await fetch('/api/links', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          source: 'landing',
-          destination_url: processedUrl,
-          password: password.trim() || undefined,
-          // datetime-local has no timezone; send the user's local time as an absolute instant
-          expires_at: expiresAt ? new Date(expiresAt).toISOString() : undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
       if (data.success && data.link) {
-        const fullShortUrl = `${window.location.origin}/${data.link.slug}`;
-        setShortenedResult({
-          slug: data.link.slug,
-          shortUrl: fullShortUrl,
-          originalUrl: data.link.destination_url,
-        });
+        const fullShortUrl = toShortUrl(data.link.slug);
+        setShortenedResult({ id: data.link.id, slug: data.link.slug, shortUrl: fullShortUrl });
 
         try {
           await navigator.clipboard.writeText(fullShortUrl);
@@ -117,9 +103,6 @@ export default function ShortenCard() {
           showToast('success', 'Havola muvaffaqiyatli yaratildi!');
         }
 
-        setTimeout(() => {
-          router.push('/dashboard/links');
-        }, 1200);
       } else if (data.code === 'AUTH_REQUIRED') {
         openAuthModal(targetUrl.trim(), () => performShorten(targetUrl.trim()));
       } else {
@@ -227,7 +210,7 @@ export default function ShortenCard() {
             </button>
 
             <span className="text-zinc-500 hidden sm:inline">
-              Avtomatik 5-belgili ID · &lt; 15ms Edge
+              Avtomatik 5-belgili ID
             </span>
           </div>
 
@@ -338,6 +321,12 @@ export default function ShortenCard() {
                 >
                   <QrCode className="w-3.5 h-3.5" />
                 </button>
+                <Link
+                  href={`/dashboard/links/${shortenedResult.id}`}
+                  className="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 rounded text-[11px] font-mono flex items-center gap-1 transition-colors"
+                >
+                  Boshqarish <ArrowRight className="w-3 h-3" />
+                </Link>
               </div>
             </div>
           </div>
@@ -354,7 +343,7 @@ export default function ShortenCard() {
         ) : (
           <span>Qisqartirilgan havolalar avtomatik hisobingizga biriktiriladi</span>
         )}
-        <span>SLA 99.99% · DNS Anycast</span>
+        <span>HTTPS · Fishingdan himoya</span>
       </div>
 
       {/* Quick QR Code Modal */}

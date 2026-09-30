@@ -22,11 +22,16 @@ test('login → create link → redirect → click recorded', async ({ page, req
   // 2. Create a link through the dashboard drawer
   const slug = `smoke-${Date.now().toString(36)}`;
   await page.keyboard.press('c');
-  await page.getByPlaceholder('https://t.me/kanal, instagram.com/post yoki sayt.uz/promo').fill('example.com/smoke-test');
-  await page.getByPlaceholder('promo-2026').fill(slug);
-  await expect(page.getByText('Ushbu slug bo‘sh va foydalanishga tayyor')).toBeVisible();
-  await page.locator('form button[type="submit"]').click();
-  await expect(page.getByText(`/${slug}`).first()).toBeVisible();
+  const dialog = page.getByRole('dialog', { name: 'Yangi qisqa havola' });
+  await dialog.getByPlaceholder('https://t.me/kanal, instagram.com/post yoki sayt.uz/promo').fill('example.com/smoke-test');
+  // Everything except the URL is optional and tucked away
+  await expect(dialog.getByPlaceholder('promo-2026')).toHaveCount(0);
+  await dialog.getByRole('button', { name: /Qo‘shimcha sozlamalar/ }).click();
+  await dialog.getByPlaceholder('promo-2026').fill(slug);
+  await expect(dialog.getByText('Ushbu slug bo‘sh va foydalanishga tayyor')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Qisqartirish' }).click();
+  await expect(dialog.getByText('Havolangiz tayyor!')).toBeVisible();
+  await expect(dialog.getByText(`/${slug}`).first()).toBeVisible();
 
   // 3. The short link redirects (a fresh context, like a real visitor)
   const visit = await request.get(`/${slug}`, {
@@ -45,4 +50,22 @@ test('login → create link → redirect → click recorded', async ({ page, req
   const data = await analytics.json();
   expect(data.clicks).toHaveLength(1);
   expect(data.clicks[0].os).toBe('iOS');
+});
+
+test('landing page shortener keeps UTM as link fields and shows the result', async ({ page }) => {
+  await loginAsTelegramUser(page.request, 900000102, 'Landing User');
+  await page.goto('/');
+  await page.getByPlaceholder('https://example.com/very/long/url-slug-123...').fill('example.com/landing');
+  await page.getByRole('button', { name: /Qo‘shimcha parametrlar/ }).click();
+  await page.getByPlaceholder('utm_source (telegram)').fill('telegram');
+  await page.locator('form').first().locator('button[type="submit"]').click();
+  await expect(page.getByText('Yaratildi:')).toBeVisible();
+  // No redirect away from the result
+  await page.waitForTimeout(1500);
+  await expect(page).toHaveURL(/\/$/);
+
+  const links = (await (await page.request.get('/api/links')).json()).links;
+  expect(links[0].destination_url).toBe('https://example.com/landing');
+  expect(links[0].utm_source).toBe('telegram');
+  expect(links[0].source).toBe('landing');
 });
