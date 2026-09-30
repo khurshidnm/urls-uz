@@ -5,15 +5,16 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/language-context';
 import ShortenCard from './shorten-card';
 import { Zap, Smartphone, MapPin, Shield, Terminal, Sparkles } from 'lucide-react';
+import { formatNumber } from '@/lib/utils';
 
-export default function Hero() {
+export default function Hero({ totalRedirects }: { totalRedirects: number }) {
   const { t, locale } = useLanguage();
 
   const highlights = [
-    { icon: Zap, label: 'P99 LATENCY', value: '< 14ms Global Edge' },
+    { icon: Zap, label: 'SMART ROUTING', value: 'iOS · Android · Huawei' },
     { icon: Smartphone, label: 'DEEP LINKING', value: 'Zero-Webview Bypass' },
     { icon: MapPin, label: 'GEO-TELEMETRY', value: '14 Viloyat Real-time' },
-    { icon: Shield, label: 'LINK ARMOR', value: 'SHA-256 & Rate Limiting' },
+    { icon: Shield, label: 'LINK ARMOR', value: 'Parol & Rate Limiting' },
   ];
 
   return (
@@ -23,9 +24,9 @@ export default function Hero() {
         <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 text-[11px] font-mono">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-zinc-300 font-semibold">INFRASTRUCTURE V3.4</span>
+            <span className="text-zinc-300 font-semibold">urls.uz</span>
             <span className="text-zinc-600">·</span>
-            <span>40M+ Redirects Processed</span>
+            <span>{formatNumber(totalRedirects)} Redirects Processed</span>
           </div>
 
           <Link

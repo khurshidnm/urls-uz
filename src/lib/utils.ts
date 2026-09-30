@@ -118,7 +118,8 @@ export function appendUtmParams(
 }
 
 export function formatNumber(num: number): string {
-  return new Intl.NumberFormat().format(num);
+  // Fixed locale so server-rendered and hydrated output match
+  return new Intl.NumberFormat('en-US').format(num);
 }
 
 export function formatDate(dateStr: string): string {

@@ -1037,6 +1037,31 @@ export const db = {
     return key.user_id;
   },
 
+  /**
+   * Platform-wide numbers for the landing page. The seeded demo workspace is
+   * excluded so only real usage is shown, and the recent activity feed has no
+   * URLs or slugs, since those belong to other users.
+   */
+  getPublicStats() {
+    const database = getDatabase();
+    const count = (sql: string) => (database.prepare(sql).get() as { n: number }).n;
+    const realLinks = "SELECT id FROM links WHERE user_id != 'demo_user'";
+
+    return {
+      totalRedirects: count(`SELECT COUNT(*) as n FROM clicks WHERE link_id IN (${realLinks})`),
+      redirectsLast7Days: count(`SELECT COUNT(*) as n FROM clicks WHERE link_id IN (${realLinks}) AND created_at >= datetime('now', '-7 days')`),
+      totalLinks: count("SELECT COUNT(*) as n FROM links WHERE user_id != 'demo_user'"),
+      linksLast7Days: count("SELECT COUNT(*) as n FROM links WHERE user_id != 'demo_user' AND created_at >= datetime('now', '-7 days')"),
+      totalUsers: count('SELECT COUNT(*) as n FROM users'),
+      totalBioPages: count("SELECT COUNT(*) as n FROM bio_pages WHERE user_id != 'demo_user'"),
+      recentClicks: database.prepare(`
+        SELECT country, region, os, browser, created_at
+        FROM clicks WHERE link_id IN (${realLinks})
+        ORDER BY created_at DESC LIMIT 5
+      `).all() as { country: string; region: string; os: string; browser: string; created_at: string }[],
+    };
+  },
+
   // ---------------------------------------------------------------------------
   // Users & sessions
   // ---------------------------------------------------------------------------

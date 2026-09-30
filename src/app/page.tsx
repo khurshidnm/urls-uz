@@ -7,13 +7,19 @@ import QrPreviewSection from '@/components/landing/qr-preview-section';
 import BioPreviewSection from '@/components/landing/bio-preview-section';
 import PricingSection from '@/components/landing/pricing-section';
 import Footer from '@/components/landing/footer';
+import { db } from '@/lib/db';
+
+// Landing stats are real database counts, refreshed at most once a minute
+export const revalidate = 60;
 
 export default function HomePage() {
+  const stats = db.getPublicStats();
+
   return (
     <main className="min-h-screen bg-mesh flex flex-col bg-grid-pattern">
       <Navbar />
-      <Hero />
-      <StatsBand />
+      <Hero totalRedirects={stats.totalRedirects} />
+      <StatsBand stats={stats} />
       <Features />
       <SmartDeepLinkSection />
       <QrPreviewSection />
