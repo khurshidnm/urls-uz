@@ -1,9 +1,12 @@
+import type { Metadata } from 'next';
 import React from 'react';
 import { redirect } from 'next/navigation';
 import { requireWorkspace } from '@/lib/auth';
 import { toClientJson } from '@/lib/serialize';
 import { qrRepo } from '@/lib/qr/qr-repo';
 import QrLibrary from './qr-library';
+
+export const metadata: Metadata = { title: 'QR kodlar' };
 
 interface Props {
   searchParams: Promise<{ link?: string }>;

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -9,6 +10,8 @@ import { METHOD_LABELS, PROVIDER_LABELS, som, timeAgo } from '../../format';
 import PlanBadge from '../../plan-badge';
 import GrantPlanForm from './grant-plan-form';
 import ResetTwoFactorButton from './reset-two-factor-button';
+
+export const metadata: Metadata = { title: 'Foydalanuvchi' };
 
 interface Props {
   params: Promise<{ id: string }>;

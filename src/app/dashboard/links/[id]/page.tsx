@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { db, toPublicLink } from '@/lib/db';
@@ -5,6 +6,8 @@ import { requireWorkspace } from '@/lib/auth';
 import { toClientJson } from '@/lib/serialize';
 import { qrRepo } from '@/lib/qr/qr-repo';
 import LinkDetailClient, { type LinkTab } from './link-detail-client';
+
+export const metadata: Metadata = { title: 'Havola' };
 
 interface Props {
   params: Promise<{ id: string }>;

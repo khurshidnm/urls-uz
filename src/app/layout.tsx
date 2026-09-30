@@ -1,16 +1,53 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { LanguageProvider } from '@/lib/language-context';
 import { AuthProvider } from '@/lib/auth-context';
 import AuthModal from '@/components/auth/auth-modal';
 import { phoneLoginAvailable } from '@/lib/login-flow';
 import { ToastProvider } from '@/components/ui/toast';
+import { BRAND, SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_TITLE, SITE_URL } from '@/lib/site';
 
 export const metadata: Metadata = {
-  title: 'urls.uz — Havolalarni qisqartirish, Smart Deep Linklar va QR Studio',
-  description: 'Oʻzbekiston va global bozor uchun professional havola ekotizimi. Qisqa havolalar, mobil ilovalarga toʻgʻridan-toʻgʻri oʻtuvchi deep linklar, dinamik QR-kodlar, Link-in-Bio va viloyatlar kesimida chuqur analitika.',
-  keywords: ['urls.uz', 'url.uz', 'havola qisqartirish', 'short link uzbekistan', 'qr code generator', 'link in bio', 'telegram deep link', 'bitly alternative uzbekistan'],
-  authors: [{ name: 'urls.uz Team' }],
+  metadataBase: new URL(SITE_URL),
+  title: { default: SITE_TITLE, template: `%s — ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
+  keywords: SITE_KEYWORDS,
+  applicationName: SITE_NAME,
+  authors: [{ name: SITE_NAME, url: SITE_URL }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  category: 'technology',
+  // No canonical here: pages inherit it, and each public page sets its own
+  openGraph: {
+    type: 'website',
+    url: '/',
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    locale: 'uz_UZ',
+    alternateLocale: ['ru_RU', 'en_US'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1, 'max-video-preview': -1 },
+  },
+  formatDetection: { telephone: false, email: false, address: false },
+  // Search Console / Yandex Webmaster ownership, when configured
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION || undefined,
+    yandex: process.env.YANDEX_SITE_VERIFICATION || undefined,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: BRAND.background,
+  colorScheme: 'dark',
 };
 
 export default function RootLayout({

@@ -1,9 +1,12 @@
+import type { Metadata } from 'next';
 import React from 'react';
 import { db, toPublicLink } from '@/lib/db';
 import { requireWorkspace } from '@/lib/auth';
 import { toClientJson } from '@/lib/serialize';
 import QrStudioClient from '@/components/qr-studio/qr-studio';
 import type { QrDataType } from '@/lib/qr-payloads';
+
+export const metadata: Metadata = { title: 'Yangi QR kod' };
 
 interface Props {
   searchParams: Promise<{ link?: string; type?: string }>;

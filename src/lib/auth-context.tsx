@@ -177,7 +177,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     setUser(null);
     setDemoEditModeState(false);
-    router.refresh();
+    // To the landing page with a full load: refreshing a dashboard page would
+    // show the read-only demo that anonymous visitors see there. A full load also
+    // drops cached dashboard pages, so Back can't show the signed-in data.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign('/');
   };
 
   return (

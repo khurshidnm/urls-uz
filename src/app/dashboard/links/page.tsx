@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import React from 'react';
 import { db, toPublicLink } from '@/lib/db';
 import { requireWorkspace } from '@/lib/auth';
@@ -5,6 +6,8 @@ import { parseLinkFilter } from '@/lib/links/list-filter';
 import { limitsFor, toJsonLimit } from '@/lib/plans';
 import { toClientJson } from '@/lib/serialize';
 import LinksManagerClient from './links-client';
+
+export const metadata: Metadata = { title: 'Havolalar' };
 
 const PAGE_SIZE = 25;
 

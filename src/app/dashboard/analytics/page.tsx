@@ -1,8 +1,11 @@
+import type { Metadata } from 'next';
 import React from 'react';
 import { db, toPublicLink } from '@/lib/db';
 import { requireWorkspace } from '@/lib/auth';
 import { toClientJson } from '@/lib/serialize';
 import AnalyticsViewClient from './analytics-client';
+
+export const metadata: Metadata = { title: 'Analitika' };
 
 interface PageProps {
   searchParams?: Promise<{ link_id?: string; slug?: string }>;

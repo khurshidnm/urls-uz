@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import React from 'react';
 import { getSessionUser } from '@/lib/auth';
 import { listIdentities } from '@/lib/accounts';
@@ -7,6 +8,8 @@ import LoginMethods from './login-methods';
 import { connectMessage } from './connect-message';
 import TwoFactorSettings from './two-factor-settings';
 import { isTwoFactorEnabled } from '@/lib/two-factor/service';
+
+export const metadata: Metadata = { title: 'Sozlamalar' };
 
 interface Props {
   searchParams: Promise<{ connected?: string; outcome?: string; connect_error?: string }>;

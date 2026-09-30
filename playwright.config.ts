@@ -24,7 +24,7 @@ export default defineConfig({
     command: 'npx next start -p 3100',
     // A static file: the server starts before global-setup migrates the test
     // database, so a readiness check that queries it fails after schema changes
-    url: `${E2E_ENV.NEXT_PUBLIC_APP_URL}/favicon.ico`,
+    url: `${E2E_ENV.NEXT_PUBLIC_APP_URL}/icon.svg`,
     reuseExistingServer: !process.env.CI,
     env: E2E_ENV,
     timeout: 60_000,

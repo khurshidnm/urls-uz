@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -7,6 +8,8 @@ import { adminRepo, type AdminUserSort } from '@/lib/admin/admin-repo';
 import { formatDate, formatNumber } from '@/lib/utils';
 import { METHOD_LABELS, PROVIDER_LABELS, som, timeAgo } from './format';
 import PlanBadge from './plan-badge';
+
+export const metadata: Metadata = { title: 'Admin panel' };
 
 interface Props {
   searchParams: Promise<{ q?: string; sort?: string; page?: string }>;

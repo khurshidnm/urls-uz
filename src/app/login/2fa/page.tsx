@@ -1,7 +1,10 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
 import { readChallenge } from '@/lib/two-factor/challenge';
+import type { Metadata } from 'next';
 import TwoFactorForm from './two-factor-form';
+
+export const metadata: Metadata = { title: 'Ikki bosqichli tasdiqlash', robots: { index: false, follow: false } };
 
 /** Second login step for users with two-step login. */
 export default async function TwoFactorPage() {

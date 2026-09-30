@@ -1,9 +1,12 @@
+import type { Metadata } from 'next';
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { requireWorkspace } from '@/lib/auth';
 import { toClientJson } from '@/lib/serialize';
 import { qrRepo } from '@/lib/qr/qr-repo';
 import QrStudioClient from '@/components/qr-studio/qr-studio';
+
+export const metadata: Metadata = { title: 'QR kod' };
 
 interface Props {
   params: Promise<{ id: string }>;

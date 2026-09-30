@@ -1,4 +1,5 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { cookies, headers } from 'next/headers';
@@ -21,6 +22,9 @@ import { isHostedType } from '@/lib/qr/content';
 interface Props {
   params: Promise<{ slug: string }>;
 }
+
+// Short links redirect; their pages (password, expired, contact card) aren't search results
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function SlugRedirectPage({ params }: Props) {
   const { slug } = await params;
