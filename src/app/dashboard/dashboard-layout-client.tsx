@@ -11,8 +11,10 @@ import { useAuth } from '@/lib/auth-context';
 
 export default function DashboardLayoutClient({
   children,
+  bioHandle,
 }: {
   children: React.ReactNode;
+  bioHandle: string | null;
 }) {
   const router = useRouter();
   const { user, openAuthModal, isSuperAdmin, demoEditMode } = useAuth();
@@ -84,7 +86,7 @@ export default function DashboardLayoutClient({
 
       {/* Sidebar */}
       <div className={`${mobileSidebarOpen ? 'fixed inset-y-0 left-0 z-50 block' : 'hidden'} md:relative md:block`}>
-        <Sidebar onCreateLink={() => { handleRequestCreateLink('Yangi havola yaratish'); setMobileSidebarOpen(false); }} />
+        <Sidebar bioHandle={bioHandle} onCreateLink={() => { handleRequestCreateLink('Yangi havola yaratish'); setMobileSidebarOpen(false); }} />
       </div>
 
       {/* Main Content Area */}

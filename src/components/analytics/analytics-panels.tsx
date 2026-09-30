@@ -36,7 +36,20 @@ export function RangeSwitch({ value, onChange }: { value: AnalyticsRangeValue; o
   );
 }
 
-export function TimelineChart({ timeline, title }: { timeline: AnalyticsView['timeline']; title: string }) {
+export function TimelineChart({
+  timeline,
+  title,
+  countLabel = 'bosish',
+  emptyLabel = 'Maʼlumotlar to‘planmoqda...',
+  locale = 'uz',
+}: {
+  timeline: AnalyticsView['timeline'];
+  title: string;
+  /** "12 bosish" in the hover label. */
+  countLabel?: string;
+  emptyLabel?: string;
+  locale?: 'uz' | 'ru' | 'en';
+}) {
   const maxCount = Math.max(...timeline.map((t) => t.count), 1);
   // Label about ten bars so 30- and 90-day ranges stay readable
   const labelEvery = Math.max(1, Math.ceil(timeline.length / 10));
@@ -48,20 +61,20 @@ export function TimelineChart({ timeline, title }: { timeline: AnalyticsView['ti
           <Activity className="w-4 h-4 text-indigo-400" />
           <h3 className="text-sm font-bold text-white">{title}</h3>
         </div>
-        <Badge variant="indigo" size="xs" dot pulse>Live Telemetry</Badge>
       </div>
 
       {timeline.length > 0 ? (
         <div className="flex items-end gap-1 h-44">
           {timeline.map((t, idx) => {
             const height = t.count === 0 ? 2 : Math.max((t.count / maxCount) * 100, 6);
-            const dayLabel = formatDay(t.date);
+            const dayLabel = formatDay(t.date, locale);
             const isLatest = idx === timeline.length - 1;
 
             return (
-              <div key={t.date} className="flex-1 h-full flex flex-col items-center justify-end group/bar relative">
+              // min-w-0: date labels must not widen the columns (they'd push the chart out of its card)
+              <div key={t.date} className="flex-1 min-w-0 h-full flex flex-col items-center justify-end group/bar relative">
                 <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded-lg bg-slate-800 text-[10px] text-white font-mono opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 shadow-lg border border-slate-700">
-                  {t.count} bosish · {dayLabel}
+                  {t.count} {countLabel} · {dayLabel}
                 </div>
                 <div
                   className={`w-full rounded-t-lg transition-all duration-500 cursor-pointer ${
@@ -71,15 +84,19 @@ export function TimelineChart({ timeline, title }: { timeline: AnalyticsView['ti
                   }`}
                   style={{ height: `${height}%` }}
                 />
-                <span className={`text-[8px] mt-1.5 whitespace-nowrap ${isLatest ? 'text-indigo-400 font-bold' : 'text-slate-600'} ${(timeline.length - 1 - idx) % labelEvery === 0 ? '' : 'invisible'}`}>
-                  {dayLabel}
+                <span className="relative w-full h-3 mt-1.5">
+                  <span
+                    className={`absolute left-1/2 -translate-x-1/2 text-[8px] whitespace-nowrap ${isLatest ? 'text-indigo-400 font-bold' : 'text-slate-600'} ${(timeline.length - 1 - idx) % labelEvery === 0 ? '' : 'invisible'}`}
+                  >
+                    {dayLabel}
+                  </span>
                 </span>
               </div>
             );
           })}
         </div>
       ) : (
-        <div className="h-44 flex items-center justify-center text-xs text-slate-600">Maʼlumotlar to‘planmoqda...</div>
+        <div className="h-44 flex items-center justify-center text-xs text-slate-600">{emptyLabel}</div>
       )}
     </div>
   );

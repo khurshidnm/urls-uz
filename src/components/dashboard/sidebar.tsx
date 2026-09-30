@@ -24,17 +24,19 @@ import {
 
 interface SidebarProps {
   onCreateLink?: () => void;
+  /** The workspace's bio page, if it has one. */
+  bioHandle: string | null;
 }
 
-export default function Sidebar({ onCreateLink }: SidebarProps) {
+export default function Sidebar({ onCreateLink, bioHandle }: SidebarProps) {
   const pathname = usePathname();
-  const { t, locale } = useLanguage();
+  const { t } = useLanguage();
   const { user, logout, openAuthModal, isSuperAdmin, demoEditMode, setDemoEditMode } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
   const navigation = [
     {
-      name: locale === 'uz' ? "Umumiy ko'rinish" : locale === 'ru' ? 'Обзор' : 'Overview',
+      name: t.shell.overview,
       href: '/dashboard',
       icon: LayoutDashboard,
       matchExact: true,
@@ -60,12 +62,12 @@ export default function Sidebar({ onCreateLink }: SidebarProps) {
       icon: BarChart3,
     },
     {
-      name: 'API Kalitlar',
+      name: t.shell.apiKeys,
       href: '/dashboard/api-keys',
       icon: KeyRound,
     },
     {
-      name: "Tarif & To'lov",
+      name: t.shell.billing,
       href: '/dashboard/billing',
       icon: CreditCard,
     },
@@ -140,21 +142,32 @@ export default function Sidebar({ onCreateLink }: SidebarProps) {
         })}
       </nav>
 
-      {/* Quick Bio Link Footnote */}
+      {/* The workspace's own bio page */}
       {!collapsed && (
         <div className="p-2.5 mx-2.5 mb-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800">
           <div className="flex items-center justify-between mb-1 text-[11px] font-mono text-zinc-400">
-            <span>Bio Portal</span>
+            <span>{t.shell.bioPage}</span>
             <ExternalLink className="w-2.5 h-2.5 text-zinc-500" />
           </div>
-          <p className="text-[10px] text-zinc-500 mb-1.5 truncate font-mono">urls.uz/b/apextech</p>
-          <Link
-            href="/b/apextech"
-            target="_blank"
-            className="block w-full py-1 text-center text-[10px] font-mono font-medium text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded transition-colors"
-          >
-            Ochish →
-          </Link>
+          {bioHandle ? (
+            <>
+              <p className="text-[10px] text-zinc-500 mb-1.5 truncate font-mono">urls.uz/b/{bioHandle}</p>
+              <Link
+                href={`/b/${bioHandle}`}
+                target="_blank"
+                className="block w-full py-1 text-center text-[10px] font-mono font-medium text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded transition-colors"
+              >
+                {t.shell.open} →
+              </Link>
+            </>
+          ) : (
+            <Link
+              href="/dashboard/bio"
+              className="block w-full mt-1.5 py-1 text-center text-[10px] font-mono font-medium text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded transition-colors"
+            >
+              {t.shell.createBio} →
+            </Link>
+          )}
         </div>
       )}
 
@@ -193,11 +206,14 @@ export default function Sidebar({ onCreateLink }: SidebarProps) {
         ) : user ? (
           <>
             <div className="flex items-center gap-2 min-w-0">
-              <img
-                src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                alt="Avatar"
-                className="w-6 h-6 rounded-full object-cover bg-zinc-800 shrink-0"
-              />
+              {user.avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element -- avatars come from Google/Telegram
+                <img src={user.avatar} alt="" className="w-6 h-6 rounded-full object-cover bg-zinc-800 shrink-0" />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-500 to-cyan-500 text-white flex items-center justify-center font-bold text-[10px] shrink-0" aria-hidden>
+                  {user.name?.[0]?.toUpperCase() || '?'}
+                </div>
+              )}
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <p className="text-xs font-medium text-zinc-200 truncate">{user?.name || 'Foydalanuvchi'}</p>
@@ -207,13 +223,14 @@ export default function Sidebar({ onCreateLink }: SidebarProps) {
                     </span>
                   )}
                 </div>
-                <p className="text-[10px] text-zinc-500 truncate font-mono">{user?.email || 'user@urls.uz'}</p>
+                {(user.email || user.phone) && <p className="text-[10px] text-zinc-500 truncate font-mono">{user.email || user.phone}</p>}
               </div>
             </div>
 
             <button
               onClick={logout}
-              title="Chiqish"
+              title={t.shell.signOut}
+              aria-label={t.shell.signOut}
               className="p-1 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors shrink-0"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -227,16 +244,15 @@ export default function Sidebar({ onCreateLink }: SidebarProps) {
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-zinc-200 truncate">ApexTech Solutions</p>
-                <p className="text-[10px] text-amber-400 truncate font-mono">Demo Rejimi</p>
+                <p className="text-[10px] text-amber-400 truncate font-mono">{t.shell.demoMode}</p>
               </div>
             </div>
 
             <button
               onClick={() => openAuthModal()}
-              title="Bepul ro‘yxatdan o‘tish"
               className="px-2 py-1 text-[11px] font-bold text-zinc-950 bg-white hover:bg-zinc-200 rounded transition-colors shrink-0 cursor-pointer"
             >
-              Kirish
+              {t.shell.signIn}
             </button>
           </>
         )}

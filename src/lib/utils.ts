@@ -139,15 +139,21 @@ export function formatDateTime(value: string | Date): string {
 }
 
 const UZ_MONTHS = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avg', 'sen', 'okt', 'noy', 'dek'];
+const SHORT_MONTHS = {
+  uz: UZ_MONTHS,
+  ru: ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'],
+  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+};
 
-/** "30-sen" — short day label for charts (same output on server and client). */
-export function formatDay(value: string | Date): string {
+/** "30-sen" / "30 сен" / "30 Sep" — short day label for charts (same output on server and client). */
+export function formatDay(value: string | Date, locale: keyof typeof SHORT_MONTHS = 'uz'): string {
   // Plain "YYYY-MM-DD" days are formatted as-is, so no time zone can shift them
   const plain = typeof value === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (plain) return `${Number(plain[3])}-${UZ_MONTHS[Number(plain[2]) - 1]}`;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  return `${d.getDate()}-${UZ_MONTHS[d.getMonth()]}`;
+  const d = plain ? null : new Date(value);
+  if (d && Number.isNaN(d.getTime())) return String(value);
+  const day = plain ? Number(plain[3]) : d!.getDate();
+  const month = SHORT_MONTHS[locale][plain ? Number(plain[2]) - 1 : d!.getMonth()];
+  return locale === 'uz' ? `${day}-${month}` : `${day} ${month}`;
 }
 
 /** "30-sen, 2026" — browsers render the uz-UZ locale inconsistently ("2026 M09 30"), so format by hand. */

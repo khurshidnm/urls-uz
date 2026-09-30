@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { useLanguage } from '@/lib/language-context';
 import { Sparkles, Shield, RotateCcw, Plus, Check, ArrowRight, Eye, ShieldAlert } from 'lucide-react';
 
 interface DemoBannerProps {
@@ -18,6 +19,7 @@ export function DemoBanner({ onStartFree }: DemoBannerProps) {
     resetDemoData,
   } = useAuth();
   const [isResetting, setIsResetting] = useState(false);
+  const { t } = useLanguage();
 
   // CASE 1: Super Admin in Demo Edit Mode
   if (isSuperAdmin && demoEditMode) {
@@ -134,14 +136,14 @@ export function DemoBanner({ onStartFree }: DemoBannerProps) {
         </span>
         <div className="flex items-center gap-1.5 flex-wrap min-w-0">
           <span className="font-bold text-white font-mono text-[11px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30">
-            DEMO REJIM
+            {t.shell.demoBadge}
           </span>
           <span className="text-zinc-300 font-medium truncate">
-            Faqat ko‘rish imkoniyati
+            {t.shell.demoReadOnly}
           </span>
           <span className="text-zinc-500 hidden md:inline">·</span>
           <span className="text-zinc-400 hidden md:inline truncate">
-            Namunaviy «ApexTech Solutions» kompaniyasi ma’lumotlari. O‘z havolalaringizni yaratish uchun bepul kiring.
+            {t.shell.demoNote}
           </span>
         </div>
       </div>
@@ -153,7 +155,7 @@ export function DemoBanner({ onStartFree }: DemoBannerProps) {
           className="flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-zinc-200 text-zinc-950 font-bold text-xs rounded-lg shadow-sm hover:shadow transition-all active:scale-[0.98] cursor-pointer"
         >
           <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-          <span>Bepul boshlash</span>
+          <span>{t.shell.startFree}</span>
           <ArrowRight className="w-3 h-3" />
         </button>
       </div>
