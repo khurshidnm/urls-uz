@@ -14,7 +14,7 @@ test('bio buttons are real links: tracked, editable without losing stats, cleane
     { title: 'Qo‘ng‘iroq', url: 'tel:+998901234567' },
   ]);
   expect(res.status()).toBe(200);
-  let buttons: Button[] = (await res.json()).bioPage.links;
+  const buttons: Button[] = (await res.json()).bioPage.links;
   expect(buttons[0].link_id).toBeTruthy();
   expect(buttons[0].short_slug).toBeTruthy();
   expect(buttons[2].link_id).toBeNull();
