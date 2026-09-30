@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { and, asc, desc, eq, gte, isNull, lt, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, lt, ne, or, sql, type SQL } from 'drizzle-orm';
 import { pg } from '@/db/client';
 import {
   apiKeys,
@@ -152,6 +152,17 @@ export type LinkInput = {
   source?: LinkRecord['source'];
 };
 
+export interface LinkFilter {
+  q?: string;
+  status?: 'active' | 'archived' | 'all';
+  tag?: string;
+  /** Folder id, or 'none' for links outside any folder. */
+  folder?: string;
+  sort?: 'newest' | 'oldest' | 'clicks';
+  limit: number;
+  offset: number;
+}
+
 export type LinkChanges = Partial<
   Pick<
     LinkRecord,
@@ -215,6 +226,61 @@ export const db = {
 
   async getAllLinks(workspaceId: string): Promise<LinkRecord[]> {
     return pg.select().from(links).where(eq(links.workspace_id, workspaceId)).orderBy(desc(links.created_at));
+  },
+
+  /** Filtered, sorted, paginated links for the links table. */
+  async queryLinks(workspaceId: string, filter: LinkFilter): Promise<{ links: LinkRecord[]; total: number }> {
+    const conditions: (SQL | undefined)[] = [eq(links.workspace_id, workspaceId)];
+    if (filter.status === 'active') conditions.push(eq(links.is_archived, false));
+    if (filter.status === 'archived') conditions.push(eq(links.is_archived, true));
+    if (filter.tag) conditions.push(sql`${links.tags} @> array[${filter.tag}]::text[]`);
+    if (filter.folder === 'none') conditions.push(isNull(links.folder_id));
+    else if (filter.folder) conditions.push(eq(links.folder_id, filter.folder));
+    if (filter.q) {
+      // Escape LIKE wildcards so a search for "50%" matches literally
+      const pattern = `%${filter.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+      conditions.push(
+        or(
+          ilike(links.title, pattern),
+          ilike(links.slug, pattern),
+          ilike(links.destination_url, pattern),
+          sql`exists (select 1 from unnest(${links.tags}) t where t ilike ${pattern})`
+        )
+      );
+    }
+    const where = and(...conditions);
+    const order =
+      filter.sort === 'clicks' ? [desc(links.click_count), desc(links.created_at)]
+      : filter.sort === 'oldest' ? [asc(links.created_at)]
+      : [desc(links.created_at)];
+
+    const [rows, [{ n }]] = await Promise.all([
+      pg.select().from(links).where(where).orderBy(...order).limit(filter.limit).offset(filter.offset),
+      pg.select({ n: count }).from(links).where(where),
+    ]);
+    return { links: rows, total: n };
+  },
+
+  /** Every tag used in the workspace, most used first. */
+  async listTags(workspaceId: string): Promise<{ tag: string; count: number }[]> {
+    const result = await pg.execute<{ tag: string; count: number }>(sql`
+      select t as tag, count(*)::int as count
+      from ${links}, unnest(${links.tags}) t
+      where ${links.workspace_id} = ${workspaceId}
+      group by t
+      order by count desc, t asc
+    `);
+    return result.rows;
+  },
+
+  /** Deletes links in the workspace; ids from other workspaces are ignored. Returns the deleted ids. */
+  async deleteLinks(ids: string[], workspaceId: string): Promise<string[]> {
+    if (ids.length === 0) return [];
+    const deleted = await pg
+      .delete(links)
+      .where(and(inArray(links.id, ids), eq(links.workspace_id, workspaceId)))
+      .returning({ id: links.id });
+    return deleted.map((d) => d.id);
   },
 
   async createLink(data: LinkInput, exec: Executor = pg): Promise<LinkRecord> {

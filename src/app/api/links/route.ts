@@ -2,24 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, toPublicLink } from '@/lib/db';
 import { requireWorkspace } from '@/lib/auth';
 import { createLink } from '@/lib/links/create-link';
+import { parseLinkFilter } from '@/lib/links/list-filter';
 
+/**
+ * Lists the workspace's links. Filters: q, status (all|active|archived, default all),
+ * tag, folder (id or "none"), sort (newest|oldest|clicks), page, limit (max 100).
+ */
 export async function GET(request: NextRequest) {
   try {
     const ctx = await requireWorkspace();
-    const { searchParams } = new URL(request.url);
-    const q = searchParams.get('q')?.toLowerCase();
+    const filter = parseLinkFilter(request.nextUrl.searchParams, { status: 'all', limit: 100 });
+    const { links, total } = await db.queryLinks(ctx.workspace.id, filter);
 
-    let links = await db.getAllLinks(ctx.workspace.id);
-
-    if (q) {
-      links = links.filter(l =>
-        l.title.toLowerCase().includes(q) ||
-        l.slug.toLowerCase().includes(q) ||
-        l.destination_url.toLowerCase().includes(q)
-      );
-    }
-
-    return NextResponse.json({ success: true, links: links.map(toPublicLink) });
+    return NextResponse.json({
+      success: true,
+      links: links.map(toPublicLink),
+      total,
+      page: filter.page,
+      pageSize: filter.limit,
+    });
   } catch (error) {
     console.error('GET /api/links failed:', error);
     return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });

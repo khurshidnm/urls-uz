@@ -176,6 +176,18 @@ export const updateLinkSchema = z
   })
   .refine((v) => Object.values(v).some((x) => x !== undefined), 'O‘zgartirish uchun kamida bitta maydon yuboring');
 
+const bulkIds = z.array(z.string().max(64)).min(1, 'Kamida bitta havola tanlang').max(100, 'Bir martada ko‘pi bilan 100 ta havola');
+const bulkTag = z.string().trim().min(1).max(40);
+
+export const bulkLinksSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('archive'), ids: bulkIds }),
+  z.object({ action: z.literal('unarchive'), ids: bulkIds }),
+  z.object({ action: z.literal('delete'), ids: bulkIds }),
+  z.object({ action: z.literal('move'), ids: bulkIds, folder_id: folderId.nullable() }),
+  z.object({ action: z.literal('add_tag'), ids: bulkIds, tag: bulkTag }),
+  z.object({ action: z.literal('remove_tag'), ids: bulkIds, tag: bulkTag }),
+]);
+
 export const folderSchema = z.object({
   name: z.string().trim().min(1, 'Papka nomi kiritilishi shart').max(60),
 });
