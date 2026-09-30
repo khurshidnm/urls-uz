@@ -15,6 +15,11 @@ export interface PlanLimits {
   bioLinks: number;
   /** Bio page themes; null = all themes. */
   bioThemes: string[] | null;
+  /**
+   * Days raw clicks (the per-visit log) are kept. Daily totals by region,
+   * source, device, ... are kept forever, so charts and totals don't shrink.
+   */
+  rawClickRetentionDays: number;
 }
 
 const UNLIMITED = Number.POSITIVE_INFINITY;
@@ -26,6 +31,7 @@ export const PLAN_LIMITS: Record<WorkspaceRecord['plan'], PlanLimits> = {
     deviceTargeting: 1,
     bioLinks: 4,
     bioThemes: ['midnight', 'emerald', 'clean-light'],
+    rawClickRetentionDays: 30,
   },
   pro: {
     activeLinks: UNLIMITED,
@@ -33,6 +39,7 @@ export const PLAN_LIMITS: Record<WorkspaceRecord['plan'], PlanLimits> = {
     deviceTargeting: UNLIMITED,
     bioLinks: 50,
     bioThemes: null,
+    rawClickRetentionDays: 365,
   },
   enterprise: {
     activeLinks: UNLIMITED,
@@ -40,6 +47,7 @@ export const PLAN_LIMITS: Record<WorkspaceRecord['plan'], PlanLimits> = {
     deviceTargeting: UNLIMITED,
     bioLinks: 50,
     bioThemes: null,
+    rawClickRetentionDays: 730,
   },
 };
 

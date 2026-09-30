@@ -41,10 +41,10 @@ test('login → create link → redirect → click recorded', async ({ page, req
   expect(visit.status()).toBe(307);
   expect(visit.headers()['location']).toBe('https://example.com/smoke-test');
 
-  // 4. The click is recorded in the owner's analytics
-  const list = await page.request.get('/api/links');
-  const created = (await list.json()).links.find((l: { slug: string }) => l.slug === slug);
-  expect(created.click_count).toBe(1);
+  // 4. The click is recorded in the owner's analytics (written in a batch right after the redirect)
+  const findCreated = async () => (await (await page.request.get('/api/links')).json()).links.find((l: { slug: string }) => l.slug === slug);
+  await expect.poll(async () => (await findCreated()).click_count).toBe(1);
+  const created = await findCreated();
 
   const analytics = await page.request.get(`/api/analytics?link_id=${created.id}`);
   const data = await analytics.json();

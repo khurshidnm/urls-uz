@@ -2,7 +2,9 @@ import React from 'react';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { cookies, headers } from 'next/headers';
+import { after } from 'next/server';
 import { db } from '@/lib/db';
+import { enqueueClick, recordLimitedClick, type ClickData } from '@/lib/clicks/recorder';
 import { detectAndBuildDeepLink, resolveDeviceRedirect } from '@/lib/deep-link';
 import { resolveRegionFromHeaders } from '@/lib/geo';
 import { getClientIp } from '@/lib/auth';
@@ -103,25 +105,32 @@ export default async function SlugRedirectPage({ params }: Props) {
 
   const geoInfo = resolveRegionFromHeaders(headerList);
 
-  // 4. Analytics Async Isolation: Tracking failures must never interrupt the redirect flow.
-  // Link-preview crawlers (Telegram, WhatsApp, ...) are not visitors and are not counted.
+  // 4. Analytics. Link-preview crawlers (Telegram, WhatsApp, ...) are not visitors and are not counted.
+  // Recording never delays the redirect, and a tracking failure never breaks it.
   let withinLimit = true;
   if (!BOT_UA.test(userAgentStr)) {
-    try {
-      withinLimit = await db.recordClick({
-        link_id: link.id,
-        ip_hash: hashIp(getClientIp(headerList)),
-        referer: refererStr.includes('t.me') ? 'Telegram' : refererStr.includes('instagram') ? 'Instagram' : refererStr.includes('google') ? 'Google' : 'Direct',
-        country: geoInfo.country,
-        region: geoInfo.region,
-        city: geoInfo.city,
-        device_type: deviceType,
-        os: osName,
-        browser: browserName,
-      });
-    } catch (trackingErr) {
-      // Non-fatal telemetry failure log; client redirect proceeds unaffected
-      console.error('[Analytics Async Isolation] Telemetry warning:', trackingErr);
+    const click: ClickData = {
+      link_id: link.id,
+      ip_hash: hashIp(getClientIp(headerList)),
+      referer: refererStr.includes('t.me') ? 'Telegram' : refererStr.includes('instagram') ? 'Instagram' : refererStr.includes('google') ? 'Google' : 'Direct',
+      country: geoInfo.country,
+      region: geoInfo.region,
+      city: geoInfo.city,
+      device_type: deviceType,
+      os: osName,
+      browser: browserName,
+      created_at: new Date(),
+    };
+    if (link.click_limit) {
+      // The limit has to be exact, so these clicks are counted before redirecting
+      try {
+        withinLimit = await recordLimitedClick(click);
+      } catch (err) {
+        console.error('[clicks] recording a limited click failed:', err);
+      }
+    } else {
+      // Written in a batch after the response is sent
+      after(() => enqueueClick(click));
     }
   }
 

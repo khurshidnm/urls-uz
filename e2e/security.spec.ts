@@ -42,6 +42,11 @@ async function req(
   return { status: res.status, json, text, headers: res.headers };
 }
 
+/** Polls until `condition` holds (clicks are written asynchronously), for up to 5 seconds. */
+async function waitFor(condition: () => Promise<boolean>) {
+  for (let i = 0; i < 50 && !(await condition()); i++) await new Promise((resolve) => setTimeout(resolve, 100));
+}
+
 function sessionCookie(res: ApiResponse) {
   const raw = res.headers.getSetCookie().find((c) => c.startsWith('urls_sid='));
   if (!raw) throw new Error(`No session cookie (status ${res.status}): ${res.text}`);
@@ -170,6 +175,8 @@ test('security and validation checks', async () => {
   check('password guessing is rate limited', limited > 0, `${limited} of 12 blocked`);
 
   // == Analytics honesty ==
+  // Clicks are written in a batch right after the redirect
+  await waitFor(async () => (await req(`/api/links/${aliceLink.id}`, { cookie: a.session.cookie })).json?.link?.click_count === 1);
   r = await req(`/api/links/${aliceLink.id}`, { cookie: a.session.cookie });
   const before = r.json.link.click_count;
   check('one real click recorded so far', before === 1, `click_count ${before}`);
@@ -179,6 +186,8 @@ test('security and validation checks', async () => {
   check('IP stored only as salted hash', lastClick?.ip_hash && lastClick.ip_hash !== 'anon' && !lastClick.ip_hash.includes('.'), lastClick?.ip_hash);
 
   await req(`/${slug}`, { cookie: unlock.split(';')[0], headers: { 'User-Agent': 'TelegramBot (like TwitterBot)' } });
+  // Give a (wrongly) queued click time to be written before checking it wasn't
+  await new Promise((resolve) => setTimeout(resolve, 400));
   r = await req(`/api/links/${aliceLink.id}`, { cookie: a.session.cookie });
   check('Telegram link-preview bot not counted', r.json.link.click_count === before, `click_count ${r.json.link.click_count}`);
 

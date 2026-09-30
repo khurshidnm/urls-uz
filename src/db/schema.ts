@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -219,6 +220,28 @@ export const clicks = pgTable(
     created_at: createdAt(),
   },
   (t) => [index('clicks_link_time').on(t.link_id, t.created_at), index('clicks_time').on(t.created_at)]
+);
+
+/** What a daily total is broken down by; 'total' has the value ''. */
+export const statDimension = pgEnum('stat_dimension', ['total', 'region', 'country', 'referer', 'device', 'os', 'browser']);
+
+/**
+ * Clicks per link per day (Tashkent time), in total and per region, country,
+ * source, device, OS and browser. Dashboards read these instead of counting
+ * raw clicks, so they stay fast however many clicks a link gets. Kept
+ * forever; raw clicks are pruned after the plan's retention period.
+ * 'region' covers Uzbekistan only (the regions panel); other countries are in 'country'.
+ */
+export const linkStatsDaily = pgTable(
+  'link_stats_daily',
+  {
+    link_id: text('link_id').notNull().references(() => links.id, { onDelete: 'cascade' }),
+    day: date('day').notNull(),
+    dimension: statDimension('dimension').notNull(),
+    value: text('value').notNull(),
+    clicks: integer('clicks').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.link_id, t.day, t.dimension, t.value] })]
 );
 
 // ---------------------------------------------------------------------------

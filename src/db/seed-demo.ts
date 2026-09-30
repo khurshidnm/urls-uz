@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import type { Database } from './client';
 import { apiKeys, bioLinks, bioPages, clicks, links, workspaces } from './schema';
 import { DEMO_WORKSPACE_ID, hashLinkPassword, sha256 } from '@/lib/db';
+import { rebuildLinkStats } from '@/lib/clicks/recorder';
 
 /**
  * (Re)creates the read-only demo workspace shown to visitors who aren't
@@ -147,6 +148,8 @@ export async function seedDemo(pg: Database) {
       }))
     );
     await tx.insert(clicks).values(clickRows);
+    // Dashboards read daily totals, not raw clicks
+    await rebuildLinkStats(tx, [...new Set(clickRows.map((c) => c.link_id))]);
 
     // Display-only key: its hash matches no real key, so it can never authenticate
     await tx.insert(apiKeys).values({

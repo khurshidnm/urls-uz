@@ -43,8 +43,10 @@ test('bio buttons are real links: tracked, editable without losing stats, cleane
   });
   expect(visit.status()).toBe(307);
   expect(visit.headers()['location']).toBe('https://example.com/site');
-  const analytics = await (await page.request.get(`/api/analytics?link_id=${buttons[0].link_id}`)).json();
-  expect(analytics.clicks[0].os).toBe('Android');
+  // Clicks are written in a batch right after the redirect
+  await expect
+    .poll(async () => (await (await page.request.get(`/api/analytics?link_id=${buttons[0].link_id}`)).json()).clicks[0]?.os)
+    .toBe('Android');
 
   // Editing a button keeps its link and statistics
   res = await save([

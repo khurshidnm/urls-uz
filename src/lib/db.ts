@@ -1,11 +1,12 @@
 import crypto from 'crypto';
-import { and, asc, desc, eq, gte, ilike, inArray, isNull, lt, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
 import { pg } from '@/db/client';
 import {
   apiKeys,
   bioLinks,
   bioPages,
   clicks,
+  linkStatsDaily,
   folders,
   linkEvents,
   links,
@@ -97,12 +98,63 @@ function clicksSince(range: AnalyticsRange) {
   return days === null ? undefined : gte(clicks.created_at, sql`now() - make_interval(days => ${days})`);
 }
 
-function timelineSince(range: AnalyticsRange) {
-  return gte(clicks.created_at, sql`now() - make_interval(days => ${timelineDays(range)})`);
-}
-
 function timelineDays(range: AnalyticsRange): number {
   return RANGE_DAYS[range] ?? 90;
+}
+
+/** Today in Tashkent, as a SQL date. */
+const todayInTashkent = sql`(now() at time zone 'Asia/Tashkent')::date`;
+
+/** Daily totals within the range (the last N days including today); all days for 'all'. */
+function statsSince(range: AnalyticsRange) {
+  const days = RANGE_DAYS[range];
+  return days === null ? undefined : gte(linkStatsDaily.day, sql`${todayInTashkent} - ${days - 1}::int`);
+}
+
+const statSum = sql<number>`coalesce(sum(${linkStatsDaily.clicks}), 0)::int`;
+type StatDimension = (typeof linkStatsDaily.$inferSelect)['dimension'];
+
+/**
+ * Analytics from the daily totals: the cost depends on the number of days
+ * and distinct values, not on how many clicks there were.
+ */
+async function statsReport(scope: SQL | undefined, range: AnalyticsRange) {
+  const where = (dimension: StatDimension, since = statsSince(range)) => and(scope, since, eq(linkStatsDaily.dimension, dimension));
+  const breakdown = (dimension: StatDimension, limit: number) =>
+    pg
+      .select({ value: linkStatsDaily.value, count: statSum })
+      .from(linkStatsDaily)
+      .innerJoin(links, eq(links.id, linkStatsDaily.link_id))
+      .where(where(dimension))
+      .groupBy(linkStatsDaily.value)
+      .orderBy(desc(statSum))
+      .limit(limit);
+
+  const [[total], regions, countries, referrers, devices, os, timeline] = await Promise.all([
+    pg.select({ n: statSum }).from(linkStatsDaily).innerJoin(links, eq(links.id, linkStatsDaily.link_id)).where(where('total')),
+    breakdown('region', 14),
+    breakdown('country', 12),
+    breakdown('referer', 10),
+    breakdown('device', 10),
+    breakdown('os', 12),
+    pg
+      .select({ date: linkStatsDaily.day, count: statSum })
+      .from(linkStatsDaily)
+      .innerJoin(links, eq(links.id, linkStatsDaily.link_id))
+      .where(where('total', gte(linkStatsDaily.day, sql`${todayInTashkent} - ${timelineDays(range) - 1}::int`)))
+      .groupBy(linkStatsDaily.day)
+      .orderBy(asc(linkStatsDaily.day)),
+  ]);
+
+  return {
+    totalClicks: total.n,
+    regions: regions.map((r) => ({ region: r.value, count: r.count })),
+    countries: countries.map((r) => ({ country: r.value, count: r.count })),
+    referrers: referrers.map((r) => ({ referer: r.value, count: r.count })),
+    devices: devices.map((r) => ({ device_type: r.value, count: r.count })),
+    os: os.map((r) => ({ os: r.value, count: r.count })),
+    timeline: fillTimeline(timeline, range),
+  };
 }
 
 const tashkentDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent' });
@@ -120,8 +172,6 @@ function fillTimeline(rows: { date: string; count: number }[], range: AnalyticsR
 /** The pool itself, or an open transaction: repository writes can join a caller's transaction. */
 export type Executor = typeof pg | Parameters<Parameters<typeof pg.transaction>[0]>[0];
 
-/** Day buckets in Uzbekistan time, formatted like the old SQLite date() output. */
-const clickDay = sql<string>`to_char(${clicks.created_at} at time zone 'Asia/Tashkent', 'YYYY-MM-DD')`;
 
 // ---------------------------------------------------------------------------
 // Repository
@@ -414,134 +464,43 @@ export const db = {
     return deleted.length > 0;
   },
 
-  /**
-   * Records a click. The counter is incremented conditionally on the click
-   * limit, so concurrent requests can't push a link past it. Returns false
-   * when the limit has been reached.
-   */
-  async recordClick(click: {
-    link_id: string;
-    ip_hash?: string;
-    referer?: string;
-    country?: string;
-    region?: string;
-    city?: string;
-    device_type?: string;
-    os?: string;
-    browser?: string;
-  }): Promise<boolean> {
-    return pg.transaction(async (tx) => {
-      const updated = await tx
-        .update(links)
-        .set({ click_count: sql`${links.click_count} + 1` })
-        .where(
-          and(
-            eq(links.id, click.link_id),
-            or(isNull(links.click_limit), lt(links.click_count, links.click_limit))
-          )
-        )
-        .returning({ id: links.id });
-      if (updated.length === 0) return false;
-
-      await tx.insert(clicks).values({
-        id: newId('click'),
-        link_id: click.link_id,
-        ip_hash: click.ip_hash || 'anon',
-        referer: click.referer || 'Direct',
-        country: click.country || 'Unknown',
-        region: click.region || 'Unknown',
-        city: click.city || 'Unknown',
-        device_type: click.device_type || 'Unknown',
-        os: click.os || 'Unknown',
-        browser: click.browser || 'Unknown',
-      });
-      return true;
-    });
-  },
-
-  // --- Analytics -----------------------------------------------------------
-
   async getAnalyticsOverview(workspaceId: string, range: AnalyticsRange = '30d') {
-    // Every click query is restricted to the workspace's links and the time window
-    const inWorkspace = and(eq(links.workspace_id, workspaceId), clicksSince(range));
-    const inTimeline = timelineSince(range);
-    const joined = eq(links.id, clicks.link_id);
-
-    const [[totals], [linkTotals], [bioTotals], regions, countries, referrers, devices, os, timeline] = await Promise.all([
-      pg.select({ n: count }).from(clicks).innerJoin(links, joined).where(inWorkspace),
+    const [report, [linkTotals], [bioTotals]] = await Promise.all([
+      statsReport(eq(links.workspace_id, workspaceId), range),
       pg.select({ n: count }).from(links).where(eq(links.workspace_id, workspaceId)),
       pg.select({ n: sql<number>`coalesce(sum(${bioPages.view_count}), 0)::int` }).from(bioPages).where(eq(bioPages.workspace_id, workspaceId)),
-      pg.select({ region: clicks.region, count }).from(clicks).innerJoin(links, joined)
-        .where(and(inWorkspace, eq(clicks.country, 'UZ'))).groupBy(clicks.region).orderBy(desc(count)).limit(14),
-      pg.select({ country: clicks.country, count }).from(clicks).innerJoin(links, joined)
-        .where(inWorkspace).groupBy(clicks.country).orderBy(desc(count)).limit(12),
-      pg.select({ referer: clicks.referer, count }).from(clicks).innerJoin(links, joined)
-        .where(inWorkspace).groupBy(clicks.referer).orderBy(desc(count)).limit(6),
-      pg.select({ device_type: clicks.device_type, count }).from(clicks).innerJoin(links, joined)
-        .where(inWorkspace).groupBy(clicks.device_type).orderBy(desc(count)),
-      pg.select({ os: clicks.os, count }).from(clicks).innerJoin(links, joined)
-        .where(inWorkspace).groupBy(clicks.os).orderBy(desc(count)),
-      pg.select({ date: clickDay, count }).from(clicks).innerJoin(links, joined)
-        .where(and(inWorkspace, inTimeline)).groupBy(clickDay).orderBy(asc(clickDay)),
     ]);
-
-    return {
-      totalClicks: totals.n,
-      totalLinks: linkTotals.n,
-      totalBioViews: bioTotals.n,
-      regions,
-      countries,
-      referrers,
-      devices,
-      os,
-      timeline: fillTimeline(timeline, range),
-    };
+    const { totalClicks, ...breakdowns } = report;
+    return { totalClicks, totalLinks: linkTotals.n, totalBioViews: bioTotals.n, ...breakdowns };
   },
 
   async getLinkAnalytics(linkId: string, range: AnalyticsRange = '30d') {
     const link = await this.getLinkById(linkId);
     if (!link) return null;
 
-    const forLink = and(eq(clicks.link_id, linkId), clicksSince(range));
-    const [{ n: clicksInRange }] = await pg.select({ n: count }).from(clicks).where(forLink);
-    const [recentClicks, regions, countries, referrers, devices, os, timeline] = await Promise.all([
-      pg.select().from(clicks).where(forLink).orderBy(desc(clicks.created_at)).limit(100),
-      pg.select({ region: clicks.region, count }).from(clicks).where(forLink).groupBy(clicks.region).orderBy(desc(count)),
-      pg.select({ country: clicks.country, count }).from(clicks).where(forLink).groupBy(clicks.country).orderBy(desc(count)).limit(12),
-      pg.select({ referer: clicks.referer, count }).from(clicks).where(forLink).groupBy(clicks.referer).orderBy(desc(count)).limit(10),
-      pg.select({ device_type: clicks.device_type, count }).from(clicks).where(forLink).groupBy(clicks.device_type).orderBy(desc(count)),
-      pg.select({ os: clicks.os, count }).from(clicks).where(forLink).groupBy(clicks.os).orderBy(desc(count)),
-      pg.select({ date: clickDay, count }).from(clicks)
-        .where(and(eq(clicks.link_id, linkId), timelineSince(range)))
-        .groupBy(clickDay).orderBy(asc(clickDay)),
+    const [report, recentClicks] = await Promise.all([
+      statsReport(eq(linkStatsDaily.link_id, linkId), range),
+      // The visit log reads raw clicks, which are kept for the plan's retention period
+      pg.select().from(clicks).where(and(eq(clicks.link_id, linkId), clicksSince(range))).orderBy(desc(clicks.created_at)).limit(100),
     ]);
 
     return {
       link,
-      totalClicks: range === 'all' ? link.click_count : clicksInRange,
+      ...report,
+      totalClicks: range === 'all' ? link.click_count : report.totalClicks,
       clicks: recentClicks,
-      regions,
-      countries,
-      referrers,
-      devices,
-      os,
-      timeline: fillTimeline(timeline, range),
     };
   },
 
-  /**
-   * Platform-wide numbers for the landing page. The demo workspace is
-   * excluded so only real usage is shown, and the recent activity feed has no
-   * URLs or slugs, since those belong to other users.
-   */
   async getPublicStats() {
     const realLink = ne(links.workspace_id, DEMO_WORKSPACE_ID);
     const lastWeek = sql`now() - interval '7 days'`;
     const joined = eq(links.id, clicks.link_id);
 
     const [[redirects], [redirects7], [linkCount], [links7], [userCount], [bioCount], recentClicks] = await Promise.all([
-      pg.select({ n: count }).from(clicks).innerJoin(links, joined).where(realLink),
-      pg.select({ n: count }).from(clicks).innerJoin(links, joined).where(and(realLink, gte(clicks.created_at, lastWeek))),
+      pg.select({ n: sql<number>`coalesce(sum(${links.click_count}), 0)::int` }).from(links).where(realLink),
+      pg.select({ n: statSum }).from(linkStatsDaily).innerJoin(links, eq(links.id, linkStatsDaily.link_id))
+        .where(and(realLink, eq(linkStatsDaily.dimension, 'total'), gte(linkStatsDaily.day, sql`${todayInTashkent} - 6`))),
       pg.select({ n: count }).from(links).where(realLink),
       pg.select({ n: count }).from(links).where(and(realLink, gte(links.created_at, lastWeek))),
       pg.select({ n: count }).from(users),

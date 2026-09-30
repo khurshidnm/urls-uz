@@ -76,12 +76,12 @@ test('a dynamic vCard QR is saved, edited after printing and opens the current c
   await page.goto(`/${slug}`);
   await expect(page.getByRole('heading', { name: 'Aziz Rahimov' })).toBeVisible();
 
-  // Scans are counted on the QR's link, which never changed
-  const scansBefore: number = (await (await page.request.get(`/api/qr-codes/${qrId}`)).json()).qrCode.link.click_count;
+  // Scans are counted on the QR's link, which never changed: two browser visits and this one
   expect((await page.request.get(`/${slug}`, { headers: ANDROID })).status()).toBe(200);
-  qr = (await (await page.request.get(`/api/qr-codes/${qrId}`)).json()).qrCode;
+  const getQr = async () => (await (await page.request.get(`/api/qr-codes/${qrId}`)).json()).qrCode;
+  await expect.poll(async () => (await getQr()).link.click_count).toBe(3);
+  qr = await getQr();
   expect(qr.link.slug).toBe(slug);
-  expect(qr.link.click_count).toBe(scansBefore + 1);
 
   // The library lists it
   await page.goto('/dashboard/qr');

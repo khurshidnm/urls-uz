@@ -50,6 +50,13 @@
       "when": 1790766180127,
       "tag": "0006_identities_not_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790767853037,
+      "tag": "0007_link_stats_daily",
+      "breakpoints": true
     }
   ]
 }

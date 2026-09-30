@@ -17,6 +17,7 @@ import Database from 'better-sqlite3';
 import { pg, pool } from '../src/db/client';
 import { apiKeys, bioLinks, bioPages, clicks, links, users, workspaces } from '../src/db/schema';
 import { db, hashLinkPassword } from '../src/lib/db';
+import { rebuildLinkStats } from '../src/lib/clicks/recorder';
 
 const LEGACY_WORKSPACE_ID = 'ws_legacy';
 const sqlitePath = process.argv[2] || 'data/urls.db';
@@ -135,6 +136,11 @@ async function main() {
   for (let i = 0; i < clickBatch.length; i += 1000) {
     const inserted = await pg.insert(clicks).values(clickBatch.slice(i, i + 1000)).onConflictDoNothing().returning({ id: clicks.id });
     importedClicks += inserted.length;
+  }
+  // Dashboards read daily totals, not raw clicks
+  const clickedLinks = [...new Set(clickBatch.map((c) => c.link_id))];
+  for (let i = 0; i < clickedLinks.length; i += 500) {
+    await rebuildLinkStats(pg, clickedLinks.slice(i, i + 500));
   }
 
   // 3. Bio pages (legacy owners' pages go to the legacy workspace too)
