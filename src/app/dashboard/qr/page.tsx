@@ -4,9 +4,20 @@ import { requireWorkspace } from '@/lib/auth';
 import { toClientJson } from '@/lib/serialize';
 import QrStudioClient from './qr-studio-client';
 
-export default async function QrStudioPage() {
-  const { workspace } = await requireWorkspace();
-  const links = (await db.getAllLinks(workspace.id)).map(toPublicLink);
+interface Props {
+  searchParams: Promise<{ link?: string }>;
+}
 
-  return <QrStudioClient links={toClientJson(links)} />;
+export default async function QrStudioPage({ searchParams }: Props) {
+  const { link } = await searchParams;
+  const ctx = await requireWorkspace();
+  const links = (await db.getAllLinks(ctx.workspace.id)).filter((l) => !l.is_archived);
+
+  return (
+    <QrStudioClient
+      links={toClientJson(links.map(toPublicLink))}
+      initialLinkId={link && links.some((l) => l.id === link) ? link : null}
+      canWrite={ctx.canWrite}
+    />
+  );
 }
