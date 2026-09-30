@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { routeError } from '@/lib/route-error';
 import { requireWorkspace } from '@/lib/auth';
 import { updateLink } from '@/lib/links/update-link';
 import { bulkLinksSchema, parseJson } from '@/lib/validation';
@@ -11,7 +12,7 @@ import { bulkLinksSchema, parseJson } from '@/lib/validation';
  */
 export async function POST(request: NextRequest) {
   try {
-    const ctx = await requireWorkspace();
+    const ctx = await requireWorkspace({ apiKey: true });
     if (!ctx.canWrite) {
       return NextResponse.json({ success: false, error: 'Demo rejimida havolalarni o‘zgartirib bo‘lmaydi.', code: 'DEMO_RESTRICTED' }, { status: 403 });
     }
@@ -59,7 +60,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: failed.length === 0, succeeded, failed });
   } catch (error) {
-    console.error('POST /api/links/bulk failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'POST /api/links/bulk');
   }
 }

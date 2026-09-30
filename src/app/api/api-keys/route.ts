@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, toPublicApiKey } from '@/lib/db';
+import { routeError } from '@/lib/route-error';
 import { requireWorkspace } from '@/lib/auth';
+import { limitsFor } from '@/lib/plans';
 import { createApiKeySchema, parseJson } from '@/lib/validation';
 
 const demoRestricted = () =>
@@ -15,8 +17,7 @@ export async function GET() {
     const keys = (await db.getApiKeys(ctx.workspace.id)).map(toPublicApiKey);
     return NextResponse.json({ success: true, keys });
   } catch (error) {
-    console.error('GET /api/api-keys failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'GET /api/api-keys');
   }
 }
 
@@ -25,6 +26,12 @@ export async function POST(request: NextRequest) {
     const ctx = await requireWorkspace();
     // Keys authenticate as their owner, so they are never issued for the shared demo workspace
     if (!ctx.canWrite || ctx.workspace.is_demo || !ctx.user) return demoRestricted();
+    if (!limitsFor(ctx.workspace, ctx.isAdmin).apiAccess) {
+      return NextResponse.json(
+        { success: false, error: 'REST API kalitlari faqat Pro va Biznes tariflarida mavjud.', code: 'PLAN_REQUIRED' },
+        { status: 403 }
+      );
+    }
 
     const parsed = await parseJson(request, createApiKeySchema);
     if (!parsed.ok) return parsed.response;
@@ -32,8 +39,7 @@ export async function POST(request: NextRequest) {
     const newKey = await db.createApiKey(ctx.workspace.id, ctx.user.id, parsed.data.name);
     return NextResponse.json({ success: true, ...newKey }, { status: 201 });
   } catch (error) {
-    console.error('POST /api/api-keys failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'POST /api/api-keys');
   }
 }
 
@@ -52,7 +58,6 @@ export async function DELETE(request: NextRequest) {
     }
     return NextResponse.json({ success: true, message: 'API key revoked' });
   } catch (error) {
-    console.error('DELETE /api/api-keys failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'DELETE /api/api-keys');
   }
 }

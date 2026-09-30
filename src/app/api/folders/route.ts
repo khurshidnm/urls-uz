@@ -1,22 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { routeError } from '@/lib/route-error';
 import { requireWorkspace } from '@/lib/auth';
 import { folderSchema, parseJson } from '@/lib/validation';
 import { isUniqueViolation } from '@/lib/pg-errors';
 
 export async function GET() {
   try {
-    const ctx = await requireWorkspace();
+    const ctx = await requireWorkspace({ apiKey: true });
     return NextResponse.json({ success: true, folders: await db.listFolders(ctx.workspace.id) });
   } catch (error) {
-    console.error('GET /api/folders failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'GET /api/folders');
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const ctx = await requireWorkspace();
+    const ctx = await requireWorkspace({ apiKey: true });
     if (!ctx.canWrite) {
       return NextResponse.json({ success: false, error: 'Papka yaratish uchun tizimga kiring.', code: 'DEMO_RESTRICTED' }, { status: 403 });
     }
@@ -33,7 +33,6 @@ export async function POST(request: NextRequest) {
       throw err;
     }
   } catch (error) {
-    console.error('POST /api/folders failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'POST /api/folders');
   }
 }

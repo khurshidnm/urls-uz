@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { E2E_ENV } from './env';
 import { signTelegram } from './helpers';
+import { execSync } from 'child_process';
+
+/** Plan changes have no API yet (billing), so tests set them in the database. */
+function setPlan(workspaceId: string, plan: 'free' | 'pro') {
+  execSync(`psql "${E2E_ENV.DATABASE_URL}" -qc "update workspaces set plan = '${plan}' where id = '${workspaceId}'"`);
+}
 
 /*
  * API-level security and validation checks: identity spoofing, login
@@ -224,10 +230,13 @@ test('security and validation checks', async () => {
   check('null clears optional field', r.status === 200 && r.json?.link?.expires_at === null);
   r = await req('/api/bio', { method: 'POST', cookie: a.session.cookie, body: { handle: 'x', title: 'Alice' } });
   check('too-short handle rejected', r.status === 400 && r.json?.code === 'HANDLE_TOO_SHORT');
+
+  // == API keys (paid plans only) ==
+  r = await req('/api/api-keys', { method: 'POST', cookie: a.session.cookie, body: { name: 'CI key' } });
+  check('free plan cannot create API keys', r.status === 403 && r.json?.code === 'PLAN_REQUIRED', `status ${r.status} ${r.json?.code}`);
+  setPlan(aliceWs, 'pro');
   r = await req('/api/api-keys', { method: 'POST', cookie: a.session.cookie, body: { name: '   ' } });
   check('blank API key name rejected', r.status === 400);
-
-  // == API keys ==
   r = await req('/api/api-keys', { method: 'POST', cookie: a.session.cookie, body: { name: 'CI key' } });
   const aliceKey = r.json?.apiKey;
   check('Alice can create an API key', r.status === 201 && aliceKey?.startsWith('urls_live_'), `status ${r.status}`);
@@ -245,6 +254,26 @@ test('security and validation checks', async () => {
   check("Bob cannot revoke Alice's key", r.status === 404, `status ${r.status}`);
   r = await req('/api/api-keys', { method: 'POST', body: { name: 'anon' } });
   check('anonymous visitors cannot create keys', r.status === 403, `status ${r.status}`);
+  // A key reaches only the public API: not key management, the bio page or the account
+  const withKey = { headers: { Authorization: `Bearer ${aliceKey}` } };
+  r = await req('/api/api-keys', { method: 'POST', ...withKey, body: { name: 'minted by a key' } });
+  check('an API key cannot create API keys', r.status === 401 && r.json?.code === 'API_KEY_NOT_ACCEPTED', `status ${r.status}`);
+  r = await req('/api/bio', { method: 'POST', ...withKey, body: { handle: 'keyhandle', title: 'x' } });
+  check('an API key cannot edit the bio page', r.status === 401, `status ${r.status}`);
+  r = await req('/api/auth/me', withKey);
+  check('an API key is refused on account routes', r.status === 401, `status ${r.status}`);
+  r = await req('/api/analytics', withKey);
+  check('an API key reads analytics', r.status === 200 && r.json?.success !== false, `status ${r.status}`);
+  r = await req('/api/links', { headers: { Authorization: 'Bearer urls_live_not_a_real_key' } });
+  check('an unknown key gets 401, not demo data', r.status === 401 && !r.json?.links, `status ${r.status}`);
+  // Keys stop working when the workspace goes back to the free plan
+  setPlan(aliceWs, 'free');
+  r = await req('/api/links', withKey);
+  check('keys stop working on the free plan', r.status === 403 && r.json?.code === 'PLAN_REQUIRED', `status ${r.status}`);
+
+  // == Platform bot webhook ==
+  r = await req('/api/webhook/telegram');
+  check('webhook diagnostics are hidden from the public', r.status === 200 && Object.keys(r.json ?? {}).join() === 'status', JSON.stringify(r.json).slice(0, 80));
 
   // == Logout ==
   r = await req('/api/auth/logout', { method: 'POST', cookie: a.session.cookie });

@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { routeError } from '@/lib/route-error';
 import { requireWorkspace } from '@/lib/auth';
 import { limitsFor, toJsonLimit } from '@/lib/plans';
 
 /** Plan limits and current usage, so the UI shows real numbers instead of hard-coded ones. */
 export async function GET() {
   try {
-    const ctx = await requireWorkspace();
+    const ctx = await requireWorkspace({ apiKey: true });
     const limits = limitsFor(ctx.workspace, ctx.isAdmin);
     const usage = await db.getLinkUsage(ctx.workspace.id);
     return NextResponse.json({
@@ -21,7 +22,6 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('GET /api/workspace/usage failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'GET /api/workspace/usage');
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { routeError } from '@/lib/route-error';
 import { requireWorkspace } from '@/lib/auth';
 import { folderSchema, parseJson } from '@/lib/validation';
 import { isUniqueViolation } from '@/lib/pg-errors';
@@ -12,7 +13,7 @@ const restricted = () =>
 
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
-    const ctx = await requireWorkspace();
+    const ctx = await requireWorkspace({ apiKey: true });
     if (!ctx.canWrite) return restricted();
     const parsed = await parseJson(request, folderSchema);
     if (!parsed.ok) return parsed.response;
@@ -28,20 +29,18 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       throw err;
     }
   } catch (error) {
-    console.error('PATCH /api/folders/[id] failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'PATCH /api/folders/[id]');
   }
 }
 
 /** Deleting a folder keeps its links; they become unfiled. */
 export async function DELETE(_request: NextRequest, { params }: Params) {
   try {
-    const ctx = await requireWorkspace();
+    const ctx = await requireWorkspace({ apiKey: true });
     if (!ctx.canWrite) return restricted();
     const { id } = await params;
     return (await db.deleteFolder(id, ctx.workspace.id)) ? NextResponse.json({ success: true }) : notFound();
   } catch (error) {
-    console.error('DELETE /api/folders/[id] failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'DELETE /api/folders/[id]');
   }
 }

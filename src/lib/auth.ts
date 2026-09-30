@@ -1,5 +1,6 @@
 import { cookies, headers } from 'next/headers';
 import type { NextResponse } from 'next/server';
+import { limitsFor } from '@/lib/plans';
 import { db, type MemberRole, type UserRecord, type UserRole, type WorkspaceRecord } from '@/lib/db';
 
 /**
@@ -80,14 +81,36 @@ export async function getCurrentUser(): Promise<UserRecord | null> {
  * Every route handler and server component goes through this, so tenancy
  * checks live in one place.
  */
-export async function requireWorkspace(): Promise<WorkspaceContext> {
+/** A request with an API key that can't be served; routes turn it into a 401/403 via routeError(). */
+export class ApiAuthError extends Error {
+  constructor(
+    readonly status: 401 | 403,
+    readonly code: 'INVALID_API_KEY' | 'API_KEY_NOT_ACCEPTED' | 'PLAN_REQUIRED',
+    message: string
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * The workspace a request acts on: the API key's, the logged-in user's, or
+ * (for visitors) the read-only demo. `apiKey: true` marks the routes that
+ * make up the public REST API; everywhere else an API key is refused, so a
+ * leaked key can't manage keys, the bio page or the account.
+ */
+export async function requireWorkspace({ apiKey = false }: { apiKey?: boolean } = {}): Promise<WorkspaceContext> {
   const authHeader = (await headers()).get('authorization') || '';
 
   // API keys belong to a workspace
   if (authHeader.startsWith('Bearer ')) {
+    if (!apiKey) throw new ApiAuthError(401, 'API_KEY_NOT_ACCEPTED', 'Bu endpoint API kalit bilan ishlamaydi.');
     const key = await db.verifyApiKey(authHeader.slice('Bearer '.length).trim());
     const workspace = key ? await db.getWorkspace(key.workspaceId) : undefined;
-    if (!key || !workspace) return anonymousContext();
+    if (!key || !workspace) throw new ApiAuthError(401, 'INVALID_API_KEY', 'API kalit noto‘g‘ri yoki bekor qilingan.');
+    // Keys stop working when the workspace moves to a plan without API access
+    if (!limitsFor(workspace).apiAccess) {
+      throw new ApiAuthError(403, 'PLAN_REQUIRED', 'REST API faqat Pro va Biznes tariflarida mavjud.');
+    }
     const user = key.createdBy ? (await db.getUserById(key.createdBy)) ?? null : null;
     return { user, workspace, role: 'member', canWrite: !workspace.is_demo, isAdmin: false, viaApiKey: true };
   }

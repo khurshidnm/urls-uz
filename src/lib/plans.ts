@@ -20,6 +20,8 @@ export interface PlanLimits {
    * source, device, ... are kept forever, so charts and totals don't shrink.
    */
   rawClickRetentionDays: number;
+  /** REST API keys (creating keys and calling the API with them). */
+  apiAccess: boolean;
 }
 
 const UNLIMITED = Number.POSITIVE_INFINITY;
@@ -32,6 +34,7 @@ export const PLAN_LIMITS: Record<WorkspaceRecord['plan'], PlanLimits> = {
     bioLinks: 4,
     bioThemes: ['midnight', 'emerald', 'clean-light'],
     rawClickRetentionDays: 30,
+    apiAccess: false,
   },
   pro: {
     activeLinks: UNLIMITED,
@@ -40,6 +43,7 @@ export const PLAN_LIMITS: Record<WorkspaceRecord['plan'], PlanLimits> = {
     bioLinks: 50,
     bioThemes: null,
     rawClickRetentionDays: 365,
+    apiAccess: true,
   },
   enterprise: {
     activeLinks: UNLIMITED,
@@ -48,6 +52,7 @@ export const PLAN_LIMITS: Record<WorkspaceRecord['plan'], PlanLimits> = {
     bioLinks: 50,
     bioThemes: null,
     rawClickRetentionDays: 730,
+    apiAccess: true,
   },
 };
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, toPublicLink } from '@/lib/db';
+import { routeError } from '@/lib/route-error';
 import { requireWorkspace } from '@/lib/auth';
 import { updateLink } from '@/lib/links/update-link';
 
@@ -11,14 +12,13 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const ctx = await requireWorkspace();
+    const ctx = await requireWorkspace({ apiKey: true });
     if (!await db.getOwnedLink(id, ctx.workspace.id)) return notFound();
 
     const analytics = (await db.getLinkAnalytics(id))!;
     return NextResponse.json({ success: true, ...analytics, link: toPublicLink(analytics.link) });
   } catch (error) {
-    console.error('GET /api/links/[id] failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'GET /api/links/[id]');
   }
 }
 
@@ -27,7 +27,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const ctx = await requireWorkspace();
+    const ctx = await requireWorkspace({ apiKey: true });
     if (!ctx.canWrite) {
       return NextResponse.json({ success: false, error: 'Demo rejimida havolani o‘zgartirish cheklangan.', code: 'DEMO_RESTRICTED' }, { status: 403 });
     }
@@ -53,8 +53,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, link: toPublicLink(updated) });
   } catch (error) {
-    console.error('PATCH /api/links/[id] failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'PATCH /api/links/[id]');
   }
 }
 
@@ -63,7 +62,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const ctx = await requireWorkspace();
+    const ctx = await requireWorkspace({ apiKey: true });
     if (!ctx.canWrite) {
       return NextResponse.json({ success: false, error: 'Demo rejimida havolani o‘chirish cheklangan.', code: 'DEMO_RESTRICTED' }, { status: 403 });
     }
@@ -73,7 +72,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: 'Link deleted' });
   } catch (error) {
-    console.error('DELETE /api/links/[id] failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'DELETE /api/links/[id]');
   }
 }

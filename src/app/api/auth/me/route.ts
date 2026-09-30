@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireWorkspace, toClientUser } from '@/lib/auth';
+import { routeError } from '@/lib/route-error';
 
 export async function GET() {
-  const ctx = await requireWorkspace();
+  let ctx;
+  try {
+    ctx = await requireWorkspace();
+  } catch (error) {
+    // An API key sent here is refused (keys don't reach account routes)
+    return routeError(error, 'GET /api/auth/me');
+  }
   const workspaces = ctx.user && !ctx.viaApiKey ? await db.listWorkspacesForUser(ctx.user.id) : [];
   return NextResponse.json({
     user: ctx.user ? toClientUser(ctx.user, ctx.workspace) : null,

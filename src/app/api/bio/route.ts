@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { routeError } from '@/lib/route-error';
 import { requireWorkspace } from '@/lib/auth';
 import { saveBio } from '@/lib/bio/save-bio';
 import { limitsFor } from '@/lib/plans';
@@ -10,8 +11,7 @@ export async function GET() {
     const bioPage = await db.getBioPageByWorkspace(ctx.workspace.id);
     return NextResponse.json({ success: true, bioPage });
   } catch (error) {
-    console.error('GET /api/bio failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'GET /api/bio');
   }
 }
 
@@ -45,7 +45,6 @@ export async function POST(request: NextRequest) {
       limitNotice: result.truncated ? `Tarifingizda faqat ${limit} ta tugma saqlandi.` : undefined,
     });
   } catch (error) {
-    console.error('POST /api/bio failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'POST /api/bio');
   }
 }

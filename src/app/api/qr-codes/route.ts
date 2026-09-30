@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { routeError } from '@/lib/route-error';
 import { requireWorkspace } from '@/lib/auth';
 import { qrRepo } from '@/lib/qr/qr-repo';
 import { createQrCode } from '@/lib/qr/save-qr';
 
 export async function GET() {
   try {
-    const ctx = await requireWorkspace();
+    const ctx = await requireWorkspace({ apiKey: true });
     return NextResponse.json({ success: true, qrCodes: await qrRepo.list(ctx.workspace.id) });
   } catch (error) {
-    console.error('GET /api/qr-codes failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'GET /api/qr-codes');
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const ctx = await requireWorkspace();
+    const ctx = await requireWorkspace({ apiKey: true });
     if (!ctx.canWrite) {
       return NextResponse.json({ success: false, error: 'QR kodni saqlash uchun tizimga kiring.', code: 'DEMO_RESTRICTED' }, { status: 403 });
     }
@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ success: true, qrCode: await qrRepo.get(result.id, ctx.workspace.id) }, { status: 201 });
   } catch (error) {
-    console.error('POST /api/qr-codes failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'POST /api/qr-codes');
   }
 }

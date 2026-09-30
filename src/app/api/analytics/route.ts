@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, toPublicLink, type AnalyticsRange } from '@/lib/db';
+import { routeError } from '@/lib/route-error';
 import { requireWorkspace } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
-    const ctx = await requireWorkspace();
+    const ctx = await requireWorkspace({ apiKey: true });
     const { searchParams } = new URL(req.url);
     const slug = searchParams.get('slug');
     const linkId = searchParams.get('link_id');
@@ -31,7 +32,6 @@ export async function GET(req: NextRequest) {
     const overview = await db.getAnalyticsOverview(ctx.workspace.id, range);
     return NextResponse.json({ success: true, ...overview });
   } catch (error) {
-    console.error('GET /api/analytics failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'GET /api/analytics');
   }
 }

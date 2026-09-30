@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { routeError } from '@/lib/route-error';
 import { requireWorkspace } from '@/lib/auth';
 import { qrRepo } from '@/lib/qr/qr-repo';
 import { deleteQrCode, updateQrCode } from '@/lib/qr/save-qr';
@@ -12,18 +13,17 @@ const demoRestricted = () =>
 export async function GET(_request: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
-    const ctx = await requireWorkspace();
+    const ctx = await requireWorkspace({ apiKey: true });
     const qrCode = await qrRepo.get(id, ctx.workspace.id);
     return qrCode ? NextResponse.json({ success: true, qrCode }) : notFound();
   } catch (error) {
-    console.error('GET /api/qr-codes/[id] failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'GET /api/qr-codes/[id]');
   }
 }
 
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
-    const ctx = await requireWorkspace();
+    const ctx = await requireWorkspace({ apiKey: true });
     if (!ctx.canWrite) return demoRestricted();
     const { id } = await params;
     let body: unknown;
@@ -39,20 +39,18 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
     return NextResponse.json({ success: true, qrCode: await qrRepo.get(id, ctx.workspace.id) });
   } catch (error) {
-    console.error('PATCH /api/qr-codes/[id] failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'PATCH /api/qr-codes/[id]');
   }
 }
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
   try {
-    const ctx = await requireWorkspace();
+    const ctx = await requireWorkspace({ apiKey: true });
     if (!ctx.canWrite) return demoRestricted();
     const { id } = await params;
     const deleted = await deleteQrCode({ workspace: ctx.workspace, userId: ctx.user?.id ?? null, isAdmin: ctx.isAdmin }, id);
     return deleted ? NextResponse.json({ success: true }) : notFound();
   } catch (error) {
-    console.error('DELETE /api/qr-codes/[id] failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'DELETE /api/qr-codes/[id]');
   }
 }

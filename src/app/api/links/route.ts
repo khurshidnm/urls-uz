@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, toPublicLink } from '@/lib/db';
+import { routeError } from '@/lib/route-error';
 import { requireWorkspace } from '@/lib/auth';
 import { createLink } from '@/lib/links/create-link';
 import { parseLinkFilter } from '@/lib/links/list-filter';
@@ -10,7 +11,7 @@ import { parseLinkFilter } from '@/lib/links/list-filter';
  */
 export async function GET(request: NextRequest) {
   try {
-    const ctx = await requireWorkspace();
+    const ctx = await requireWorkspace({ apiKey: true });
     const filter = parseLinkFilter(request.nextUrl.searchParams, { status: 'all', limit: 100 });
     const { links, total } = await db.queryLinks(ctx.workspace.id, filter);
 
@@ -22,15 +23,14 @@ export async function GET(request: NextRequest) {
       pageSize: filter.limit,
     });
   } catch (error) {
-    console.error('GET /api/links failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'GET /api/links');
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     // Identity comes from the session cookie or an API key, never from the request body
-    const ctx = await requireWorkspace();
+    const ctx = await requireWorkspace({ apiKey: true });
     if (!ctx.canWrite) {
       return NextResponse.json({
         success: false,
@@ -63,7 +63,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, link: toPublicLink(result.link) }, { status: 201 });
   } catch (error) {
-    console.error('POST /api/links failed:', error);
-    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
+    return routeError(error, 'POST /api/links');
   }
 }

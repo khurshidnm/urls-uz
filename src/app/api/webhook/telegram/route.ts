@@ -5,6 +5,7 @@ import { TelegramBot, TelegramInlineButton } from '@/lib/telegram-bot';
 import { formatNumber } from '@/lib/utils';
 import { detectAndBuildDeepLink } from '@/lib/deep-link';
 import { pickTelegramFields, upsertTelegramUser } from '@/lib/telegram-auth';
+import { getSessionUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +51,10 @@ function escapeHtml(value: string): string {
  */
 export async function GET() {
   try {
+    // Webhook diagnostics (Telegram's last errors, pending updates, ...) are for platform admins only
+    const viewer = await getSessionUser();
+    if (viewer?.role !== 'superadmin') return NextResponse.json({ status: 'online' });
+
     const isBotConfigured = TelegramBot.isConfigured;
     const botInfo = isBotConfigured ? await TelegramBot.getMe() : null;
     const webhookInfo = isBotConfigured ? await TelegramBot.getWebhookInfo() : null;
