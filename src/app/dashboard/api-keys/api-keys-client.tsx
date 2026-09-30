@@ -16,7 +16,7 @@ import {
 import { formatDate, copyToClipboard as copyToClipboardUtil } from '@/lib/utils';
 import { Modal } from '@/components/ui/modal';
 import type { ClientApiKey } from '@/lib/client-types';
-import TelegramBotCard from './telegram-bot-card';
+import { TelegramIcon } from '@/components/ui/icons';
 import WebhookAdminPanel from './webhook-admin-panel';
 
 interface Props {
@@ -186,6 +186,18 @@ print(response.json())`;
           </p>
         </div>
 
+        <div className="flex items-center gap-2">
+        {/* The bot is free on every plan: send it a link, get a short link back */}
+        <a
+          href={`https://t.me/${botUsername}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={`Telegram bot: @${botUsername}`}
+          aria-label={`Telegram bot @${botUsername}`}
+          className="w-9 h-9 flex items-center justify-center rounded-lg bg-[#229ED9] hover:bg-sky-500 text-white transition-colors"
+        >
+          <TelegramIcon className="w-4 h-4" />
+        </a>
         {apiAccess || !user ? (
           <button
             onClick={handleOpenNewKeyModal}
@@ -203,6 +215,7 @@ print(response.json())`;
             <span>Pro tarifga o‘tish</span>
           </Link>
         )}
+        </div>
       </div>
 
       {/* REST API is a paid feature; the Telegram bot below is free */}
@@ -408,7 +421,6 @@ print(response.json())`;
         </div>
       </div>
 
-      <TelegramBotCard botUsername={botUsername} />
       {isAdmin && <WebhookAdminPanel />}
 
       {/* Create Key Modal */}
