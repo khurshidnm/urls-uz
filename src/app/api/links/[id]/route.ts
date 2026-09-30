@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, toPublicLink, type LinkRecord } from '@/lib/db';
+import { db, toPublicLink } from '@/lib/db';
 import { requireWorkspace } from '@/lib/auth';
 import { checkUrlSafety } from '@/lib/anti-phishing';
 import { isValidSlug } from '@/lib/utils';
-
-/** Fields a user may change through PATCH. Everything else (owner, counters, timestamps) is server-managed. */
-const EDITABLE_FIELDS = [
-  'title', 'destination_url', 'slug', 'is_active', 'is_archived', 'tags', 'password',
-  'expires_at', 'click_limit', 'utm_source', 'utm_medium', 'utm_campaign',
-  'ios_url', 'android_url', 'huawei_url', 'desktop_url', 'open_in_app',
-] as const;
+import { parseJson, updateLinkSchema } from '@/lib/validation';
 
 const notFound = () => NextResponse.json({ success: false, error: 'Link not found' }, { status: 404 });
 
@@ -41,26 +35,24 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const body = await request.json();
-
-    const changes: Partial<LinkRecord> = {};
-    for (const field of EDITABLE_FIELDS) {
-      if (body[field] !== undefined) (changes as Record<string, unknown>)[field] = body[field];
-    }
+    // The schema only lets through fields a user may change; owner, counters and timestamps are server-managed
+    const parsed = await parseJson(request, updateLinkSchema);
+    if (!parsed.ok) return parsed.response;
+    const changes = parsed.data;
 
     if (changes.destination_url !== undefined) {
-      const safety = checkUrlSafety(String(changes.destination_url));
+      const safety = checkUrlSafety(changes.destination_url);
       if (!safety.isSafe) {
         return NextResponse.json({ success: false, error: safety.reason, code: 'PHISHING_SUSPECTED' }, { status: 400 });
       }
     }
 
     if (changes.slug !== undefined) {
-      if (!isValidSlug(String(changes.slug))) {
+      if (!isValidSlug(changes.slug)) {
         return NextResponse.json({ success: false, error: 'Yaroqsiz slug formati.', code: 'INVALID_SLUG' }, { status: 400 });
       }
       const current = await db.getOwnedLink(id, ctx.workspace.id);
-      if (current?.slug !== changes.slug && (await db.isSlugTaken(String(changes.slug)))) {
+      if (current?.slug !== changes.slug && (await db.isSlugTaken(changes.slug))) {
         return NextResponse.json({ success: false, error: 'Ushbu slug allaqachon band qilingan.', code: 'SLUG_TAKEN' }, { status: 409 });
       }
     }

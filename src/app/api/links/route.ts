@@ -3,6 +3,7 @@ import { db, toPublicLink } from '@/lib/db';
 import { generateRandomSlug, isValidSlug, isReservedSlug } from '@/lib/utils';
 import { checkUrlSafety } from '@/lib/anti-phishing';
 import { requireWorkspace } from '@/lib/auth';
+import { createLinkSchema, parseJson } from '@/lib/validation';
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,25 +30,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const {
-      destination_url,
-      title,
-      password,
-      expires_at,
-      click_limit,
-      utm_source,
-      utm_medium,
-      utm_campaign,
-      utm_term,
-      utm_content,
-      ios_url,
-      android_url,
-      huawei_url,
-      desktop_url,
-      open_in_app,
-    } = body;
-
     // 1. Identity comes from the session cookie or an API key, never from the request body
     const ctx = await requireWorkspace();
     if (!ctx.canWrite) {
@@ -57,6 +39,11 @@ export async function POST(request: NextRequest) {
         code: 'AUTH_REQUIRED',
       }, { status: 401 });
     }
+
+    const parsed = await parseJson(request, createLinkSchema);
+    if (!parsed.ok) return parsed.response;
+    const input = parsed.data;
+    const { ios_url, android_url, huawei_url, desktop_url } = input;
 
     const isSuperAdmin = ctx.isAdmin;
 
@@ -77,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Smart Deep Link quota (max 1 in free plan, bypassed for super admin)
-    const isDeepLinkRequested = Boolean(open_in_app);
+    const isDeepLinkRequested = Boolean(input.open_in_app);
     const currentDeepLinksCount = activeLinks.filter((l) => Boolean(l.open_in_app)).length;
     if (!isSuperAdmin && isDeepLinkRequested && currentDeepLinksCount >= 1) {
       return NextResponse.json({
@@ -102,18 +89,8 @@ export async function POST(request: NextRequest) {
       }, { status: 403 });
     }
 
-    if (!destination_url) {
-      return NextResponse.json({ success: false, error: 'Destination URL is required' }, { status: 400 });
-    }
-
-    // Auto-prepend https:// if missing
-    let formattedUrl = destination_url.trim();
-    if (!/^https?:\/\//i.test(formattedUrl)) {
-      formattedUrl = 'https://' + formattedUrl;
-    }
-
-    // Anti-Phishing Safety Filter
-    const safetyCheck = checkUrlSafety(formattedUrl);
+    // Anti-Phishing Safety Filter (the schema already normalized the URL to http(s))
+    const safetyCheck = checkUrlSafety(input.destination_url);
     if (!safetyCheck.isSafe) {
       return NextResponse.json({
         success: false,
@@ -123,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate custom slug if provided, otherwise generate 5-character random ID
-    const requestedSlug = (body.slug || body.custom_slug)?.trim();
+    const requestedSlug = input.slug || input.custom_slug;
     let finalSlug = '';
 
     if (requestedSlug) {
@@ -156,7 +133,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Device targeting limit in free tier is capped to 100 clicks
-    let effectiveClickLimit = click_limit ? Number(click_limit) : null;
+    let effectiveClickLimit = input.click_limit ?? null;
     if (isDeviceTargetingRequested) {
       effectiveClickLimit = effectiveClickLimit ? Math.min(effectiveClickLimit, 100) : 100;
     }
@@ -164,23 +141,23 @@ export async function POST(request: NextRequest) {
     const created = await db.createLink({
       workspaceId: ctx.workspace.id,
       createdBy: ctx.user?.id ?? null,
-      title: title?.trim() || finalSlug,
-      destination_url: formattedUrl,
+      title: input.title || finalSlug,
+      destination_url: input.destination_url,
       slug: finalSlug,
-      password: password?.trim() || null,
-      expires_at: expires_at || null,
+      password: input.password ?? null,
+      expires_at: input.expires_at ?? null,
       click_limit: effectiveClickLimit,
-      utm_source: utm_source?.trim() || null,
-      utm_medium: utm_medium?.trim() || null,
-      utm_campaign: utm_campaign?.trim() || null,
-      utm_term: utm_term?.trim() || null,
-      utm_content: utm_content?.trim() || null,
-      ios_url: ios_url?.trim() || null,
-      android_url: android_url?.trim() || null,
-      huawei_url: huawei_url?.trim() || null,
-      desktop_url: desktop_url?.trim() || null,
-      open_in_app: !!open_in_app,
-      tags: body.tags?.trim() || '',
+      utm_source: input.utm_source ?? null,
+      utm_medium: input.utm_medium ?? null,
+      utm_campaign: input.utm_campaign ?? null,
+      utm_term: input.utm_term ?? null,
+      utm_content: input.utm_content ?? null,
+      ios_url: ios_url ?? null,
+      android_url: android_url ?? null,
+      huawei_url: huawei_url ?? null,
+      desktop_url: desktop_url ?? null,
+      open_in_app: Boolean(input.open_in_app),
+      tags: input.tags ?? '',
     });
 
     return NextResponse.json({ success: true, link: toPublicLink(created) }, { status: 201 });

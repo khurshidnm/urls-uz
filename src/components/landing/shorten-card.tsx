@@ -93,7 +93,8 @@ export default function ShortenCard() {
         body: JSON.stringify({
           destination_url: processedUrl,
           password: password.trim() || undefined,
-          expires_at: expiresAt || undefined,
+          // datetime-local has no timezone; send the user's local time as an absolute instant
+          expires_at: expiresAt ? new Date(expiresAt).toISOString() : undefined,
         }),
       });
 

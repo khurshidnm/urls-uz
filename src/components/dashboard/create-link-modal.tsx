@@ -250,7 +250,8 @@ export default function CreateLinkModal({ isOpen, onClose, onCreated }: CreateLi
           huawei_url: enableDeviceTargeting && huaweiUrl.trim() ? huaweiUrl.trim() : undefined,
           desktop_url: enableDeviceTargeting && desktopUrl.trim() ? desktopUrl.trim() : undefined,
           password: enableProtection && password.trim() ? password.trim() : undefined,
-          expires_at: enableProtection && expiresAt ? expiresAt : undefined,
+          // datetime-local has no timezone; send the user's local time as an absolute instant
+          expires_at: enableProtection && expiresAt ? new Date(expiresAt).toISOString() : undefined,
           utm_source: enableUtm && utmSource.trim() ? utmSource.trim() : undefined,
           utm_medium: enableUtm && utmMedium.trim() ? utmMedium.trim() : undefined,
           utm_campaign: enableUtm && utmCampaign.trim() ? utmCampaign.trim() : undefined,

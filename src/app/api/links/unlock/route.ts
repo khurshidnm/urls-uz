@@ -3,13 +3,13 @@ import { db, verifyLinkPassword } from '@/lib/db';
 import { getClientIp } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { UNLOCK_MAX_AGE, unlockCookieName, unlockToken } from '@/lib/link-unlock';
+import { parseJson, unlockLinkSchema } from '@/lib/validation';
 
 export async function POST(request: NextRequest) {
   try {
-    const { slug, password } = await request.json();
-    if (typeof slug !== 'string' || typeof password !== 'string') {
-      return NextResponse.json({ success: false, error: 'Noto‘g‘ri so‘rov' }, { status: 400 });
-    }
+    const parsed = await parseJson(request, unlockLinkSchema);
+    if (!parsed.ok) return parsed.response;
+    const { slug, password } = parsed.data;
 
     const limit = rateLimit(`unlock:${getClientIp(request.headers)}:${slug}`, 10, 15 * 60 * 1000);
     if (!limit.ok) {

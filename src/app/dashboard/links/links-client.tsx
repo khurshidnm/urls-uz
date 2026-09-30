@@ -268,9 +268,9 @@ export default function LinksManagerClient({ initialLinks }: Props) {
   };
 
   // Archive Single Link
-  const handleToggleArchive = async (id: string, currentArchived: number = 0) => {
+  const handleToggleArchive = async (id: string, currentArchived: boolean) => {
     if (checkDemoRestricted('Havolani arxivlash')) return;
-    const nextStatus = currentArchived === 1 ? 0 : 1;
+    const nextStatus = !currentArchived;
     try {
       const res = await fetch(`/api/links/${id}`, {
         method: 'PATCH',
@@ -280,7 +280,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
       const data = await res.json();
       if (data.success) {
         setLinks(links.map((l) => (l.id === id ? { ...l, is_archived: nextStatus } : l)));
-        showToast('success', nextStatus === 1 ? 'Havola arxivlandi' : 'Havola faollashtirildi');
+        showToast('success', nextStatus ? 'Havola arxivlandi' : 'Havola faollashtirildi');
       }
     } catch {
       showToast('error', 'Statusni o‘zgartirishda xatolik');

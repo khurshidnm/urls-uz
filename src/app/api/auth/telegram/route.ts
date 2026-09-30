@@ -4,6 +4,7 @@ import { db, type UserRecord } from '@/lib/db';
 import { getClientIp, roleFor, setSessionCookie, toClientUser } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { pickTelegramFields, upsertTelegramUser, verifyTelegramLogin } from '@/lib/telegram-auth';
+import { parseJson, telegramAuthSchema } from '@/lib/validation';
 
 const GATEWAY_URL = 'https://gatewayapi.telegram.org';
 const OTP_TTL_MS = 5 * 60 * 1000;
@@ -48,12 +49,9 @@ async function loginResponse(user: UserRecord) {
 }
 
 export async function POST(request: NextRequest) {
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ success: false, error: 'Noto‘g‘ri so‘rov' }, { status: 400 });
-  }
+  const parsed = await parseJson(request, telegramAuthSchema);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   const ip = getClientIp(request.headers);
   const gatewayConfigured = Boolean(process.env.TELEGRAM_GATEWAY_TOKEN);
@@ -61,7 +59,7 @@ export async function POST(request: NextRequest) {
 
   // --- Telegram Login Widget (JS callback variant) ---
   if (body.action === 'verify-widget') {
-    const data = pickTelegramFields((body.widgetData as Record<string, unknown>) || {});
+    const data = pickTelegramFields(body.widgetData);
     if (!verifyTelegramLogin(data)) {
       return NextResponse.json({ success: false, error: 'Telegram xavfsizlik imzosi noto‘g‘ri' }, { status: 401 });
     }
@@ -112,8 +110,8 @@ export async function POST(request: NextRequest) {
   // --- Phone OTP: verify code ---
   if (body.action === 'verify-otp') {
     const phone = normalizePhone(body.phone);
-    const code = typeof body.code === 'string' ? body.code.trim() : '';
-    if (!phone || !/^\d{4,8}$/.test(code)) {
+    const code = body.code;
+    if (!phone) {
       return NextResponse.json({ success: false, error: 'Telefon va kod kiritilishi shart' }, { status: 400 });
     }
 
@@ -148,7 +146,7 @@ export async function POST(request: NextRequest) {
       provider: 'phone',
       providerId: phone,
       phone: `+${phone}`,
-      name: typeof body.name === 'string' && body.name.trim() ? body.name.trim().slice(0, 80) : `Foydalanuvchi (${phone.slice(-4)})`,
+      name: body.name || `Foydalanuvchi (${phone.slice(-4)})`,
       role: roleFor({}),
     });
     return loginResponse(user);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DEMO_EDIT_COOKIE, getCurrentUser } from '@/lib/auth';
+import { demoEditSchema, parseJson } from '@/lib/validation';
 
 /** Superadmins can switch the dashboard to edit the shared demo workspace. */
 export async function POST(request: NextRequest) {
@@ -8,8 +9,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Faqat super admin ruxsatiga ega.' }, { status: 403 });
   }
 
-  const { active } = await request.json().catch(() => ({ active: false }));
-  const response = NextResponse.json({ success: true, active: Boolean(active) });
+  const parsed = await parseJson(request, demoEditSchema);
+  if (!parsed.ok) return parsed.response;
+  const { active } = parsed.data;
+
+  const response = NextResponse.json({ success: true, active });
   if (active) {
     response.cookies.set(DEMO_EDIT_COOKIE, '1', {
       path: '/',

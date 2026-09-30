@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, toPublicApiKey } from '@/lib/db';
 import { requireWorkspace } from '@/lib/auth';
+import { createApiKeySchema, parseJson } from '@/lib/validation';
 
 const demoRestricted = () =>
   NextResponse.json(
@@ -25,12 +26,10 @@ export async function POST(request: NextRequest) {
     // Keys authenticate as their owner, so they are never issued for the shared demo workspace
     if (!ctx.canWrite || ctx.workspace.is_demo || !ctx.user) return demoRestricted();
 
-    const { name } = await request.json();
-    if (typeof name !== 'string' || !name.trim()) {
-      return NextResponse.json({ success: false, error: 'Key name is required' }, { status: 400 });
-    }
+    const parsed = await parseJson(request, createApiKeySchema);
+    if (!parsed.ok) return parsed.response;
 
-    const newKey = await db.createApiKey(ctx.workspace.id, ctx.user.id, name.trim().slice(0, 80));
+    const newKey = await db.createApiKey(ctx.workspace.id, ctx.user.id, parsed.data.name);
     return NextResponse.json({ success: true, ...newKey }, { status: 201 });
   } catch (error) {
     console.error('POST /api/api-keys failed:', error);
