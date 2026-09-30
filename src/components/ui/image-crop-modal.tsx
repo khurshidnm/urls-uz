@@ -45,14 +45,16 @@ export function ImageCropModal({
   const VIEW_SIZE = 280; // Size of outer container
   const APERTURE_SIZE = 220; // Diameter of circular crop aperture
 
-  // Reset transforms when new image is loaded
-  useEffect(() => {
+  // Reset transforms when the modal opens or a new image is loaded
+  const [prevSource, setPrevSource] = useState({ isOpen, imageSrc });
+  if (prevSource.isOpen !== isOpen || prevSource.imageSrc !== imageSrc) {
+    setPrevSource({ isOpen, imageSrc });
     if (isOpen) {
       setZoom(1);
       setRotation(0);
       setPan({ x: 0, y: 0 });
     }
-  }, [isOpen, imageSrc]);
+  }
 
   // Load natural dimensions of the image
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -196,7 +198,7 @@ export function ImageCropModal({
 
       // If still above 100 KB, resize canvas to 320x320 and re-compress
       if (currentBytes > MAX_BYTES) {
-        let currentDim = 320;
+        const currentDim = 320;
         const resizedCanvas = document.createElement('canvas');
         resizedCanvas.width = currentDim;
         resizedCanvas.height = currentDim;

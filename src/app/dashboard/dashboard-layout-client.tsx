@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/dashboard/sidebar';
 import Topbar from '@/components/dashboard/topbar';
 import CreateLinkDrawer from '@/components/dashboard/create-link-modal';
@@ -13,6 +14,7 @@ export default function DashboardLayoutClient({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const { user, openAuthModal, isSuperAdmin, demoEditMode } = useAuth();
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
   const [demoModalOpen, setDemoModalOpen] = useState(false);
@@ -54,9 +56,9 @@ export default function DashboardLayoutClient({
     };
 
     const handleOpenEvent = () => handleRequestCreateLink();
-    const handleDemoEvent = (e: any) => {
+    const handleDemoEvent = (e: Event) => {
       if (isSuperAdmin && demoEditMode) return;
-      setDemoActionTitle(e.detail?.actionTitle);
+      setDemoActionTitle((e as CustomEvent<{ actionTitle?: string }>).detail?.actionTitle);
       setDemoModalOpen(true);
     };
 
@@ -106,11 +108,7 @@ export default function DashboardLayoutClient({
       <CreateLinkDrawer
         isOpen={createDrawerOpen}
         onClose={() => setCreateDrawerOpen(false)}
-        onCreated={() => {
-          if (typeof window !== 'undefined') {
-            window.location.reload();
-          }
-        }}
+        onCreated={() => router.refresh()}
       />
 
       {/* Demo Mode Restriction Modal */}

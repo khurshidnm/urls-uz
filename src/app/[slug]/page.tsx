@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { cookies, headers } from 'next/headers';
 import { db } from '@/lib/db';
@@ -45,13 +46,13 @@ export default async function SlugRedirectPage({ params }: Props) {
           <p className="text-zinc-400 text-xs mb-6 leading-relaxed">
             Ushbu qisqa havolaning amal qilish muddati o‘tib ketgan. Yangi maʼlumot olish uchun havola egasi bilan bog‘laning.
           </p>
-          <a
+          <Link
             href="/"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-medium transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>urls.uz Bosh sahifasi</span>
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -182,13 +183,13 @@ function ClickLimitReached() {
           <p className="text-zinc-400 text-xs mb-6 leading-relaxed">
             Ushbu havola uchun ajratilgan maksimal tashriflar soniga yetib bo‘lingan.
           </p>
-          <a
+          <Link
             href="/"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-medium transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>urls.uz Bosh sahifasi</span>
-          </a>
+          </Link>
         </div>
       </div>
   );

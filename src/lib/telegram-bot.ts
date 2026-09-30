@@ -19,7 +19,7 @@ export interface TelegramSendMessageOptions {
   reply_to_message_id?: number;
   reply_markup?: {
     inline_keyboard?: TelegramInlineButton[][];
-    keyboard?: any[][];
+    keyboard?: { text: string }[][];
     resize_keyboard?: boolean;
     one_time_keyboard?: boolean;
     remove_keyboard?: boolean;
@@ -148,7 +148,7 @@ export const TelegramBot = {
         formData.append('reply_markup', JSON.stringify(options.reply_markup));
       }
 
-      const blob = new Blob([buffer as any], { type: 'image/png' });
+      const blob = new Blob([new Uint8Array(buffer)], { type: 'image/png' });
       formData.append('photo', blob, options.filename || 'urls-uz-qr.png');
 
       const res = await fetch(`${TELEGRAM_API}/sendPhoto`, {
@@ -197,7 +197,7 @@ export const TelegramBot = {
    */
   async answerInlineQuery(
     inlineQueryId: string,
-    results: any[],
+    results: Record<string, unknown>[],
     options: { cache_time?: number; is_personal?: boolean } = {}
   ) {
     if (!this.isConfigured) return null;
@@ -227,7 +227,7 @@ export const TelegramBot = {
       return { ok: false, description: 'TELEGRAM_BOT_TOKEN sozlanmagan' };
     }
     try {
-      const payload: Record<string, any> = {
+      const payload: Record<string, unknown> = {
         url: webhookUrl,
         allowed_updates: ['message', 'callback_query', 'inline_query'],
         drop_pending_updates: false,
@@ -242,8 +242,8 @@ export const TelegramBot = {
         body: JSON.stringify(payload),
       });
       return await res.json();
-    } catch (err: any) {
-      return { ok: false, description: err.message };
+    } catch (err) {
+      return { ok: false, description: err instanceof Error ? err.message : String(err) };
     }
   },
 

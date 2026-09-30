@@ -52,7 +52,7 @@ export default function QrPreviewSection() {
   const [activeType, setActiveType] = useState<QrDataType>('vcard');
 
   // Accordion active pane: 'content' | 'colors' | 'logo' | 'design'
-  const [activePane, setActivePane] = useState<'content' | 'colors' | 'logo' | 'design'>('content');
+  const [activePane, setActivePane] = useState<'content' | 'colors' | 'logo' | 'design' | null>('content');
 
   // Quality resolution slider
   const [resolution, setResolution] = useState<number>(1000);
@@ -228,7 +228,7 @@ export default function QrPreviewSection() {
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 overflow-hidden">
               <button
                 type="button"
-                onClick={() => setActivePane(activePane === 'content' ? ('' as any) : 'content')}
+                onClick={() => setActivePane(activePane === 'content' ? null : 'content')}
                 className="w-full flex items-center justify-between p-3.5 bg-zinc-900/70 hover:bg-zinc-900 transition-colors text-left"
               >
                 <div className="flex items-center gap-2">
@@ -443,7 +443,7 @@ export default function QrPreviewSection() {
                         <label className="block text-[10px] font-mono text-zinc-400 mb-1">ENCRYPTION</label>
                         <select
                           value={wifi.encryption}
-                          onChange={(e) => setWifi({ ...wifi, encryption: e.target.value as any })}
+                          onChange={(e) => setWifi({ ...wifi, encryption: e.target.value as typeof wifi.encryption })}
                           className="w-full px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded text-xs text-white"
                         >
                           <option value="WPA">WPA/WPA2</option>
@@ -565,7 +565,7 @@ export default function QrPreviewSection() {
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 overflow-hidden">
               <button
                 type="button"
-                onClick={() => setActivePane(activePane === 'colors' ? ('' as any) : 'colors')}
+                onClick={() => setActivePane(activePane === 'colors' ? null : 'colors')}
                 className="w-full flex items-center justify-between p-3.5 bg-zinc-900/70 hover:bg-zinc-900 transition-colors text-left"
               >
                 <div className="flex items-center gap-2">
@@ -642,7 +642,7 @@ export default function QrPreviewSection() {
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 overflow-hidden">
               <button
                 type="button"
-                onClick={() => setActivePane(activePane === 'logo' ? ('' as any) : 'logo')}
+                onClick={() => setActivePane(activePane === 'logo' ? null : 'logo')}
                 className="w-full flex items-center justify-between p-3.5 bg-zinc-900/70 hover:bg-zinc-900 transition-colors text-left"
               >
                 <div className="flex items-center gap-2">
@@ -897,7 +897,7 @@ export default function QrPreviewSection() {
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 overflow-hidden">
               <button
                 type="button"
-                onClick={() => setActivePane(activePane === 'design' ? ('' as any) : 'design')}
+                onClick={() => setActivePane(activePane === 'design' ? null : 'design')}
                 className="w-full flex items-center justify-between p-3.5 bg-zinc-900/70 hover:bg-zinc-900 transition-colors text-left"
               >
                 <div className="flex items-center gap-2">

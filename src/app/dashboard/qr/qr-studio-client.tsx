@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import type { ClientLink } from '@/lib/client-types';
 import { useLanguage } from '@/lib/language-context';
 import {
   QrCanvas,
@@ -56,7 +57,7 @@ import {
 import { useToast } from '@/components/ui/toast';
 
 interface Props {
-  links: any[];
+  links: ClientLink[];
 }
 
 export default function QrStudioClient({ links }: Props) {
@@ -67,7 +68,7 @@ export default function QrStudioClient({ links }: Props) {
   const [activeType, setActiveType] = useState<QrDataType>('vcard');
 
   // Accordion active pane: 'content' | 'colors' | 'logo' | 'design'
-  const [activePane, setActivePane] = useState<'content' | 'colors' | 'logo' | 'design'>('content');
+  const [activePane, setActivePane] = useState<'content' | 'colors' | 'logo' | 'design' | null>('content');
 
   // Quality resolution slider (300 to 2000px)
   const [resolution, setResolution] = useState<number>(1000);
@@ -279,7 +280,7 @@ export default function QrStudioClient({ links }: Props) {
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 overflow-hidden shadow-sm">
             <button
               type="button"
-              onClick={() => setActivePane(activePane === 'content' ? ('' as any) : 'content')}
+              onClick={() => setActivePane(activePane === 'content' ? null : 'content')}
               className="w-full flex items-center justify-between p-4 bg-zinc-900/60 hover:bg-zinc-900/90 text-left transition-colors"
             >
               <div className="flex items-center gap-2.5">
@@ -676,7 +677,7 @@ export default function QrStudioClient({ links }: Props) {
                       <label className="block text-[11px] font-mono uppercase text-zinc-400 mb-1">Encryption</label>
                       <select
                         value={wifi.encryption}
-                        onChange={(e) => setWifi({ ...wifi, encryption: e.target.value as any })}
+                        onChange={(e) => setWifi({ ...wifi, encryption: e.target.value as typeof wifi.encryption })}
                         className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-xs focus:outline-none focus:border-zinc-600"
                       >
                         <option value="WPA">WPA/WPA2</option>
@@ -872,7 +873,7 @@ export default function QrStudioClient({ links }: Props) {
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 overflow-hidden shadow-sm">
             <button
               type="button"
-              onClick={() => setActivePane(activePane === 'colors' ? ('' as any) : 'colors')}
+              onClick={() => setActivePane(activePane === 'colors' ? null : 'colors')}
               className="w-full flex items-center justify-between p-4 bg-zinc-900/60 hover:bg-zinc-900/90 text-left transition-colors"
             >
               <div className="flex items-center gap-2.5">
@@ -979,7 +980,7 @@ export default function QrStudioClient({ links }: Props) {
                       <span className="text-xs text-zinc-300">Turi</span>
                       <select
                         value={gradientType}
-                        onChange={(e) => setGradientType(e.target.value as any)}
+                        onChange={(e) => setGradientType(e.target.value as GradientType)}
                         className="bg-zinc-900 border border-zinc-800 text-xs text-white rounded px-2 py-1"
                       >
                         <option value="linear">Linear</option>
@@ -1020,7 +1021,7 @@ export default function QrStudioClient({ links }: Props) {
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 overflow-hidden shadow-sm">
             <button
               type="button"
-              onClick={() => setActivePane(activePane === 'logo' ? ('' as any) : 'logo')}
+              onClick={() => setActivePane(activePane === 'logo' ? null : 'logo')}
               className="w-full flex items-center justify-between p-4 bg-zinc-900/60 hover:bg-zinc-900/90 text-left transition-colors"
             >
               <div className="flex items-center gap-2.5">
@@ -1097,7 +1098,7 @@ export default function QrStudioClient({ links }: Props) {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-mono uppercase text-zinc-400">
-                        Brend logotipi yoki "No Icon" ni tanlang:
+                        Brend logotipi yoki “No Icon” ni tanlang:
                       </span>
                       {centerLogo === 'none' && !centerEmoji && !customLogoUrl && (
                         <span className="text-[11px] text-rose-400 font-mono flex items-center gap-1">
@@ -1335,7 +1336,7 @@ export default function QrStudioClient({ links }: Props) {
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 overflow-hidden shadow-sm">
             <button
               type="button"
-              onClick={() => setActivePane(activePane === 'design' ? ('' as any) : 'design')}
+              onClick={() => setActivePane(activePane === 'design' ? null : 'design')}
               className="w-full flex items-center justify-between p-4 bg-zinc-900/60 hover:bg-zinc-900/90 text-left transition-colors"
             >
               <div className="flex items-center gap-2.5">

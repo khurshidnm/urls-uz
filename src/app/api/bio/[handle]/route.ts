@@ -17,7 +17,8 @@ export async function GET(
     await db.recordBioPageView(bioPage.id);
 
     return NextResponse.json({ success: true, bioPage });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    console.error('GET /api/bio/[handle] failed:', error);
+    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
   }
 }

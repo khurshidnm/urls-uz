@@ -32,9 +32,10 @@ import {
 } from 'lucide-react';
 import { formatNumber, formatDate } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
+import type { ClientLink } from '@/lib/client-types';
 
 interface Props {
-  initialLinks: any[];
+  initialLinks: ClientLink[];
 }
 
 export default function LinksManagerClient({ initialLinks }: Props) {
@@ -58,24 +59,18 @@ export default function LinksManagerClient({ initialLinks }: Props) {
 
   const getHeaders = () => ({ 'Content-Type': 'application/json' });
 
-  // Sync links when initialLinks change or fetch latest
-  React.useEffect(() => {
+  // Reset local state when the server sends a fresh list (e.g. after router.refresh())
+  const [prevInitialLinks, setPrevInitialLinks] = useState(initialLinks);
+  if (initialLinks !== prevInitialLinks) {
+    setPrevInitialLinks(initialLinks);
     setLinks(initialLinks);
-    fetch('/api/links')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.links)) {
-          setLinks(data.links);
-        }
-      })
-      .catch(() => {});
-  }, [initialLinks]);
+  }
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'archived'>('all');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
-  const [activeQrLink, setActiveQrLink] = useState<any | null>(null);
+  const [activeQrLink, setActiveQrLink] = useState<ClientLink | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Multi-select

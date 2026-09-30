@@ -72,7 +72,8 @@ export async function POST(req: NextRequest) {
       result: res,
       webhook_url: webhookUrl,
     });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err) {
+    console.error('POST /api/webhook/telegram/setup failed:', err);
+    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Link2,
@@ -27,7 +27,7 @@ import { QrCanvas } from '@/components/ui/qr-canvas';
 export default function ShortenCard() {
   const router = useRouter();
   const { t, locale } = useLanguage();
-  const { user, openAuthModal, pendingUrl, setPendingUrl } = useAuth();
+  const { user, openAuthModal } = useAuth();
   const { showToast } = useToast();
 
   const [url, setUrl] = useState('');
@@ -120,7 +120,7 @@ export default function ShortenCard() {
           router.push('/dashboard/links');
         }, 1200);
       } else if (data.code === 'AUTH_REQUIRED') {
-        openAuthModal(targetUrl.trim());
+        openAuthModal(targetUrl.trim(), () => performShorten(targetUrl.trim()));
       } else {
         setError(data.error || "Xatolik yuz berdi. Qayta urinib ko'ring.");
       }
@@ -131,21 +131,12 @@ export default function ShortenCard() {
     }
   };
 
-  useEffect(() => {
-    if (user && pendingUrl) {
-      const urlToProcess = pendingUrl;
-      setPendingUrl('');
-      setUrl(urlToProcess);
-      performShorten(urlToProcess);
-    }
-  }, [user, pendingUrl]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) return;
 
     if (!user) {
-      openAuthModal(url.trim());
+      openAuthModal(url.trim(), () => performShorten(url.trim()));
       return;
     }
 

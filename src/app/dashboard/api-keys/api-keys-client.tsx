@@ -21,9 +21,10 @@ import {
 } from 'lucide-react';
 import { formatDate, copyToClipboard as copyToClipboardUtil } from '@/lib/utils';
 import { Modal } from '@/components/ui/modal';
+import type { ClientApiKey } from '@/lib/client-types';
 
 interface Props {
-  initialKeys: any[];
+  initialKeys: ClientApiKey[];
 }
 
 export default function ApiKeysClient({ initialKeys }: Props) {
@@ -47,14 +48,22 @@ export default function ApiKeysClient({ initialKeys }: Props) {
   };
 
   // Webhook state
-  const [webhookStatus, setWebhookStatus] = useState<any | null>(null);
+  const [webhookStatus, setWebhookStatus] = useState<{
+    status?: string;
+    version?: string;
+    bot_configured?: boolean;
+    bot?: { username?: string } | null;
+    webhook_registered?: boolean;
+    message?: string;
+  } | null>(null);
   const [checkingWebhook, setCheckingWebhook] = useState(false);
   const [copiedWebhook, setCopiedWebhook] = useState(false);
 
   // Playground state
   const [testUrl, setTestUrl] = useState('https://t.me/urls_uz');
   const [testSlug, setTestSlug] = useState('api-test');
-  const [playgroundOutput, setPlaygroundOutput] = useState<any | null>(null);
+  // Raw API response, shown as JSON
+  const [playgroundOutput, setPlaygroundOutput] = useState<unknown>(null);
   const [playgroundLoading, setPlaygroundLoading] = useState(false);
   const [activeCodeTab, setActiveCodeTab] = useState<'curl' | 'js' | 'python'>('curl');
 
@@ -79,15 +88,7 @@ export default function ApiKeysClient({ initialKeys }: Props) {
       const data = await res.json();
       if (data.success) {
         setGeneratedKey(data.apiKey);
-        setKeys([
-          {
-            id: data.id,
-            name: data.name,
-            key_prefix: data.keyPrefix,
-            created_at: new Date().toISOString(),
-          },
-          ...keys,
-        ]);
+        setKeys([data.key, ...keys]);
         setKeyName('');
       }
     } catch {
@@ -140,8 +141,8 @@ export default function ApiKeysClient({ initialKeys }: Props) {
       });
       const data = await res.json();
       setPlaygroundOutput(data);
-    } catch (err: any) {
-      setPlaygroundOutput({ success: false, error: err.message });
+    } catch (err) {
+      setPlaygroundOutput({ success: false, error: err instanceof Error ? err.message : String(err) });
     } finally {
       setPlaygroundLoading(false);
     }
@@ -335,7 +336,7 @@ print(response.json())`;
             </button>
 
             {/* Output view */}
-            {playgroundOutput && (
+            {playgroundOutput !== null && (
               <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] font-mono overflow-x-auto text-emerald-400 max-h-48">
                 <pre>{JSON.stringify(playgroundOutput, null, 2)}</pre>
               </div>

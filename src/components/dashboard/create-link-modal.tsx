@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import type { ClientLink } from '@/lib/client-types';
 import { useLanguage } from '@/lib/language-context';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/components/ui/toast';
@@ -38,6 +39,14 @@ interface CreateLinkModalProps {
   onCreated?: () => void;
 }
 
+function detectApp(rawUrl: string): 'Telegram' | 'Instagram' | 'YouTube' | null {
+  const url = rawUrl.toLowerCase().trim();
+  if (url.includes('t.me/') || url.includes('telegram.me/')) return 'Telegram';
+  if (url.includes('instagram.com/')) return 'Instagram';
+  if (url.includes('youtube.com/') || url.includes('youtu.be/')) return 'YouTube';
+  return null;
+}
+
 export default function CreateLinkModal({ isOpen, onClose, onCreated }: CreateLinkModalProps) {
   const { t, locale } = useLanguage();
   const { isSuperAdmin, demoEditMode } = useAuth();
@@ -73,11 +82,10 @@ export default function CreateLinkModal({ isOpen, onClose, onCreated }: CreateLi
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [createdLink, setCreatedLink] = useState<{ slug: string; shortUrl: string } | null>(null);
-  const [slugStatus, setSlugStatus] = useState<{
-    checking: boolean;
-    available?: boolean;
-    message?: string;
-  }>({ checking: false });
+  // Result of the last server availability check, keyed by the slug it was for
+  const [remoteSlugCheck, setRemoteSlugCheck] = useState<{ slug: string; available?: boolean; message?: string } | null>(null);
+  // Captured once per mount: "now" for the past-date check without reading the clock during render
+  const [openedAt] = useState(() => Date.now());
 
   // Plan Quotas & Limits
   const [activeLinksCount, setActiveLinksCount] = useState<number>(0);
@@ -96,11 +104,11 @@ export default function CreateLinkModal({ isOpen, onClose, onCreated }: CreateLi
         .then((r) => r.json())
         .then((data) => {
           if (data.success && Array.isArray(data.links)) {
-            const active = data.links.filter((l: any) => !l.is_archived);
+            const active = (data.links as ClientLink[]).filter((l) => !l.is_archived);
             setActiveLinksCount(active.length);
-            setDeepLinksCount(active.filter((l: any) => Boolean(l.open_in_app)).length);
+            setDeepLinksCount(active.filter((l) => l.open_in_app).length);
             setDeviceTargetingCount(
-              active.filter((l: any) => Boolean(l.ios_url || l.android_url || l.huawei_url || l.desktop_url)).length
+              active.filter((l) => Boolean(l.ios_url || l.android_url || l.huawei_url || l.desktop_url)).length
             );
           }
         })
@@ -109,72 +117,56 @@ export default function CreateLinkModal({ isOpen, onClose, onCreated }: CreateLi
   }, [isOpen]);
 
   // Intelligent URL detection (Telegram / Instagram)
-  const detectedApp = useMemo(() => {
-    const url = destinationUrl.toLowerCase().trim();
-    if (url.includes('t.me/') || url.includes('telegram.me/')) return 'Telegram';
-    if (url.includes('instagram.com/')) return 'Instagram';
-    if (url.includes('youtube.com/') || url.includes('youtu.be/')) return 'YouTube';
-    return null;
-  }, [destinationUrl]);
+  const detectedApp = useMemo(() => detectApp(destinationUrl), [destinationUrl]);
 
-  // Auto-suggest Smart Deep link if Telegram or Instagram is typed
-  useEffect(() => {
-    if (detectedApp && !openInApp && !isDeepLinkLimitReached) {
+  // Auto-suggest Smart Deep link when a Telegram/Instagram/YouTube URL is first typed
+  const handleDestinationChange = (value: string) => {
+    const nextApp = detectApp(value);
+    if (nextApp && nextApp !== detectedApp && !isDeepLinkLimitReached) {
       setOpenInApp(true);
     }
-  }, [detectedApp, isDeepLinkLimitReached]);
+    setDestinationUrl(value);
+  };
 
-  // Live slug validation
+  // Live slug validation: format rules are checked locally, availability on the server
+  const trimmedSlug = customSlug.trim().toLowerCase();
+  const localSlugError = !trimmedSlug
+    ? null
+    : isReservedSlug(trimmedSlug)
+      ? 'Ushbu slug tizim tomonidan band qilingan'
+      : !isValidSlug(trimmedSlug)
+        ? 'Slug 3–50 ta belgi (faqat harf, raqam, tire yoki tagchiziq) bo‘lishi lozim'
+        : null;
+
   useEffect(() => {
-    const trimmed = customSlug.trim().toLowerCase();
-    if (!trimmed) {
-      setSlugStatus({ checking: false });
-      return;
-    }
-
-    if (isReservedSlug(trimmed)) {
-      setSlugStatus({
-        checking: false,
-        available: false,
-        message: 'Ushbu slug tizim tomonidan band qilingan',
-      });
-      return;
-    }
-
-    if (!isValidSlug(trimmed)) {
-      setSlugStatus({
-        checking: false,
-        available: false,
-        message: 'Slug 3–50 ta belgi (faqat harf, raqam, tire yoki tagchiziq) bo‘lishi lozim',
-      });
-      return;
-    }
-
-    setSlugStatus({ checking: true });
+    if (!trimmedSlug || localSlugError) return;
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/links/check-slug?slug=${encodeURIComponent(trimmed)}`);
+        const res = await fetch(`/api/links/check-slug?slug=${encodeURIComponent(trimmedSlug)}`);
         const data = await res.json();
-        setSlugStatus({
-          checking: false,
-          available: data.available,
-          message: data.message,
-        });
+        setRemoteSlugCheck({ slug: trimmedSlug, available: data.available, message: data.message });
       } catch {
-        setSlugStatus({ checking: false });
+        setRemoteSlugCheck({ slug: trimmedSlug });
       }
     }, 280);
-
     return () => clearTimeout(timer);
-  }, [customSlug]);
+  }, [trimmedSlug, localSlugError]);
 
-  const isExpiredDate = expiresAt ? new Date(expiresAt).getTime() <= Date.now() : false;
+  const slugStatus: { checking: boolean; available?: boolean; message?: string } = !trimmedSlug
+    ? { checking: false }
+    : localSlugError
+      ? { checking: false, available: false, message: localSlugError }
+      : remoteSlugCheck?.slug === trimmedSlug
+        ? { checking: false, available: remoteSlugCheck.available, message: remoteSlugCheck.message }
+        : { checking: true };
+
+  const isExpiredDate = expiresAt ? new Date(expiresAt).getTime() <= openedAt : false;
 
   const resetForm = useCallback(() => {
     setDestinationUrl('');
     setTitle('');
     setCustomSlug('');
-    setSlugStatus({ checking: false });
+    setRemoteSlugCheck(null);
     setOpenInApp(false);
     setEnableDeviceTargeting(false);
     setIosUrl('');
@@ -437,7 +429,7 @@ export default function CreateLinkModal({ isOpen, onClose, onCreated }: CreateLi
                   <input
                     type="text"
                     value={destinationUrl}
-                    onChange={(e) => setDestinationUrl(e.target.value)}
+                    onChange={(e) => handleDestinationChange(e.target.value)}
                     placeholder="https://t.me/kanal, instagram.com/post yoki sayt.uz/promo"
                     required
                     autoFocus

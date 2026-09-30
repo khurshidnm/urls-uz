@@ -76,8 +76,9 @@ export async function GET(req: NextRequest) {
         { command: '/help', description: 'Yordam va qo‘llanma' },
       ],
     });
-  } catch (err: any) {
-    return NextResponse.json({ status: 'error', message: err.message }, { status: 500 });
+  } catch (err) {
+    console.error('GET /api/webhook/telegram failed:', err);
+    return NextResponse.json({ status: 'error', message: 'Server xatosi' }, { status: 500 });
   }
 }
 

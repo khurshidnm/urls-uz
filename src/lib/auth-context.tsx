@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export interface User {
@@ -37,7 +37,12 @@ interface AuthContextType {
   loginWithTelegramWidget: (widgetData: TelegramWidgetData) => Promise<boolean>;
   logout: () => Promise<void>;
   isAuthModalOpen: boolean;
-  openAuthModal: (pendingUrlToShorten?: string) => void;
+  /**
+   * Opens the login modal. `afterLogin` runs once the user logs in inside the
+   * modal (Telegram phone code); redirect logins (Google, Telegram widget)
+   * reload the page and create the pending link on the server instead.
+   */
+  openAuthModal: (pendingUrlToShorten?: string, afterLogin?: () => void) => void;
   closeAuthModal: () => void;
   pendingUrl: string;
   setPendingUrl: (url: string) => void;
@@ -62,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [pendingUrl, setPendingUrl] = useState('');
   const [demoEditMode, setDemoEditModeState] = useState(false);
+  const afterLoginRef = useRef<(() => void) | null>(null);
 
   const isSuperAdmin = user?.role === 'superadmin';
 
@@ -91,19 +97,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     document.cookie = 'urls_pending_url=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     setUser(loggedInUser);
     setIsAuthModalOpen(false);
+    setPendingUrl('');
     router.refresh();
+    const afterLogin = afterLoginRef.current;
+    afterLoginRef.current = null;
+    afterLogin?.();
   };
 
-  const openAuthModal = (pendingUrlToShorten?: string) => {
+  const openAuthModal = (pendingUrlToShorten?: string, afterLogin?: () => void) => {
     if (pendingUrlToShorten) {
       setPendingUrl(pendingUrlToShorten);
     }
+    afterLoginRef.current = afterLogin ?? null;
     setIsAuthModalOpen(true);
   };
 
   const closeAuthModal = () => {
     setIsAuthModalOpen(false);
     setPendingUrl('');
+    afterLoginRef.current = null;
   };
 
   const postLogin = async (payload: Record<string, unknown>): Promise<boolean> => {

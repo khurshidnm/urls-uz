@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useLanguage } from '@/lib/language-context';
 import { useToast } from '@/components/ui/toast';
 import { Badge } from '@/components/ui/badge';
@@ -23,12 +24,13 @@ import {
 } from 'lucide-react';
 import { formatNumber, formatDate, formatDateTime, copyToClipboard } from '@/lib/utils';
 import { getCountryInfo } from '@/lib/geo';
+import type { AnalyticsOverview, AnalyticsView, ClientLink, LinkAnalytics } from '@/lib/client-types';
 
 interface Props {
-  overview: any;
-  links?: any[];
+  overview: AnalyticsOverview;
+  links?: ClientLink[];
   initialLinkId?: string | null;
-  initialLinkAnalytics?: any;
+  initialLinkAnalytics?: LinkAnalytics | null;
 }
 
 export default function AnalyticsViewClient({
@@ -40,7 +42,7 @@ export default function AnalyticsViewClient({
   const { t, locale } = useLanguage();
   const { showToast } = useToast();
   const [selectedLinkId, setSelectedLinkId] = useState<string>(initialLinkId || '');
-  const [activeData, setActiveData] = useState<any>(initialLinkAnalytics || overview);
+  const [activeData, setActiveData] = useState<AnalyticsView>(initialLinkAnalytics || overview);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [dateRange, setDateRange] = useState<'7d' | '30d' | 'all'>('7d');
   const [geoTab, setGeoTab] = useState<'uzbekistan' | 'global'>('uzbekistan');
@@ -89,19 +91,19 @@ export default function AnalyticsViewClient({
   };
 
   const exportCsv = () => {
-    const isSpecificLink = Boolean(selectedLinkId && activeData.link);
-    let csv = isSpecificLink
-      ? `Havola Analitikasi: ${activeData.link.title} (/${activeData.link.slug})\nAsl manzil: ${activeData.link.destination_url}\nJami bosishlar: ${activeData.totalClicks || 0}\n\n`
+    const specificLink = selectedLinkId ? activeData.link : undefined;
+    let csv = specificLink
+      ? `Havola Analitikasi: ${specificLink.title} (/${specificLink.slug})\nAsl manzil: ${specificLink.destination_url}\nJami bosishlar: ${activeData.totalClicks || 0}\n\n`
       : 'Barcha Havolalar Umumiy Analitikasi\n\n';
 
     csv += 'Type,Name,Clicks\n';
     if (activeData.regions) {
-      activeData.regions.forEach((r: any) => {
+      activeData.regions.forEach((r) => {
         csv += `"Uzbekistan Region","${r.region}",${r.count}\n`;
       });
     }
     if (activeData.countries) {
-      activeData.countries.forEach((c: any) => {
+      activeData.countries.forEach((c) => {
         const cInfo = getCountryInfo(c.country);
         csv += `"Country","${cInfo.nameUz} (${c.country})",${c.count}\n`;
       });
@@ -109,21 +111,21 @@ export default function AnalyticsViewClient({
 
     csv += '\nReferer,Clicks\n';
     if (activeData.referrers) {
-      activeData.referrers.forEach((ref: any) => {
+      activeData.referrers.forEach((ref) => {
         csv += `"${ref.referer}",${ref.count}\n`;
       });
     }
 
     if (activeData.devices) {
       csv += '\nDevice Type,Clicks\n';
-      activeData.devices.forEach((dev: any) => {
+      activeData.devices.forEach((dev) => {
         csv += `"${dev.device_type}",${dev.count}\n`;
       });
     }
 
-    if (isSpecificLink && activeData.clicks && activeData.clicks.length > 0) {
+    if (specificLink && activeData.clicks && activeData.clicks.length > 0) {
       csv += '\n--- Oxirgi Tashriflar Jurnali ---\nDate,Region,Country,City,Device,OS,Browser,Referer\n';
-      activeData.clicks.forEach((clk: any) => {
+      (activeData.clicks ?? []).forEach((clk) => {
         csv += `"${clk.created_at}","${clk.region || ''}","${clk.country || ''}","${clk.city || ''}","${clk.device_type || ''}","${clk.os || ''}","${clk.browser || ''}","${clk.referer || ''}"\n`;
       });
     }
@@ -132,16 +134,18 @@ export default function AnalyticsViewClient({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    const filenamePrefix = isSpecificLink ? `link-${activeData.link.slug}` : 'overview';
+    const filenamePrefix = specificLink ? `link-${specificLink.slug}` : 'overview';
     link.download = `urls-uz-${filenamePrefix}-analytics-${Date.now()}.csv`;
     link.click();
     showToast('success', 'Analitika CSV formatda yuklab olindi');
   };
 
-  const isLinkView = Boolean(selectedLinkId && activeData.link);
-  const totalClicks = activeData.totalClicks || (isLinkView ? activeData.link?.click_count : overview.totalClicks) || 0;
+  // Narrowable reference to the selected link (undefined in the overview)
+  const selectedLink = selectedLinkId ? activeData.link : undefined;
+  const isLinkView = Boolean(selectedLink);
+  const totalClicks = activeData.totalClicks || (selectedLink ? selectedLink.click_count : overview.totalClicks) || 0;
   const timeline = activeData.timeline || [];
-  const maxTimelineCount = Math.max(...timeline.map((t: any) => t.count), 1);
+  const maxTimelineCount = Math.max(...timeline.map((t) => t.count), 1);
 
   // Device icon helper
   const getDeviceIcon = (type: string) => {
@@ -168,17 +172,17 @@ export default function AnalyticsViewClient({
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-              {isLinkView ? 'Havola Analitikasi' : t.analytics}
+              {selectedLink ? 'Havola Analitikasi' : t.analytics}
             </h1>
-            {isLinkView && (
+            {selectedLink && (
               <Badge variant="indigo" size="xs">
-                /{activeData.link.slug}
+                /{selectedLink.slug}
               </Badge>
             )}
           </div>
           <p className="text-xs text-[var(--foreground-muted)] mt-0.5">
-            {isLinkView
-              ? `Tanlangan havola: "${activeData.link.title}" bo‘yicha batafsil telemetriya`
+            {selectedLink
+              ? `Tanlangan havola: "${selectedLink.title}" bo‘yicha batafsil telemetriya`
               : 'Viloyatlar, davlatlar, qurilmalar va trafik manbalari umumiy tahlili'}
           </p>
         </div>
@@ -239,21 +243,21 @@ export default function AnalyticsViewClient({
       </div>
 
       {/* Selected Individual Link Banner (Linear Obsidian Aesthetic) */}
-      {isLinkView && (
+      {selectedLink && (
         <div className="p-4 sm:p-5 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-4 animate-fade-in shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="space-y-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-bold text-base text-white truncate">
-                  {activeData.link.title}
+                  {selectedLink.title}
                 </span>
-                {activeData.link.is_archived && (
+                {selectedLink.is_archived && (
                   <Badge variant="warning" size="xs">Arxivlangan</Badge>
                 )}
-                {activeData.link.open_in_app && (
+                {selectedLink.open_in_app && (
                   <Badge variant="cyan" size="xs" icon={<Smartphone className="w-3 h-3" />}>Deep Link</Badge>
                 )}
-                {activeData.link.has_password && (
+                {selectedLink.has_password && (
                   <Badge variant="warning" size="xs" icon={<Shield className="w-3 h-3" />}>Parolli</Badge>
                 )}
               </div>
@@ -261,11 +265,11 @@ export default function AnalyticsViewClient({
               {/* URLs info */}
               <div className="flex items-center gap-3 text-xs flex-wrap">
                 <span className="font-mono text-indigo-400 font-semibold">
-                  urls.uz/{activeData.link.slug}
+                  urls.uz/{selectedLink.slug}
                 </span>
                 <span className="text-zinc-600 hidden sm:inline">•</span>
-                <span className="text-zinc-400 truncate max-w-sm" title={activeData.link.destination_url}>
-                  → {activeData.link.destination_url}
+                <span className="text-zinc-400 truncate max-w-sm" title={selectedLink.destination_url}>
+                  → {selectedLink.destination_url}
                 </span>
               </div>
             </div>
@@ -273,7 +277,7 @@ export default function AnalyticsViewClient({
             {/* Quick Actions for Link */}
             <div className="flex items-center gap-2 shrink-0">
               <button
-                onClick={() => handleCopyShortUrl(activeData.link.slug)}
+                onClick={() => handleCopyShortUrl(selectedLink.slug)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   copied
                     ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
@@ -285,7 +289,7 @@ export default function AnalyticsViewClient({
               </button>
 
               <a
-                href={`/${activeData.link.slug}`}
+                href={`/${selectedLink.slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition-colors"
@@ -328,7 +332,7 @@ export default function AnalyticsViewClient({
             <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
               <div className="text-[11px] text-zinc-500 font-mono">Yaratilgan sana</div>
               <div className="text-sm font-semibold text-zinc-300 font-mono mt-1">
-                {formatDate(activeData.link.created_at)}
+                {formatDate(selectedLink.created_at)}
               </div>
             </div>
           </div>
@@ -357,12 +361,12 @@ export default function AnalyticsViewClient({
             </p>
           </div>
           <div className="pt-1">
-            <a
+            <Link
               href="/dashboard/links"
               className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 transition-colors"
             >
               Havolalar ro‘yxatiga o‘tish
-            </a>
+            </Link>
           </div>
         </div>
       )}
@@ -373,7 +377,7 @@ export default function AnalyticsViewClient({
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-indigo-400" />
             <h3 className="text-sm font-bold text-white">
-              {isLinkView ? `"${activeData.link.title}" bosishlar dinamikasi` : 'Bosishlar dinamikasi'}
+              {selectedLink ? `"${selectedLink.title}" bosishlar dinamikasi` : 'Bosishlar dinamikasi'}
             </h3>
           </div>
           <Badge variant="indigo" size="xs" dot pulse>Live Telemetry</Badge>
@@ -383,7 +387,7 @@ export default function AnalyticsViewClient({
           <div className="space-y-2">
             {/* Area Chart (CSS-based) */}
             <div className="flex items-end gap-1 h-44">
-              {timeline.map((t: any, idx: number) => {
+              {timeline.map((t, idx) => {
                 const height = Math.max((t.count / maxTimelineCount) * 100, 6);
                 const date = new Date(t.date);
                 const dayLabel = date.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' });
@@ -413,7 +417,7 @@ export default function AnalyticsViewClient({
           </div>
         ) : (
           <div className="h-44 flex items-center justify-center text-xs text-slate-600">
-            Maʼlumotlar to'planmoqda...
+            Maʼlumotlar to‘planmoqda...
           </div>
         )}
       </div>
@@ -460,7 +464,7 @@ export default function AnalyticsViewClient({
         {geoTab === 'uzbekistan' && (
           activeData.regions && activeData.regions.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-fade-in">
-              {activeData.regions.map((reg: any, idx: number) => {
+              {activeData.regions.map((reg, idx) => {
                 const percentage = totalClicks > 0 ? Math.round((reg.count / totalClicks) * 100) : 0;
                 return (
                   <div
@@ -498,7 +502,7 @@ export default function AnalyticsViewClient({
         {geoTab === 'global' && (
           activeData.countries && activeData.countries.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-fade-in">
-              {activeData.countries.map((c: any, idx: number) => {
+              {activeData.countries.map((c, idx) => {
                 const cInfo = getCountryInfo(c.country);
                 const countryName = locale === 'ru' ? cInfo.nameRu : locale === 'en' ? cInfo.nameEn : cInfo.nameUz;
                 const percentage = totalClicks > 0 ? Math.round((c.count / totalClicks) * 100) : 0;
@@ -546,7 +550,7 @@ export default function AnalyticsViewClient({
           </div>
           {activeData.referrers && activeData.referrers.length > 0 ? (
             <div className="space-y-2.5">
-              {activeData.referrers.map((ref: any, idx: number) => {
+              {activeData.referrers.map((ref, idx) => {
                 const perc = totalClicks > 0 ? Math.round((ref.count / totalClicks) * 100) : 0;
                 return (
                   <div key={idx} className="p-3 rounded-xl bg-[var(--surface-1)] border border-[var(--border-subtle)] space-y-1.5">
@@ -576,7 +580,7 @@ export default function AnalyticsViewClient({
           </div>
           {activeData.devices && activeData.devices.length > 0 ? (
             <div className="space-y-2.5">
-              {activeData.devices.map((dev: any, idx: number) => {
+              {activeData.devices.map((dev, idx) => {
                 const perc = totalClicks > 0 ? Math.round((dev.count / totalClicks) * 100) : 0;
                 const colorClass = getDeviceColor(dev.device_type);
                 return (
@@ -609,7 +613,7 @@ export default function AnalyticsViewClient({
             <div className="mt-4 pt-4 border-t border-[var(--border-subtle)]">
               <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold mb-2.5">Operatsion tizimlar</div>
               <div className="flex flex-wrap gap-2">
-                {activeData.os.map((os: any, idx: number) => (
+                {activeData.os.map((os, idx) => (
                   <Badge key={idx} variant="default" size="sm">
                     {os.os}: <span className="font-mono font-bold ml-1">{os.count}</span>
                   </Badge>
@@ -650,7 +654,7 @@ export default function AnalyticsViewClient({
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-850/60 font-mono text-zinc-300">
-                {activeData.clicks.slice(0, 25).map((click: any, idx: number) => {
+                {activeData.clicks.slice(0, 25).map((click, idx) => {
                   const countryInfo = getCountryInfo(click.country || 'UZ');
                   return (
                     <tr key={idx} className="hover:bg-zinc-900/40 transition-colors">

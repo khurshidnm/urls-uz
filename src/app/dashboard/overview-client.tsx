@@ -24,11 +24,12 @@ import {
 } from 'lucide-react';
 import { formatNumber } from '@/lib/utils';
 import { QrCanvas } from '@/components/ui/qr-canvas';
+import type { AnalyticsOverview, ClientBioPage, ClientLink } from '@/lib/client-types';
 
 interface OverviewClientProps {
-  analytics: any;
-  links: any[];
-  bioPage: any;
+  analytics: AnalyticsOverview;
+  links: ClientLink[];
+  bioPage: ClientBioPage | undefined;
 }
 
 export default function DashboardOverviewClient({
@@ -39,7 +40,7 @@ export default function DashboardOverviewClient({
   const { t, locale } = useLanguage();
   const { showToast } = useToast();
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [activeQrLink, setActiveQrLink] = useState<any | null>(null);
+  const [activeQrLink, setActiveQrLink] = useState<ClientLink | null>(null);
 
   const handleCopy = async (id: string, slug: string) => {
     const url = `${window.location.origin}/${slug}`;
@@ -107,7 +108,7 @@ export default function DashboardOverviewClient({
 
   // Build simple bar chart data from timeline
   const timeline = analytics.timeline || [];
-  const maxTimelineCount = Math.max(...timeline.map((t: any) => t.count), 1);
+  const maxTimelineCount = Math.max(...timeline.map((t) => t.count), 1);
 
   return (
     <div className="space-y-6">
@@ -169,7 +170,7 @@ export default function DashboardOverviewClient({
           {/* CSS Bar Chart */}
           {timeline.length > 0 ? (
             <div className="flex items-end gap-1.5 h-36">
-              {timeline.map((t: any, idx: number) => {
+              {timeline.map((t, idx) => {
                 const height = Math.max((t.count / maxTimelineCount) * 100, 8);
                 const date = new Date(t.date);
                 const dayLabel = date.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' });
@@ -190,7 +191,7 @@ export default function DashboardOverviewClient({
           ) : (
             <div className="h-36 flex items-center justify-center text-xs text-slate-500">
               <BarChart3 className="w-8 h-8 text-slate-700 mr-2" />
-              Maʼlumotlar to'planmoqda...
+              Maʼlumotlar to‘planmoqda...
             </div>
           )}
         </div>
@@ -213,7 +214,7 @@ export default function DashboardOverviewClient({
 
           <div className="space-y-2.5">
             {analytics.regions && analytics.regions.length > 0 ? (
-              analytics.regions.slice(0, 5).map((reg: any, idx: number) => {
+              analytics.regions.slice(0, 5).map((reg, idx) => {
                 const maxCount = analytics.regions[0]?.count || 1;
                 const percentage = Math.round((reg.count / maxCount) * 100);
                 return (
@@ -235,7 +236,7 @@ export default function DashboardOverviewClient({
                 );
               })
             ) : (
-              <p className="text-xs text-slate-600 py-6 text-center">Maʼlumotlar to'planmoqda...</p>
+              <p className="text-xs text-slate-600 py-6 text-center">Maʼlumotlar to‘planmoqda...</p>
             )}
           </div>
         </div>
@@ -250,7 +251,7 @@ export default function DashboardOverviewClient({
           </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-          {analytics.referrers && analytics.referrers.map((ref: any, idx: number) => (
+          {analytics.referrers && analytics.referrers.map((ref, idx) => (
             <div
               key={idx}
               className="flex items-center justify-between p-3 rounded-xl bg-[var(--surface-1)] border border-[var(--border-subtle)] hover:border-[var(--border-hover)] transition-all"

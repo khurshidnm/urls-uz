@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useRef } from 'react';
+import type { ClientBioPage } from '@/lib/client-types';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/language-context';
 import { useAuth } from '@/lib/auth-context';
@@ -64,7 +65,7 @@ interface BioLinkItem {
 }
 
 interface Props {
-  initialBio: any;
+  initialBio: ClientBioPage | undefined;
 }
 
 // Preset themes: Free vs Pro
@@ -216,12 +217,7 @@ export default function BioBuilderClient({ initialBio }: Props) {
     return false;
   };
 
-  let parsedSocial: Record<string, string> = {};
-  try {
-    parsedSocial = JSON.parse(initialBio?.social_links || '{}');
-  } catch {
-    parsedSocial = {};
-  }
+  const parsedSocial: Record<string, string> = initialBio?.social_links ?? {};
 
   // Profile Fields
   const [handle, setHandle] = useState(initialBio?.handle || 'apextech');
@@ -289,15 +285,15 @@ export default function BioBuilderClient({ initialBio }: Props) {
   // Custom Links: Limited to 4 in Free Plan
   const BIO_LINKS_LIMIT = 4;
   const initialLinks = initialBio?.links && initialBio.links.length > 0
-    ? initialBio.links.slice(0, BIO_LINKS_LIMIT).map((l: any) => ({
+    ? initialBio.links.slice(0, BIO_LINKS_LIMIT).map((l) => ({
         id: l.id,
         title: l.title,
         url: l.url,
         icon: l.icon || 'link',
         style: l.style === 'solid' ? 'solid' : 'glass', // Restrict to free styles
         animation: 'none',
-        tag: l.tag || '',
-        enabled: l.enabled !== false,
+        tag: '',
+        enabled: l.is_active,
         click_count: l.click_count || 0,
       }))
     : [
@@ -387,7 +383,7 @@ export default function BioBuilderClient({ initialBio }: Props) {
     setLinks(links.filter((_, i) => i !== index));
   };
 
-  const updateLink = (index: number, field: keyof BioLinkItem, value: any) => {
+  const updateLink = <K extends keyof BioLinkItem>(index: number, field: K, value: BioLinkItem[K]) => {
     const updated = [...links];
     updated[index] = { ...updated[index], [field]: value };
     setLinks(updated);

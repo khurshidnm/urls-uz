@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import {
   CheckCircle2,
   Share2,
@@ -174,12 +175,12 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
     <div className={`min-h-screen ${currentTheme.bg} transition-colors duration-300 flex flex-col items-center py-12 px-4`}>
       {/* Top Floating Controls */}
       <div className="w-full max-w-md flex items-center justify-between mb-8">
-        <a
+        <Link
           href="/"
           className="text-xs font-semibold tracking-wider text-slate-400 hover:text-white transition-colors bg-white/5 px-3 py-1.5 rounded-full border border-white/10"
         >
           urls.uz
-        </a>
+        </Link>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowQr(true)}
@@ -271,13 +272,13 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
 
         {/* Footer Brand */}
         <div className="mt-auto pt-6 pb-4">
-          <a
+          <Link
             href="/"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-slate-300 transition-colors shadow-sm"
           >
             <span>O‘zingizning bepul bio sahifangizni yarating —</span>
             <span className="font-bold text-indigo-400">urls.uz</span>
-          </a>
+          </Link>
         </div>
       </div>
 

@@ -457,16 +457,17 @@ export const db = {
     const prefix = rawKey.slice(0, 14);
     const id = newId('key', 10);
 
-    await pg.insert(apiKeys).values({
+    const [row] = await pg.insert(apiKeys).values({
       id,
       workspace_id: workspaceId,
       created_by: createdBy,
       name,
       key_hash: sha256(rawKey),
       key_prefix: prefix,
-    });
+    }).returning();
 
-    return { id, name, apiKey: rawKey, keyPrefix: prefix };
+    // The raw key is returned exactly once; only its hash is stored
+    return { id, name, apiKey: rawKey, keyPrefix: prefix, key: toPublicApiKey(row) };
   },
 
   async deleteApiKey(id: string, workspaceId: string): Promise<boolean> {
