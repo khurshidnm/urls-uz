@@ -5,6 +5,9 @@ import { useLanguage } from '@/lib/language-context';
 import { useAuth } from '@/lib/auth-context';
 import { Plus, Globe, Command, Menu } from 'lucide-react';
 import { Locale } from '@/lib/translations';
+import { TelegramIcon } from '@/components/ui/icons';
+
+const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'urlsuzbot';
 
 interface TopbarProps {
   onCreateLink: () => void;
@@ -64,6 +67,18 @@ export default function Topbar({ onCreateLink, onToggleMobileSidebar }: TopbarPr
             <Command className="w-2.5 h-2.5" />K
           </kbd>
         </button>
+
+        {/* Telegram bot (free on every plan): send it a link, get a short link back */}
+        <a
+          href={`https://t.me/${BOT_USERNAME}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={`Telegram bot: @${BOT_USERNAME}`}
+          aria-label={`Telegram bot @${BOT_USERNAME}`}
+          className="w-7 h-7 flex items-center justify-center rounded-md bg-[#229ED9] hover:bg-sky-500 text-white transition-colors"
+        >
+          <TelegramIcon className="w-3.5 h-3.5" />
+        </a>
 
         {/* Language Switcher */}
         <div className="relative group">

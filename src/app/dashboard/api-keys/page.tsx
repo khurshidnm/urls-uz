@@ -14,7 +14,6 @@ export default async function ApiKeysPage() {
       initialKeys={toClientJson(keys)}
       apiAccess={limitsFor(workspace, isAdmin).apiAccess}
       isAdmin={isAdmin}
-      botUsername={process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'urlsuzbot'}
     />
   );
 }
