@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, toPublicLink } from '@/lib/db';
 import { requireWorkspace } from '@/lib/auth';
-import { checkUrlSafety } from '@/lib/anti-phishing';
-import { isValidSlug } from '@/lib/utils';
-import { parseJson, updateLinkSchema } from '@/lib/validation';
+import { updateLink } from '@/lib/links/update-link';
 
 const notFound = () => NextResponse.json({ success: false, error: 'Link not found' }, { status: 404 });
 
@@ -35,34 +33,23 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    // The schema only lets through fields a user may change; owner, counters and timestamps are server-managed
-    const parsed = await parseJson(request, updateLinkSchema);
-    if (!parsed.ok) return parsed.response;
-    const changes = parsed.data;
-
-    if (changes.destination_url !== undefined) {
-      const safety = checkUrlSafety(changes.destination_url);
-      if (!safety.isSafe) {
-        return NextResponse.json({ success: false, error: safety.reason, code: 'PHISHING_SUSPECTED' }, { status: 400 });
-      }
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ success: false, error: 'So‘rov JSON formatida bo‘lishi kerak', code: 'INVALID_JSON' }, { status: 400 });
     }
 
-    if (changes.slug !== undefined) {
-      if (!isValidSlug(changes.slug)) {
-        return NextResponse.json({ success: false, error: 'Yaroqsiz slug formati.', code: 'INVALID_SLUG' }, { status: 400 });
-      }
-      const current = await db.getOwnedLink(id, ctx.workspace.id);
-      if (current?.slug !== changes.slug && (await db.isSlugTaken(changes.slug))) {
-        return NextResponse.json({ success: false, error: 'Ushbu slug allaqachon band qilingan.', code: 'SLUG_TAKEN' }, { status: 409 });
-      }
+    // Owner, counters and timestamps are server-managed; the service applies the same rules as creation
+    const result = await updateLink(
+      { workspace: ctx.workspace, userId: ctx.user?.id ?? null, isAdmin: ctx.isAdmin },
+      id,
+      body
+    );
+    if (!result.ok) {
+      return NextResponse.json({ success: false, error: result.error, code: result.code, ...result.details }, { status: result.status });
     }
-
-    if (changes.folder_id && !(await db.getFolder(changes.folder_id, ctx.workspace.id))) {
-      return NextResponse.json({ success: false, error: 'Papka topilmadi', code: 'FOLDER_NOT_FOUND' }, { status: 400 });
-    }
-
-    const updated = await db.updateLink(id, ctx.workspace.id, changes, ctx.user?.id ?? null);
-    if (!updated) return notFound();
+    const updated = result.link;
 
     return NextResponse.json({ success: true, link: toPublicLink(updated) });
   } catch (error) {

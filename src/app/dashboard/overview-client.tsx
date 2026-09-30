@@ -22,7 +22,7 @@ import {
   Globe,
   Activity,
 } from 'lucide-react';
-import { formatNumber } from '@/lib/utils';
+import { formatDay, formatNumber } from '@/lib/utils';
 import { QrCanvas } from '@/components/ui/qr-canvas';
 import type { AnalyticsOverview, ClientBioPage, ClientLink } from '@/lib/client-types';
 
@@ -171,11 +171,11 @@ export default function DashboardOverviewClient({
           {timeline.length > 0 ? (
             <div className="flex items-end gap-1.5 h-36">
               {timeline.map((t, idx) => {
-                const height = Math.max((t.count / maxTimelineCount) * 100, 8);
-                const date = new Date(t.date);
-                const dayLabel = date.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' });
+                const height = t.count === 0 ? 2 : Math.max((t.count / maxTimelineCount) * 100, 8);
+                const showLabel = (timeline.length - 1 - idx) % Math.max(1, Math.ceil(timeline.length / 10)) === 0;
+                const dayLabel = formatDay(t.date);
                 return (
-                  <div key={idx} className="flex-1 flex flex-col items-center gap-1 group/bar">
+                  <div key={idx} className="flex-1 h-full flex flex-col items-center justify-end gap-1 group/bar">
                     <span className="text-[9px] text-indigo-300 font-mono font-bold opacity-0 group-hover/bar:opacity-100 transition-opacity">
                       {t.count}
                     </span>
@@ -183,7 +183,7 @@ export default function DashboardOverviewClient({
                       className="w-full rounded-t-md bg-gradient-to-t from-indigo-600 to-indigo-400 chart-bar cursor-pointer group-hover/bar:from-indigo-500 group-hover/bar:to-indigo-300 transition-all"
                       style={{ height: `${height}%` }}
                     />
-                    <span className="text-[8px] text-slate-500 mt-0.5 truncate w-full text-center">{dayLabel}</span>
+                    <span className={`text-[8px] text-slate-500 mt-0.5 whitespace-nowrap text-center ${showLabel ? '' : 'invisible'}`}>{dayLabel}</span>
                   </div>
                 );
               })}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useLanguage } from '@/lib/language-context';
 import { useToast } from '@/components/ui/toast';
 import { Badge } from '@/components/ui/badge';
@@ -658,16 +659,13 @@ export default function LinksManagerClient({ initialLinks }: Props) {
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 group">
-                          <span
-                            onDoubleClick={() => {
-                              setInlineEditingTitleId(link.id);
-                              setInlineTitleValue(link.title);
-                            }}
-                            className="font-bold text-white text-sm hover:text-indigo-300 transition-colors cursor-pointer"
-                            title="Nomi tahrirlash uchun ikki marta bosing"
+                          <Link
+                            href={`/dashboard/links/${link.id}`}
+                            className="font-bold text-white text-sm hover:text-indigo-300 transition-colors"
+                            title="Havola sahifasi: analitika, QR, sozlamalar va tarix"
                           >
                             {link.title}
-                          </span>
+                          </Link>
                           <button
                             onClick={() => {
                               setInlineEditingTitleId(link.id);
@@ -784,14 +782,14 @@ export default function LinksManagerClient({ initialLinks }: Props) {
                     <div className="flex items-center gap-4 text-[11px] text-zinc-500 mt-2">
                       <span className="font-mono">{formatDate(link.created_at)}</span>
                       <span className="text-zinc-700">•</span>
-                      <a
-                        href={`/dashboard/analytics?link_id=${link.id}`}
+                      <Link
+                        href={`/dashboard/links/${link.id}`}
                         className="text-zinc-200 hover:text-indigo-400 font-medium font-mono tabular-nums transition-colors flex items-center gap-1 group/clicks"
                         title="Ushbu havola bo‘yicha batafsil analitika"
                       >
                         <span>{formatNumber(link.click_count)} clicks</span>
                         <BarChart3 className="w-3 h-3 text-indigo-400 opacity-60 group-hover/clicks:opacity-100 transition-opacity" />
-                      </a>
+                      </Link>
                     </div>
                   </div>
 
@@ -815,13 +813,13 @@ export default function LinksManagerClient({ initialLinks }: Props) {
                     </button>
 
                     {/* Analytics Direct Button */}
-                    <a
-                      href={`/dashboard/analytics?link_id=${link.id}`}
+                    <Link
+                      href={`/dashboard/links/${link.id}`}
                       className="p-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-indigo-300 border border-zinc-800 transition-colors"
                       title="Havola bo‘yicha batafsil analitika"
                     >
                       <BarChart3 className="w-3.5 h-3.5" />
-                    </a>
+                    </Link>
 
                     {/* QR Button */}
                     <button

@@ -1,6 +1,11 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+/** Public short URL for a slug (what QR codes encode and users share). */
+export function shortUrl(slug: string): string {
+  return `${process.env.NEXT_PUBLIC_APP_URL || 'https://urls.uz'}/${slug}`;
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -133,15 +138,21 @@ export function formatDateTime(value: string | Date): string {
   }).format(d);
 }
 
+const UZ_MONTHS = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avg', 'sen', 'okt', 'noy', 'dek'];
+
+/** "30-sen" — short day label for charts (same output on server and client). */
+export function formatDay(value: string | Date): string {
+  // Plain "YYYY-MM-DD" days are formatted as-is, so no time zone can shift them
+  const plain = typeof value === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (plain) return `${Number(plain[3])}-${UZ_MONTHS[Number(plain[2]) - 1]}`;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return `${d.getDate()}-${UZ_MONTHS[d.getMonth()]}`;
+}
+
+/** "30-sen, 2026" — browsers render the uz-UZ locale inconsistently ("2026 M09 30"), so format by hand. */
 export function formatDate(dateStr: string): string {
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('uz-UZ', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  } catch {
-    return dateStr;
-  }
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  return `${d.getDate()}-${UZ_MONTHS[d.getMonth()]}, ${d.getFullYear()}`;
 }

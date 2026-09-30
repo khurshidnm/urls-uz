@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Shade between zinc-800 and zinc-900, used for subtle dividers */
+@theme {
+  --color-zinc-850: #1f1f23;
+}
+
 /* ========================================================
    urls.uz — Staff Product Design System (Linear / Vercel Standard)
    ======================================================== */

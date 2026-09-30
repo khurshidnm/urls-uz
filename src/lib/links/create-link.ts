@@ -1,8 +1,8 @@
 import { sql } from 'drizzle-orm';
 import { pg } from '@/db/client';
 import { db, type LinkRecord, type WorkspaceRecord } from '@/lib/db';
-import { checkUrlSafety } from '@/lib/anti-phishing';
-import { limitsFor, toJsonLimit } from '@/lib/plans';
+import { limitsFor } from '@/lib/plans';
+import { checkQuota, checkRedirectTargets, fail, footprintOf, NO_FOOTPRINT, type RuleFailure } from '@/lib/links/rules';
 import { generateRandomSlug, isReservedSlug, isValidSlug } from '@/lib/utils';
 import { createLinkSchema } from '@/lib/validation';
 import { isUniqueViolation } from '@/lib/pg-errors';
@@ -22,24 +22,7 @@ export interface CreateLinkContext {
   isAdmin?: boolean;
 }
 
-export type CreateLinkResult =
-  | { ok: true; link: LinkRecord }
-  | {
-      ok: false;
-      status: 400 | 403 | 409;
-      code: string;
-      error: string;
-      details?: Record<string, unknown>;
-    };
-
-const fail = (
-  status: 400 | 403 | 409,
-  code: string,
-  error: string,
-  details?: Record<string, unknown>
-): CreateLinkResult => ({ ok: false, status, code, error, details });
-
-const PRO_SOON = 'Cheksiz imkoniyatlar Pro tarifda tez kunda ishga tushadi!';
+export type CreateLinkResult = { ok: true; link: LinkRecord } | RuleFailure;
 
 async function pickRandomSlug(): Promise<string> {
   for (let attempt = 0; attempt < 20; attempt++) {
@@ -62,11 +45,9 @@ export async function createLink(ctx: CreateLinkContext, raw: unknown, source: L
   }
   const input = parsed.data;
 
-  // Phishing filter (the schema already normalized the URL to http(s))
-  const safety = checkUrlSafety(input.destination_url);
-  if (!safety.isSafe) {
-    return fail(400, 'PHISHING_SUSPECTED', safety.reason || 'Fishing xavfi: Ushbu havola xavfsizlik filtri tomonidan bloklandi.');
-  }
+  // Phishing filter on every redirect target (the schema already normalized them to http(s))
+  const unsafe = checkRedirectTargets([input.destination_url, input.ios_url, input.android_url, input.huawei_url, input.desktop_url]);
+  if (unsafe) return unsafe;
 
   // Custom slug, or a random 5-character one
   const requestedSlug = input.slug || input.custom_slug;
@@ -88,41 +69,17 @@ export async function createLink(ctx: CreateLinkContext, raw: unknown, source: L
   const slug = requestedSlug || (await pickRandomSlug());
 
   const wantsDeepLink = Boolean(input.open_in_app);
-  const wantsDeviceTargeting = Boolean(input.ios_url || input.android_url || input.huawei_url || input.desktop_url);
   const limits = limitsFor(ctx.workspace, ctx.isAdmin);
+  const footprint = footprintOf({ ...input, source, is_archived: false });
 
   try {
     return await pg.transaction(async (tx) => {
       // Serialize creates per workspace so concurrent requests can't exceed the plan
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${ctx.workspace.id}))`);
 
-      if (source !== 'bio') {
-        const usage = await db.getLinkUsage(ctx.workspace.id, tx);
-        if (usage.activeLinks >= limits.activeLinks) {
-          return fail(
-            403,
-            'FREE_LIMIT_REACHED',
-            `Tarifingizda ko‘pi bilan ${limits.activeLinks} ta faol havola yaratish mumkin (${usage.activeLinks}/${limits.activeLinks}). Yangi havola uchun eskilarini arxivlang yoki o‘chiring. ${PRO_SOON}`,
-            { limit: toJsonLimit(limits.activeLinks), currentCount: usage.activeLinks }
-          );
-        }
-        if (wantsDeepLink && usage.deepLinks >= limits.deepLinks) {
-          return fail(
-            403,
-            'DEEP_LINK_LIMIT_REACHED',
-            `Tarifingizda ${limits.deepLinks} ta Smart Deep Link yaratish mumkin (${usage.deepLinks}/${limits.deepLinks} ishlatilgan). Mavjud deep linkni o‘chiring yoki oddiy havola sifatida yarating. ${PRO_SOON}`,
-            { maxLimit: toJsonLimit(limits.deepLinks), currentCount: usage.deepLinks }
-          );
-        }
-        if (wantsDeviceTargeting && usage.deviceTargeting >= limits.deviceTargeting) {
-          return fail(
-            403,
-            'DEVICE_TARGETING_LIMIT_REACHED',
-            `Tarifingizda ${limits.deviceTargeting} ta qurilmalar bo‘yicha yo‘naltiruvchi havola yaratish mumkin (${usage.deviceTargeting}/${limits.deviceTargeting} ishlatilgan). ${PRO_SOON}`,
-            { maxLimit: toJsonLimit(limits.deviceTargeting), currentCount: usage.deviceTargeting }
-          );
-        }
-      }
+      const usage = await db.getLinkUsage(ctx.workspace.id, tx);
+      const overQuota = checkQuota(limits, usage, NO_FOOTPRINT, footprint);
+      if (overQuota) return overQuota;
 
       const link = await db.createLink(
         {

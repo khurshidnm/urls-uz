@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, toPublicLink } from '@/lib/db';
+import { db, toPublicLink, type AnalyticsRange } from '@/lib/db';
 import { requireWorkspace } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
@@ -8,6 +8,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const slug = searchParams.get('slug');
     const linkId = searchParams.get('link_id');
+    const rangeParam = searchParams.get('range');
+    const range: AnalyticsRange = rangeParam === '7d' || rangeParam === 'all' ? rangeParam : '30d';
 
     if (slug || linkId) {
       const link = linkId
@@ -22,11 +24,11 @@ export async function GET(req: NextRequest) {
         );
       }
 
-      const linkAnalytics = (await db.getLinkAnalytics(link.id))!;
+      const linkAnalytics = (await db.getLinkAnalytics(link.id, range))!;
       return NextResponse.json({ success: true, ...linkAnalytics, link: toPublicLink(linkAnalytics.link) });
     }
 
-    const overview = await db.getAnalyticsOverview(ctx.workspace.id);
+    const overview = await db.getAnalyticsOverview(ctx.workspace.id, range);
     return NextResponse.json({ success: true, ...overview });
   } catch (error) {
     console.error('GET /api/analytics failed:', error);
