@@ -28,30 +28,32 @@ export function appOrigin(request: NextRequest): string {
   return process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
 }
 
-/** Shortens the URL the visitor entered before logging in. Returns true if a link was created. */
-async function createPendingLink(userId: string, rawCookie: string): Promise<boolean> {
+/** Shortens the URL the visitor entered before logging in. Returns the new link's id. */
+async function createPendingLink(userId: string, rawCookie: string): Promise<string | null> {
   // New links go to the user's first (personal) workspace
   const [membership] = await db.listWorkspacesForUser(userId);
-  if (!membership) return false;
+  if (!membership) return null;
 
   const result = await createLink(
     { workspace: membership.workspace, userId },
     { destination_url: decodeURIComponent(rawCookie) },
     'landing'
   );
-  return result.ok;
+  return result.ok ? result.link.id : null;
 }
 
 /**
- * Where to go once logged in: creates the link the visitor tried to shorten
- * before logging in (if any) and returns the dashboard page to open.
+ * Where to go once logged in. A visitor who was shortening a link on the
+ * landing page goes back there, where the new short link is shown with its
+ * copy button; everyone else goes to the dashboard.
  */
 export async function afterLogin(request: NextRequest, userId: string): Promise<{ path: string; hadPendingUrl: boolean }> {
   const pendingUrl = request.cookies.get(PENDING_URL_COOKIE)?.value;
   let path = '/dashboard';
   if (pendingUrl) {
     try {
-      if (await createPendingLink(userId, pendingUrl)) path = '/dashboard/links';
+      const linkId = await createPendingLink(userId, pendingUrl);
+      if (linkId) path = `/?shortened=${encodeURIComponent(linkId)}`;
     } catch (e) {
       console.error('Failed to create pending link after login:', e);
     }

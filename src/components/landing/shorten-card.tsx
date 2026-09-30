@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   Link2,
@@ -49,6 +49,23 @@ export default function ShortenCard() {
     shortUrl: string;
   } | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Back from a redirect login (Google, Telegram): the server created the link; show it here
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('shortened');
+    if (!id) return;
+    // Clean address, so a reload doesn't show the result again
+    window.history.replaceState(null, '', window.location.pathname);
+    // Only the owner gets the link back, so the parameter can't show someone else's
+    fetch(`/api/links/${encodeURIComponent(id)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data?.link) return;
+        setShortenedResult({ id: data.link.id, slug: data.link.slug, shortUrl: toShortUrl(data.link.slug) });
+        document.getElementById('shorten')?.scrollIntoView({ block: 'center' });
+      })
+      .catch(() => {});
+  }, []);
   const [showQrModal, setShowQrModal] = useState(false);
 
   const handlePaste = async () => {
@@ -144,7 +161,7 @@ export default function ShortenCard() {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-3">
+    <div id="shorten" className="w-full max-w-2xl mx-auto space-y-3 scroll-mt-24">
       {/* Omni-Shortener Command Bar (Linear/Vercel standard) */}
       <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06),0_8px_24px_rgba(0,0,0,0.5)] p-1.5 transition-all duration-150 focus-within:border-zinc-700">
         <form onSubmit={handleSubmit} className="space-y-1.5">
@@ -173,12 +190,6 @@ export default function ShortenCard() {
                 <span>Paste</span>
               </button>
             )}
-
-            {/* Domain Suffix Indicator */}
-            <div className="hidden md:flex items-center gap-1 px-2 py-1 bg-zinc-950 rounded border border-zinc-800 text-[11px] font-mono text-zinc-400 shrink-0">
-              <span className="text-zinc-300">urls.uz/</span>
-              <span className="text-zinc-500">···</span>
-            </div>
 
             {/* Solid High-Contrast CTA Button */}
             <button
