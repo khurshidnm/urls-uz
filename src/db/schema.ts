@@ -51,6 +51,15 @@ export const users = pgTable(
     last_login_at: timestamp('last_login_at', { withTimezone: true }),
     /** Last request with a session, updated at most hourly (activity for the admin panel). */
     last_seen_at: timestamp('last_seen_at', { withTimezone: true }),
+    // Two-step login with an authenticator app (TOTP). Secrets are stored encrypted.
+    totp_secret: text('totp_secret'),
+    /** Set during setup, until the first code confirms the app is configured. */
+    totp_pending_secret: text('totp_pending_secret'),
+    totp_enabled_at: timestamp('totp_enabled_at', { withTimezone: true }),
+    /** Last accepted 30-second step, so a code can't be used twice. */
+    totp_last_step: integer('totp_last_step'),
+    /** sha256 of the unused one-time recovery codes. */
+    totp_recovery_codes: text('totp_recovery_codes').array().notNull().default(sql`'{}'::text[]`),
   },
   // Logins are looked up in user_identities; this only records the first login method
   (t) => [index('users_provider_identity').on(t.provider, t.provider_id)]

@@ -126,6 +126,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
+      // Two-step login: the authenticator code is asked on its own page
+      if (data.success && data.twoFactorRequired) {
+        window.location.assign(data.redirect);
+        return true;
+      }
       if (data.success && data.user) {
         onLoggedIn(data.user);
         return true;

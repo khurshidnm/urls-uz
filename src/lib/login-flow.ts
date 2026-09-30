@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { setSessionCookie } from '@/lib/auth';
 import { createLink } from '@/lib/links/create-link';
+import { isTwoFactorEnabled } from '@/lib/two-factor/service';
+import { setChallengeCookie, TWO_FACTOR_PATH } from '@/lib/two-factor/challenge';
 
 /** Cookie set by the auth modal when a visitor tries to shorten a URL before logging in. */
 export const PENDING_URL_COOKIE = 'urls_pending_url';
@@ -41,24 +43,39 @@ async function createPendingLink(userId: string, rawCookie: string): Promise<boo
 }
 
 /**
- * Final step of every browser-redirect login (Google, Telegram widget):
- * start the session, create any pending link, and send the user to the dashboard.
+ * Where to go once logged in: creates the link the visitor tried to shorten
+ * before logging in (if any) and returns the dashboard page to open.
  */
-export async function completeRedirectLogin(request: NextRequest, userId: string): Promise<NextResponse> {
+export async function afterLogin(request: NextRequest, userId: string): Promise<{ path: string; hadPendingUrl: boolean }> {
   const pendingUrl = request.cookies.get(PENDING_URL_COOKIE)?.value;
-  let redirectPath = '/dashboard';
-
+  let path = '/dashboard';
   if (pendingUrl) {
     try {
-      if (await createPendingLink(userId, pendingUrl)) redirectPath = '/dashboard/links';
+      if (await createPendingLink(userId, pendingUrl)) path = '/dashboard/links';
     } catch (e) {
       console.error('Failed to create pending link after login:', e);
     }
   }
+  return { path, hadPendingUrl: Boolean(pendingUrl) };
+}
 
-  const response = NextResponse.redirect(`${appOrigin(request)}${redirectPath}`);
+/**
+ * Final step of every browser-redirect login (Google, Telegram widget):
+ * start the session, create any pending link, and send the user to the
+ * dashboard. Users with two-step login go to the code page first.
+ */
+export async function completeRedirectLogin(request: NextRequest, userId: string): Promise<NextResponse> {
+  const user = await db.getUserById(userId);
+  if (user && isTwoFactorEnabled(user)) {
+    const response = NextResponse.redirect(`${appOrigin(request)}${TWO_FACTOR_PATH}`);
+    setChallengeCookie(response, userId);
+    return response;
+  }
+
+  const { path, hadPendingUrl } = await afterLogin(request, userId);
+  const response = NextResponse.redirect(`${appOrigin(request)}${path}`);
   await setSessionCookie(response, userId);
-  if (pendingUrl) response.cookies.delete(PENDING_URL_COOKIE);
+  if (hadPendingUrl) response.cookies.delete(PENDING_URL_COOKIE);
   return response;
 }
 

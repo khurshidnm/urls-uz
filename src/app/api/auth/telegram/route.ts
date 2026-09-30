@@ -2,6 +2,8 @@ import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getClientIp, getSessionUser, setSessionCookie, toClientUser } from '@/lib/auth';
 import { signIn, type LoginProfile } from '@/lib/accounts';
+import { isTwoFactorEnabled } from '@/lib/two-factor/service';
+import { setChallengeCookie, TWO_FACTOR_PATH } from '@/lib/two-factor/challenge';
 import { rateLimit } from '@/lib/rate-limit';
 import { pickTelegramFields, telegramProfile, verifyTelegramLogin } from '@/lib/telegram-auth';
 import { parseJson, telegramAuthSchema } from '@/lib/validation';
@@ -54,6 +56,12 @@ async function loginResponse(profile: LoginProfile, connect: boolean | undefined
   const result = await signIn(profile, { connectTo: current?.id });
   if (!result.ok) {
     return NextResponse.json({ success: false, error: result.error, code: result.code }, { status: 409 });
+  }
+  // Two-step login: no session yet, the code page finishes the login
+  if (!current && isTwoFactorEnabled(result.user)) {
+    const response = NextResponse.json({ success: true, twoFactorRequired: true, redirect: TWO_FACTOR_PATH });
+    setChallengeCookie(response, result.user.id);
+    return response;
   }
   const response = NextResponse.json({ success: true, user: toClientUser(result.user), outcome: result.outcome });
   if (!current) await setSessionCookie(response, result.user.id);

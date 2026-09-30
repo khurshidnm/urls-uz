@@ -5,6 +5,8 @@ import { phoneLoginAvailable } from '@/lib/login-flow';
 import SettingsClient from './settings-client';
 import LoginMethods from './login-methods';
 import { connectMessage } from './connect-message';
+import TwoFactorSettings from './two-factor-settings';
+import { isTwoFactorEnabled } from '@/lib/two-factor/service';
 
 interface Props {
   searchParams: Promise<{ connected?: string; outcome?: string; connect_error?: string }>;
@@ -25,11 +27,18 @@ export default async function SettingsPage({ searchParams }: Props) {
     <SettingsClient
       loginMethods={
         user && (
-          <LoginMethods
-            methods={methods.map((m) => ({ provider: m.provider, providerId: m.provider_id, label: m.label }))}
-            notice={notice}
-            phoneLoginAvailable={phoneLoginAvailable()}
-          />
+          <>
+            <LoginMethods
+              methods={methods.map((m) => ({ provider: m.provider, providerId: m.provider_id, label: m.label }))}
+              notice={notice}
+              phoneLoginAvailable={phoneLoginAvailable()}
+            />
+            <TwoFactorSettings
+              enabled={isTwoFactorEnabled(user)}
+              enabledAt={user.totp_enabled_at?.toISOString() ?? null}
+              recoveryCodesLeft={user.totp_recovery_codes.length}
+            />
+          </>
         )
       }
     />

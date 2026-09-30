@@ -1,13 +1,14 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Calendar, Clock, KeyRound, Layers, Link2, MousePointerClick, QrCode } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, KeyRound, Layers, Link2, MousePointerClick, QrCode, ShieldCheck } from 'lucide-react';
 import { getSuperAdmin } from '@/lib/auth';
 import { adminRepo } from '@/lib/admin/admin-repo';
 import { formatDate, formatDateTime, formatNumber, shortUrl } from '@/lib/utils';
 import { METHOD_LABELS, PROVIDER_LABELS, som, timeAgo } from '../../format';
 import PlanBadge from '../../plan-badge';
 import GrantPlanForm from './grant-plan-form';
+import ResetTwoFactorButton from './reset-two-factor-button';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -26,6 +27,11 @@ export default async function AdminUserPage({ params }: Props) {
     { icon: Calendar, label: 'Ro‘yxatdan o‘tgan', value: formatDateTime(user.created_at) },
     { icon: KeyRound, label: 'Oxirgi kirish', value: user.last_login_at ? `${formatDateTime(user.last_login_at)} (${timeAgo(user.last_login_at)})` : '—' },
     { icon: Clock, label: 'Oxirgi faollik', value: user.last_seen_at ? `${formatDateTime(user.last_seen_at)} (${timeAgo(user.last_seen_at)})` : '—' },
+    {
+      icon: ShieldCheck,
+      label: 'Ikki bosqichli himoya',
+      value: user.totp_enabled_at ? `Yoqilgan (${formatDateTime(user.totp_enabled_at)}), ${user.totp_recovery_codes.length} ta tiklash kodi` : 'O‘chiq',
+    },
   ];
 
   return (
@@ -43,7 +49,7 @@ export default async function AdminUserPage({ params }: Props) {
           <p className="text-xs text-zinc-400 mt-0.5">{[user.email, user.phone].filter(Boolean).join(' · ') || 'Kontakt ma’lumoti yo‘q'}</p>
           <p className="text-[10px] font-mono text-zinc-600 mt-1">{user.id}</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {facts.map((f) => (
             <div key={f.label} className="p-3 rounded-xl bg-zinc-950/60 border border-zinc-800">
               <div className="text-[10px] uppercase text-zinc-500 flex items-center gap-1.5">
@@ -53,6 +59,7 @@ export default async function AdminUserPage({ params }: Props) {
             </div>
           ))}
         </div>
+        {user.totp_enabled_at && <ResetTwoFactorButton userId={user.id} />}
         <div>
           <div className="text-[10px] uppercase text-zinc-500 mb-1.5">Kirish usullari</div>
           <div className="flex flex-wrap gap-2">
