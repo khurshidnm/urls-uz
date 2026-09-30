@@ -241,6 +241,8 @@ export const saveBioSchema = z.object({
   links: z
     .array(
       z.object({
+        /** Existing button id, so the button keeps its short link and statistics. */
+        id: z.string().max(64).optional(),
         title: z.string().trim().min(1, 'Tugma nomi bo‘sh bo‘lmasin').max(100),
         url: safeLinkUrl,
         icon: z.string().max(40).optional(),

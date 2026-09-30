@@ -32,6 +32,8 @@ interface BioClientViewProps {
       style: string;
       animation: string;
       click_count: number;
+      /** Short link behind the button; null for tel:/mailto:/tg: buttons. */
+      short_slug: string | null;
     }>;
   };
 }
@@ -121,14 +123,18 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
     }
   };
 
-  const handleLinkClick = (linkId: string, url: string) => {
+  const handleLinkClick = (link: BioClientViewProps['bioPage']['links'][number]) => {
+    // Buttons backed by a short link are counted by the redirect itself (with geo, device and referrer)
+    if (link.short_slug) {
+      window.open(`/${link.short_slug}`, '_blank', 'noopener,noreferrer');
+      return;
+    }
     fetch(`/api/bio/click`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ linkId }),
+      body: JSON.stringify({ linkId: link.id }),
     }).catch(() => {});
-
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.open(link.url, '_blank', 'noopener,noreferrer');
   };
 
   const renderSocialIcon = (network: string, value: string) => {
@@ -249,7 +255,7 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
               return (
                 <button
                   key={link.id}
-                  onClick={() => handleLinkClick(link.id, link.url)}
+                  onClick={() => handleLinkClick(link)}
                   className={`w-full relative group flex items-center justify-between p-4 rounded-2xl border transition-all duration-200 active:scale-[0.98] ${
                     isGradient
                       ? 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 text-white border-indigo-400/30 shadow-lg shadow-indigo-600/25 hover:shadow-indigo-600/40'

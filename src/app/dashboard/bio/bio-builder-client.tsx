@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useRef } from 'react';
+import { useToast } from '@/components/ui/toast';
 import type { ClientBioPage } from '@/lib/client-types';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/language-context';
@@ -200,9 +201,25 @@ const ICON_OPTIONS = [
   { id: 'zap', label: 'Maxsus', icon: Zap },
 ];
 
+/** Saved button -> editable builder state. */
+function toBuilderButton(l: ClientBioPage['links'][number]): BioLinkItem {
+  return {
+    id: l.id,
+    title: l.title,
+    url: l.url,
+    icon: l.icon || 'link',
+    style: l.style === 'solid' ? 'solid' : 'glass', // Restrict to free styles
+    animation: 'none',
+    tag: '',
+    enabled: l.is_active,
+    click_count: l.click_count || 0,
+  };
+}
+
 export default function BioBuilderClient({ initialBio }: Props) {
   const { user, isSuperAdmin, demoEditMode } = useAuth();
   const { t } = useLanguage();
+  const { showToast } = useToast();
 
   const checkDemoRestricted = (actionName: string) => {
     if (isSuperAdmin && demoEditMode) {
@@ -249,7 +266,7 @@ export default function BioBuilderClient({ initialBio }: Props) {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Iltimos, rasm formatidagi faylni tanlang (PNG, JPG, WebP)');
+      showToast('error', 'Iltimos, rasm formatidagi faylni tanlang (PNG, JPG, WebP)');
       return;
     }
 
@@ -285,17 +302,7 @@ export default function BioBuilderClient({ initialBio }: Props) {
   // Custom Links: Limited to 4 in Free Plan
   const BIO_LINKS_LIMIT = 4;
   const initialLinks = initialBio?.links && initialBio.links.length > 0
-    ? initialBio.links.slice(0, BIO_LINKS_LIMIT).map((l) => ({
-        id: l.id,
-        title: l.title,
-        url: l.url,
-        icon: l.icon || 'link',
-        style: l.style === 'solid' ? 'solid' : 'glass', // Restrict to free styles
-        animation: 'none',
-        tag: '',
-        enabled: l.is_active,
-        click_count: l.click_count || 0,
-      }))
+    ? initialBio.links.slice(0, BIO_LINKS_LIMIT).map(toBuilderButton)
     : [
         {
           title: '🌐 Rasmiy Veb-Sayt',
@@ -305,7 +312,7 @@ export default function BioBuilderClient({ initialBio }: Props) {
           animation: 'none',
           tag: 'Asosiy',
           enabled: true,
-          click_count: 1420,
+          click_count: 0,
         },
         {
           title: '📢 Telegram Rasmiy Kanal',
@@ -315,7 +322,7 @@ export default function BioBuilderClient({ initialBio }: Props) {
           animation: 'none',
           tag: 'Yangi',
           enabled: true,
-          click_count: 890,
+          click_count: 0,
         },
         {
           title: '📸 Instagram Blogimiz',
@@ -325,7 +332,7 @@ export default function BioBuilderClient({ initialBio }: Props) {
           animation: 'none',
           tag: '',
           enabled: true,
-          click_count: 650,
+          click_count: 0,
         },
       ];
 
@@ -444,6 +451,8 @@ export default function BioBuilderClient({ initialBio }: Props) {
             website: socialWebsite,
           },
           links: links.slice(0, BIO_LINKS_LIMIT).map((l, i) => ({
+            // Existing buttons keep their short link and statistics
+            id: l.id,
             title: l.title,
             url: l.url,
             icon: l.icon || 'link',
@@ -455,7 +464,12 @@ export default function BioBuilderClient({ initialBio }: Props) {
       });
 
       const data = await res.json();
-      if (data.success) {
+      if (!data.success) {
+        showToast('error', data.error || 'Saqlashda xatolik yuz berdi');
+      } else {
+        // Adopt server ids so the next save keeps each button's short link and statistics
+        setLinks(data.bioPage.links.map(toBuilderButton));
+        if (data.limitNotice) showToast('info', data.limitNotice);
         setSavedSuccess(true);
         confetti({
           particleCount: 50,
@@ -465,7 +479,7 @@ export default function BioBuilderClient({ initialBio }: Props) {
         setTimeout(() => setSavedSuccess(false), 3000);
       }
     } catch {
-      alert('Saqlashda xatolik yuz berdi');
+      showToast('error', 'Tarmoq xatosi yuz berdi');
     } finally {
       setIsSaving(false);
     }

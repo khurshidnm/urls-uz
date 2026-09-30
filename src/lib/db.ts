@@ -283,6 +283,14 @@ export const db = {
     return deleted.map((d) => d.id);
   },
 
+  /** Deletes links that were created for bio buttons; other links are left alone. */
+  async deleteBioSourceLinks(ids: string[], workspaceId: string): Promise<void> {
+    if (ids.length === 0) return;
+    await pg
+      .delete(links)
+      .where(and(inArray(links.id, ids), eq(links.workspace_id, workspaceId), eq(links.source, 'bio')));
+  },
+
   async createLink(data: LinkInput, exec: Executor = pg): Promise<LinkRecord> {
     const [row] = await exec
       .insert(links)
@@ -554,23 +562,43 @@ export const db = {
 
   // --- Bio pages -----------------------------------------------------------
 
+  /**
+   * Bio buttons with their short link. `short_slug` is set only while the
+   * link is active, so a disabled or deleted link falls back to the direct URL.
+   */
+  async getBioButtons(bioPageId: string, { activeOnly = false } = {}) {
+    return pg
+      .select({
+        id: bioLinks.id,
+        bio_page_id: bioLinks.bio_page_id,
+        link_id: bioLinks.link_id,
+        title: bioLinks.title,
+        url: bioLinks.url,
+        icon: bioLinks.icon,
+        style: bioLinks.style,
+        animation: bioLinks.animation,
+        sort_order: bioLinks.sort_order,
+        is_active: bioLinks.is_active,
+        short_slug: sql<string | null>`case when ${links.is_active} then ${links.slug} end`,
+        click_count: sql<number>`coalesce(${links.click_count}, ${bioLinks.click_count})::int`,
+      })
+      .from(bioLinks)
+      .leftJoin(links, eq(links.id, bioLinks.link_id))
+      .where(activeOnly ? and(eq(bioLinks.bio_page_id, bioPageId), eq(bioLinks.is_active, true)) : eq(bioLinks.bio_page_id, bioPageId))
+      .orderBy(asc(bioLinks.sort_order));
+  },
+
   async getBioPageByHandle(handle: string) {
     const clean = handle.replace(/^@/, '');
     const [bio] = await pg.select().from(bioPages).where(sql`lower(${bioPages.handle}) = lower(${clean})`);
     if (!bio) return undefined;
-    const pageLinks = await pg
-      .select()
-      .from(bioLinks)
-      .where(and(eq(bioLinks.bio_page_id, bio.id), eq(bioLinks.is_active, true)))
-      .orderBy(asc(bioLinks.sort_order));
-    return { ...bio, links: pageLinks };
+    return { ...bio, links: await this.getBioButtons(bio.id, { activeOnly: true }) };
   },
 
   async getBioPageByWorkspace(workspaceId: string) {
     const [bio] = await pg.select().from(bioPages).where(eq(bioPages.workspace_id, workspaceId)).limit(1);
     if (!bio) return undefined;
-    const pageLinks = await pg.select().from(bioLinks).where(eq(bioLinks.bio_page_id, bio.id)).orderBy(asc(bioLinks.sort_order));
-    return { ...bio, links: pageLinks };
+    return { ...bio, links: await this.getBioButtons(bio.id) };
   },
 
   async recordBioPageView(bioPageId: string) {
@@ -588,7 +616,7 @@ export const db = {
     avatar_url: string;
     theme: string;
     social_links: Record<string, string>;
-    links: Array<{ title: string; url: string; icon?: string; style?: string; animation?: string }>;
+    links: Array<{ id?: string; link_id?: string | null; title: string; url: string; icon?: string; style?: string; animation?: string }>;
   }) {
     const existing = await this.getBioPageByWorkspace(workspaceId);
     const handle = data.handle.replace(/^@/, '');
@@ -624,8 +652,10 @@ export const db = {
       if (data.links.length > 0) {
         await tx.insert(bioLinks).values(
           data.links.map((l, idx) => ({
-            id: newId('bl', 10),
+            // Keeping ids stable keeps each button attached to its short link
+            id: l.id ?? newId('bl', 10),
             bio_page_id: bioId!,
+            link_id: l.link_id ?? null,
             title: l.title,
             url: l.url,
             icon: l.icon || 'link',

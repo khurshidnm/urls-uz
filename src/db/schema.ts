@@ -230,6 +230,11 @@ export const bioLinks = pgTable(
   {
     id: text('id').primaryKey(),
     bio_page_id: text('bio_page_id').notNull().references(() => bioPages.id, { onDelete: 'cascade' }),
+    /**
+     * The short link this button goes through, so its clicks get full analytics.
+     * Null for non-http buttons (tel:, mailto:, tg:), which use click_count below.
+     */
+    link_id: text('link_id').references(() => links.id, { onDelete: 'set null' }),
     title: text('title').notNull(),
     url: text('url').notNull(),
     icon: text('icon').notNull().default('link'),

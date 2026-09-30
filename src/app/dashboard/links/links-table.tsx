@@ -81,6 +81,7 @@ export default function LinksTable({
                     <Link href={`/dashboard/links/${link.id}`} className="font-semibold text-white text-sm hover:text-indigo-300 transition-colors">
                       {link.title}
                     </Link>
+                    {link.source === 'bio' && <Badge variant="indigo" size="xs">Bio tugma</Badge>}
                     {link.open_in_app && <Badge variant="cyan" size="xs" icon={<Smartphone className="w-3 h-3" />}>Deep Link</Badge>}
                     {deviceTargeted && <Badge variant="purple" size="xs" icon={<Target className="w-3 h-3" />}>Qurilmalar</Badge>}
                     {link.has_password && <Badge variant="warning" size="xs" icon={<Lock className="w-3 h-3" />}>Parolli</Badge>}

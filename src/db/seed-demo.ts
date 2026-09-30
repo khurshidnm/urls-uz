@@ -159,12 +159,36 @@ export async function seedDemo(pg: Database) {
       view_count: 4120,
     });
 
-    await tx.insert(bioLinks).values([
-      { id: 'bl_demo_1', bio_page_id: 'bio_demo', title: '📱 ApexPay Mobil Ilovasi', url: 'https://apextech.uz/download', icon: 'smartphone', style: 'solid', click_count: 1840, sort_order: 1 },
-      { id: 'bl_demo_2', bio_page_id: 'bio_demo', title: '💳 Biznes Uchun To‘lovlar', url: 'https://apextech.uz/business', icon: 'zap', click_count: 1210, sort_order: 2 },
-      { id: 'bl_demo_3', bio_page_id: 'bio_demo', title: '💼 Vakansiyalar va Jamoa', url: 'https://careers.apextech.uz', icon: 'file', click_count: 840, sort_order: 3 },
-      { id: 'bl_demo_4', bio_page_id: 'bio_demo', title: '📞 24/7 Qo‘llab-quvvatlash', url: 'https://t.me/apextech_support', icon: 'phone', click_count: 630, sort_order: 4 },
-    ]);
+    // Bio buttons are backed by short links (source "bio"), like real ones
+    const buttons = [
+      { n: 1, title: '📱 ApexPay Mobil Ilovasi', url: 'https://apextech.uz/download', icon: 'smartphone', style: 'solid', clicks: 1840 },
+      { n: 2, title: '💳 Biznes Uchun To‘lovlar', url: 'https://apextech.uz/business', icon: 'zap', style: 'glass', clicks: 1210 },
+      { n: 3, title: '💼 Vakansiyalar va Jamoa', url: 'https://careers.apextech.uz', icon: 'file', style: 'glass', clicks: 840 },
+      { n: 4, title: '📞 24/7 Qo‘llab-quvvatlash', url: 'https://t.me/apextech_support', icon: 'phone', style: 'glass', clicks: 630 },
+    ];
+    await tx.insert(links).values(
+      buttons.map((b) => ({
+        ...base,
+        id: `demo_bio_${b.n}`,
+        title: `Bio: ${b.title}`,
+        destination_url: b.url,
+        slug: `apex-bio-${b.n}`,
+        click_count: b.clicks,
+        source: 'bio' as const,
+      }))
+    );
+    await tx.insert(bioLinks).values(
+      buttons.map((b) => ({
+        id: `bl_demo_${b.n}`,
+        bio_page_id: 'bio_demo',
+        link_id: `demo_bio_${b.n}`,
+        title: b.title,
+        url: b.url,
+        icon: b.icon,
+        style: b.style,
+        sort_order: b.n,
+      }))
+    );
 
     // Display-only key: its hash matches no real key, so it can never authenticate
     await tx.insert(apiKeys).values({

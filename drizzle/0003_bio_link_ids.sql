@@ -1,0 +1,2 @@
+ALTER TABLE "bio_links" ADD COLUMN "link_id" text;--> statement-breakpoint
+ALTER TABLE "bio_links" ADD CONSTRAINT "bio_links_link_id_links_id_fk" FOREIGN KEY ("link_id") REFERENCES "public"."links"("id") ON DELETE set null ON UPDATE no action;
