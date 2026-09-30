@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, toPublicLink, type LinkRecord } from '@/lib/db';
-import { getActor } from '@/lib/auth';
+import { requireWorkspace } from '@/lib/auth';
 import { checkUrlSafety } from '@/lib/anti-phishing';
 import { isValidSlug } from '@/lib/utils';
 
@@ -19,10 +19,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const actor = await getActor();
-    if (!db.getOwnedLink(id, actor.ownerId)) return notFound();
+    const ctx = await requireWorkspace();
+    if (!await db.getOwnedLink(id, ctx.workspace.id)) return notFound();
 
-    const analytics = db.getLinkAnalytics(id)!;
+    const analytics = (await db.getLinkAnalytics(id))!;
     return NextResponse.json({ success: true, ...analytics, link: toPublicLink(analytics.link) });
   } catch (error) {
     console.error('GET /api/links/[id] failed:', error);
@@ -35,8 +35,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const actor = await getActor();
-    if (!actor.canWrite) {
+    const ctx = await requireWorkspace();
+    if (!ctx.canWrite) {
       return NextResponse.json({ success: false, error: 'Demo rejimida havolani o‘zgartirish cheklangan.', code: 'DEMO_RESTRICTED' }, { status: 403 });
     }
 
@@ -59,13 +59,13 @@ export async function PATCH(
       if (!isValidSlug(String(changes.slug))) {
         return NextResponse.json({ success: false, error: 'Yaroqsiz slug formati.', code: 'INVALID_SLUG' }, { status: 400 });
       }
-      const existing = db.getLinkBySlug(String(changes.slug));
-      if (existing && existing.id !== id) {
+      const current = await db.getOwnedLink(id, ctx.workspace.id);
+      if (current?.slug !== changes.slug && (await db.isSlugTaken(String(changes.slug)))) {
         return NextResponse.json({ success: false, error: 'Ushbu slug allaqachon band qilingan.', code: 'SLUG_TAKEN' }, { status: 409 });
       }
     }
 
-    const updated = db.updateLink(id, actor.ownerId, changes);
+    const updated = await db.updateLink(id, ctx.workspace.id, changes);
     if (!updated) return notFound();
 
     return NextResponse.json({ success: true, link: toPublicLink(updated) });
@@ -80,13 +80,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const actor = await getActor();
-    if (!actor.canWrite) {
+    const ctx = await requireWorkspace();
+    if (!ctx.canWrite) {
       return NextResponse.json({ success: false, error: 'Demo rejimida havolani o‘chirish cheklangan.', code: 'DEMO_RESTRICTED' }, { status: 403 });
     }
 
     const { id } = await params;
-    if (!db.deleteLink(id, actor.ownerId)) return notFound();
+    if (!await db.deleteLink(id, ctx.workspace.id)) return notFound();
 
     return NextResponse.json({ success: true, message: 'Link deleted' });
   } catch (error) {

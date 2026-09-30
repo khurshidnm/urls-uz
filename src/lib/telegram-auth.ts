@@ -36,7 +36,7 @@ export function pickTelegramFields(source: Record<string, unknown>): Record<stri
   return out;
 }
 
-export function upsertTelegramUser(data: Record<string, string>): UserRecord {
+export function upsertTelegramUser(data: Record<string, string>): Promise<UserRecord> {
   const name =
     [data.first_name, data.last_name].filter(Boolean).join(' ') ||
     (data.username ? `@${data.username}` : 'Telegram foydalanuvchisi');

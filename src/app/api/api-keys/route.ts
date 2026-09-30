@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, toPublicApiKey } from '@/lib/db';
-import { getActor } from '@/lib/auth';
+import { requireWorkspace } from '@/lib/auth';
 
 const demoRestricted = () =>
   NextResponse.json(
@@ -10,8 +10,8 @@ const demoRestricted = () =>
 
 export async function GET() {
   try {
-    const actor = await getActor();
-    const keys = db.getApiKeys(actor.ownerId).map(toPublicApiKey);
+    const ctx = await requireWorkspace();
+    const keys = (await db.getApiKeys(ctx.workspace.id)).map(toPublicApiKey);
     return NextResponse.json({ success: true, keys });
   } catch (error) {
     console.error('GET /api/api-keys failed:', error);
@@ -21,16 +21,16 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const actor = await getActor();
+    const ctx = await requireWorkspace();
     // Keys authenticate as their owner, so they are never issued for the shared demo workspace
-    if (!actor.canWrite || actor.isDemo) return demoRestricted();
+    if (!ctx.canWrite || ctx.workspace.is_demo || !ctx.user) return demoRestricted();
 
     const { name } = await request.json();
     if (typeof name !== 'string' || !name.trim()) {
       return NextResponse.json({ success: false, error: 'Key name is required' }, { status: 400 });
     }
 
-    const newKey = db.createApiKey(actor.ownerId, name.trim().slice(0, 80));
+    const newKey = await db.createApiKey(ctx.workspace.id, ctx.user.id, name.trim().slice(0, 80));
     return NextResponse.json({ success: true, ...newKey }, { status: 201 });
   } catch (error) {
     console.error('POST /api/api-keys failed:', error);
@@ -40,15 +40,15 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const actor = await getActor();
-    if (!actor.canWrite) return demoRestricted();
+    const ctx = await requireWorkspace();
+    if (!ctx.canWrite) return demoRestricted();
 
     const id = new URL(request.url).searchParams.get('id');
     if (!id) {
       return NextResponse.json({ success: false, error: 'Key id is required' }, { status: 400 });
     }
 
-    if (!db.deleteApiKey(id, actor.ownerId)) {
+    if (!await db.deleteApiKey(id, ctx.workspace.id)) {
       return NextResponse.json({ success: false, error: 'Key not found' }, { status: 404 });
     }
     return NextResponse.json({ success: true, message: 'API key revoked' });

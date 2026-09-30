@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getActor } from '@/lib/auth';
+import { requireWorkspace } from '@/lib/auth';
 
 const HANDLE_PATTERN = /^[a-zA-Z0-9_.-]{3,30}$/;
 const SAFE_LINK_PROTOCOLS = new Set(['http:', 'https:', 'tg:', 'mailto:', 'tel:']);
@@ -17,8 +17,8 @@ function isSafeLinkUrl(value: unknown): value is string {
 
 export async function GET() {
   try {
-    const actor = await getActor();
-    const bioPage = db.getBioPageByUserId(actor.ownerId);
+    const ctx = await requireWorkspace();
+    const bioPage = await db.getBioPageByWorkspace(ctx.workspace.id);
     return NextResponse.json({ success: true, bioPage });
   } catch (error) {
     console.error('GET /api/bio failed:', error);
@@ -28,8 +28,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const actor = await getActor();
-    if (!actor.canWrite) {
+    const ctx = await requireWorkspace();
+    if (!ctx.canWrite) {
       return NextResponse.json({
         success: false,
         error: 'Demo rejimida bio sahifani saqlash cheklangan. Bepul versiyadan foydalanish uchun ro‘yxatdan o‘ting.',
@@ -49,8 +49,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Handles are unique across all users
-    const handleOwner = db.getBioPageByHandle(handle);
-    if (handleOwner && handleOwner.user_id !== actor.ownerId) {
+    const handleOwner = await db.getBioPageByHandle(handle);
+    if (handleOwner && handleOwner.workspace_id !== ctx.workspace.id) {
       return NextResponse.json({ success: false, error: 'Bu handle band. Boshqasini tanlang.', code: 'HANDLE_TAKEN' }, { status: 409 });
     }
 
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     const allowedFreeThemes = ['midnight', 'emerald', 'clean-light'];
     const finalTheme = allowedFreeThemes.includes(theme) ? theme : 'midnight';
 
-    const saved = db.saveBioPage(actor.ownerId, {
+    const saved = await db.saveBioPage(ctx.workspace.id, {
       handle,
       title,
       bio: bio || '',

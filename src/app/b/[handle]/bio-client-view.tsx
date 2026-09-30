@@ -21,7 +21,7 @@ interface BioClientViewProps {
     bio: string;
     avatar_url: string;
     theme: string;
-    verified: number;
+    verified: boolean;
     social_links_parsed: Record<string, string>;
     links: Array<{
       id: string;
@@ -214,7 +214,7 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
         {/* Title & Verified Badge */}
         <div className="flex items-center gap-1.5 mb-1.5">
           <h1 className={`text-xl font-bold tracking-tight ${currentTheme.text}`}>{bioPage.title}</h1>
-          {bioPage.verified === 1 && (
+          {bioPage.verified && (
             <CheckCircle2 className="w-5 h-5 text-indigo-400 fill-indigo-500/20" />
           )}
         </div>

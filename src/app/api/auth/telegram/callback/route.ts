@@ -13,6 +13,6 @@ export async function GET(request: NextRequest) {
     return loginErrorRedirect(request, 'Telegram xavfsizlik imzosi noto‘g‘ri yoki muddati o‘tgan');
   }
 
-  const user = upsertTelegramUser(data);
+  const user = await upsertTelegramUser(data);
   return completeRedirectLogin(request, user.id);
 }

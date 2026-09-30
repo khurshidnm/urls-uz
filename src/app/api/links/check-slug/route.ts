@@ -30,8 +30,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const existing = await db.getLinkBySlug(slug);
-    if (existing) {
+    if (await db.isSlugTaken(slug)) {
       return NextResponse.json({
         available: false,
         reason: 'taken',

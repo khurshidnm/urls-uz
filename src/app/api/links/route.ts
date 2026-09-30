@@ -2,15 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, toPublicLink } from '@/lib/db';
 import { generateRandomSlug, isValidSlug, isReservedSlug } from '@/lib/utils';
 import { checkUrlSafety } from '@/lib/anti-phishing';
-import { getActor } from '@/lib/auth';
+import { requireWorkspace } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const actor = await getActor();
+    const ctx = await requireWorkspace();
     const { searchParams } = new URL(request.url);
     const q = searchParams.get('q')?.toLowerCase();
 
-    let links = db.getAllLinks(actor.ownerId);
+    let links = await db.getAllLinks(ctx.workspace.id);
 
     if (q) {
       links = links.filter(l =>
@@ -49,8 +49,8 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // 1. Identity comes from the session cookie or an API key, never from the request body
-    const actor = await getActor();
-    if (!actor.canWrite) {
+    const ctx = await requireWorkspace();
+    if (!ctx.canWrite) {
       return NextResponse.json({
         success: false,
         error: 'Havolani qisqartirish uchun tizimga kiring.',
@@ -58,11 +58,10 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
 
-    const isSuperAdmin = actor.isAdmin;
+    const isSuperAdmin = ctx.isAdmin;
 
     // 2. Free Plan Limits Check (bypassed for super admins)
-    const activeUserId = actor.ownerId;
-    const userLinks = db.getAllLinks(activeUserId);
+    const userLinks = await db.getAllLinks(ctx.workspace.id);
     const activeLinks = userLinks.filter((l) => !l.is_archived);
     const activeCount = activeLinks.length;
     const FREE_PLAN_LIMIT = 10;
@@ -139,8 +138,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check slug collision
-      const existing = db.getLinkBySlug(requestedSlug);
-      if (existing) {
+      if (await db.isSlugTaken(requestedSlug)) {
         return NextResponse.json({
           success: false,
           error: 'Ushbu qisqa havola (slug) allaqachon band qilingan. Boshqa nom tanlang.',
@@ -154,7 +152,7 @@ export async function POST(request: NextRequest) {
       do {
         finalSlug = generateRandomSlug(attempts > 8 ? 6 : 5);
         attempts++;
-      } while ((db.getLinkBySlug(finalSlug) || isReservedSlug(finalSlug)) && attempts < 20);
+      } while ((isReservedSlug(finalSlug) || (await db.isSlugTaken(finalSlug))) && attempts < 20);
     }
 
     // Device targeting limit in free tier is capped to 100 clicks
@@ -163,8 +161,9 @@ export async function POST(request: NextRequest) {
       effectiveClickLimit = effectiveClickLimit ? Math.min(effectiveClickLimit, 100) : 100;
     }
 
-    const created = db.createLink({
-      userId: activeUserId,
+    const created = await db.createLink({
+      workspaceId: ctx.workspace.id,
+      createdBy: ctx.user?.id ?? null,
       title: title?.trim() || finalSlug,
       destination_url: formattedUrl,
       slug: finalSlug,

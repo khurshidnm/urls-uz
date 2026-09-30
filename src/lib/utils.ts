@@ -122,6 +122,17 @@ export function formatNumber(num: number): string {
   return new Intl.NumberFormat('en-US').format(num);
 }
 
+/** Date and time in Uzbekistan time; fixed locale and zone so server and client render the same text. */
+export function formatDateTime(value: string | Date): string {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Asia/Tashkent',
+  }).format(d);
+}
+
 export function formatDate(dateStr: string): string {
   try {
     const d = new Date(dateStr);

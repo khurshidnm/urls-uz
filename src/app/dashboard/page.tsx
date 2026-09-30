@@ -1,19 +1,20 @@
 import React from 'react';
 import { db, toPublicLink } from '@/lib/db';
-import { getActor } from '@/lib/auth';
+import { requireWorkspace } from '@/lib/auth';
+import { toClientJson } from '@/lib/serialize';
 import DashboardOverviewClient from './overview-client';
 
 export default async function DashboardOverviewPage() {
-  const { ownerId } = await getActor();
-  const analytics = db.getAnalyticsOverview(ownerId);
-  const links = db.getAllLinks(ownerId).map(toPublicLink);
-  const bioPage = db.getBioPageByUserId(ownerId);
+  const { workspace } = await requireWorkspace();
+  const analytics = await db.getAnalyticsOverview(workspace.id);
+  const links = (await db.getAllLinks(workspace.id)).map(toPublicLink);
+  const bioPage = await db.getBioPageByWorkspace(workspace.id);
 
   return (
     <DashboardOverviewClient
-      analytics={analytics}
-      links={links}
-      bioPage={bioPage}
+      analytics={toClientJson(analytics)}
+      links={toClientJson(links)}
+      bioPage={toClientJson(bioPage)}
     />
   );
 }

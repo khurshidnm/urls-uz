@@ -1,11 +1,12 @@
 import React from 'react';
 import { db, toPublicApiKey } from '@/lib/db';
-import { getActor } from '@/lib/auth';
+import { requireWorkspace } from '@/lib/auth';
+import { toClientJson } from '@/lib/serialize';
 import ApiKeysClient from './api-keys-client';
 
 export default async function ApiKeysPage() {
-  const { ownerId } = await getActor();
-  const keys = db.getApiKeys(ownerId).map(toPublicApiKey);
+  const { workspace } = await requireWorkspace();
+  const keys = (await db.getApiKeys(workspace.id)).map(toPublicApiKey);
 
-  return <ApiKeysClient initialKeys={keys} />;
+  return <ApiKeysClient initialKeys={toClientJson(keys)} />;
 }

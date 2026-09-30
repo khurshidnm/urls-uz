@@ -19,22 +19,27 @@ export function appOrigin(request: NextRequest): string {
 }
 
 /** Shortens the URL the visitor entered before logging in. Returns true if a link was created. */
-function createPendingLink(userId: string, rawCookie: string): boolean {
+async function createPendingLink(userId: string, rawCookie: string): Promise<boolean> {
   let url = decodeURIComponent(rawCookie).trim();
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
 
   if (!checkUrlSafety(url).isSafe) return false;
 
-  const activeCount = db.getAllLinks(userId).filter((l) => !l.is_archived).length;
+  // New links go to the user's first (personal) workspace
+  const [membership] = await db.listWorkspacesForUser(userId);
+  if (!membership) return false;
+  const workspaceId = membership.workspace.id;
+
+  const activeCount = (await db.getAllLinks(workspaceId)).filter((l) => !l.is_archived).length;
   if (activeCount >= FREE_PLAN_LIMIT) return false;
 
   let slug = '';
   for (let attempt = 0; attempt < 20; attempt++) {
     slug = generateRandomSlug(attempt > 8 ? 6 : 5);
-    if (!isReservedSlug(slug) && !db.getLinkBySlug(slug)) break;
+    if (!isReservedSlug(slug) && !(await db.isSlugTaken(slug))) break;
   }
 
-  db.createLink({ userId, title: slug, destination_url: url, slug, open_in_app: false });
+  await db.createLink({ workspaceId, createdBy: userId, title: slug, destination_url: url, slug, open_in_app: false });
   return true;
 }
 
@@ -42,20 +47,20 @@ function createPendingLink(userId: string, rawCookie: string): boolean {
  * Final step of every browser-redirect login (Google, Telegram widget):
  * start the session, create any pending link, and send the user to the dashboard.
  */
-export function completeRedirectLogin(request: NextRequest, userId: string): NextResponse {
+export async function completeRedirectLogin(request: NextRequest, userId: string): Promise<NextResponse> {
   const pendingUrl = request.cookies.get(PENDING_URL_COOKIE)?.value;
   let redirectPath = '/dashboard';
 
   if (pendingUrl) {
     try {
-      if (createPendingLink(userId, pendingUrl)) redirectPath = '/dashboard/links';
+      if (await createPendingLink(userId, pendingUrl)) redirectPath = '/dashboard/links';
     } catch (e) {
       console.error('Failed to create pending link after login:', e);
     }
   }
 
   const response = NextResponse.redirect(`${appOrigin(request)}${redirectPath}`);
-  setSessionCookie(response, userId);
+  await setSessionCookie(response, userId);
   if (pendingUrl) response.cookies.delete(PENDING_URL_COOKIE);
   return response;
 }

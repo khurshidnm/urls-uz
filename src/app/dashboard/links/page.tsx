@@ -1,11 +1,12 @@
 import React from 'react';
 import { db, toPublicLink } from '@/lib/db';
-import { getActor } from '@/lib/auth';
+import { requireWorkspace } from '@/lib/auth';
+import { toClientJson } from '@/lib/serialize';
 import LinksManagerClient from './links-client';
 
 export default async function LinksPage() {
-  const { ownerId } = await getActor();
-  const links = db.getAllLinks(ownerId).map(toPublicLink);
+  const { workspace } = await requireWorkspace();
+  const links = (await db.getAllLinks(workspace.id)).map(toPublicLink);
 
-  return <LinksManagerClient initialLinks={links} />;
+  return <LinksManagerClient initialLinks={toClientJson(links)} />;
 }

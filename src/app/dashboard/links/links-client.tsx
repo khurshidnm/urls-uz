@@ -122,8 +122,8 @@ export default function LinksManagerClient({ initialLinks }: Props) {
         statusFilter === 'all'
           ? true
           : statusFilter === 'archived'
-          ? l.is_archived === 1
-          : l.is_archived !== 1;
+          ? l.is_archived
+          : !l.is_archived;
 
       // Tag
       const matchesTag =
@@ -327,11 +327,11 @@ export default function LinksManagerClient({ initialLinks }: Props) {
       await fetch(`/api/links/${id}`, {
         method: 'PATCH',
         headers: getHeaders(),
-        body: JSON.stringify({ is_archived: archive ? 1 : 0 }),
+        body: JSON.stringify({ is_archived: archive }),
       });
     }
     setLinks(
-      links.map((l) => (selectedIds.has(l.id) ? { ...l, is_archived: archive ? 1 : 0 } : l))
+      links.map((l) => (selectedIds.has(l.id) ? { ...l, is_archived: archive } : l))
     );
     setSelectedIds(new Set());
     showToast('success', `${selectedIds.size} ta havola ${archive ? 'arxivlandi' : 'faollashtirildi'}`);
@@ -379,7 +379,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
     const selected = links.filter((l) => selectedIds.has(l.id));
     let csv = 'Title,Short URL,Destination URL,Clicks,Tags,Archived,Created At\n';
     selected.forEach((l) => {
-      csv += `"${l.title}","urls.uz/${l.slug}","${l.destination_url}",${l.click_count},"${l.tags || ''}",${l.is_archived === 1 ? 'Yes' : 'No'},"${l.created_at}"\n`;
+      csv += `"${l.title}","urls.uz/${l.slug}","${l.destination_url}",${l.click_count},"${l.tags || ''}",${l.is_archived ? 'Yes' : 'No'},"${l.created_at}"\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -421,7 +421,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            Faol ({links.filter((l) => l.is_archived !== 1).length})
+            Faol ({links.filter((l) => !l.is_archived).length})
           </button>
           <button
             onClick={() => setStatusFilter('archived')}
@@ -431,7 +431,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            Arxivlangan ({links.filter((l) => l.is_archived === 1).length})
+            Arxivlangan ({links.filter((l) => l.is_archived).length})
           </button>
         </div>
       </div>
@@ -446,13 +446,13 @@ export default function LinksManagerClient({ initialLinks }: Props) {
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-semibold text-white">Bepul Tarif (Hozir Faol)</span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
-                Havolalar: {links.filter((l) => l.is_archived !== 1).length} / 10
+                Havolalar: {links.filter((l) => !l.is_archived).length} / 10
               </span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-indigo-500/15 text-indigo-400 border border-indigo-500/25">
-                Deep Link: {links.filter((l) => l.is_archived !== 1 && l.open_in_app).length} / 1
+                Deep Link: {links.filter((l) => !l.is_archived && l.open_in_app).length} / 1
               </span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-purple-500/15 text-purple-400 border border-purple-500/25">
-                Qurilmalar: {links.filter((l) => l.is_archived !== 1 && (l.ios_url || l.android_url || l.huawei_url || l.desktop_url)).length} / 1 (100 klik/kun)
+                Qurilmalar: {links.filter((l) => !l.is_archived && (l.ios_url || l.android_url || l.huawei_url || l.desktop_url)).length} / 1 (100 klik/kun)
               </span>
             </div>
             <p className="text-[11px] text-zinc-400 mt-1">
@@ -465,17 +465,17 @@ export default function LinksManagerClient({ initialLinks }: Props) {
         <div className="w-full sm:w-44 space-y-1">
           <div className="flex justify-between text-[10px] font-mono text-zinc-500">
             <span>Ishlatildi</span>
-            <span>{Math.round((links.filter((l) => l.is_archived !== 1).length / 10) * 100)}%</span>
+            <span>{Math.round((links.filter((l) => !l.is_archived).length / 10) * 100)}%</span>
           </div>
           <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
             <div
               className={`h-full rounded-full transition-all ${
-                links.filter((l) => l.is_archived !== 1).length >= 10
+                links.filter((l) => !l.is_archived).length >= 10
                   ? 'bg-amber-400'
                   : 'bg-emerald-400'
               }`}
               style={{
-                width: `${Math.min(100, (links.filter((l) => l.is_archived !== 1).length / 10) * 100)}%`,
+                width: `${Math.min(100, (links.filter((l) => !l.is_archived).length / 10) * 100)}%`,
               }}
             />
           </div>
@@ -483,7 +483,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
       </div>
 
       {/* Limit Reached Warning */}
-      {links.filter((l) => l.is_archived !== 1).length >= 10 && (
+      {links.filter((l) => !l.is_archived).length >= 10 && (
         <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-300 flex items-start gap-2.5">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
           <div>
@@ -640,7 +640,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
                   isSelected
                     ? 'bg-zinc-800/60 border-zinc-600'
                     : 'bg-zinc-900/40 border-zinc-800 hover:bg-zinc-900/80 hover:border-zinc-700'
-                } ${link.is_archived === 1 ? 'opacity-60' : ''}`}
+                } ${link.is_archived ? 'opacity-60' : ''}`}
               >
                 <div className="flex items-start gap-3">
                   {/* Select Checkbox */}
@@ -713,12 +713,12 @@ export default function LinksManagerClient({ initialLinks }: Props) {
                         </div>
                       )}
 
-                      {link.is_archived === 1 && (
+                      {link.is_archived && (
                         <Badge variant="warning" size="xs">
                           Arxivlangan
                         </Badge>
                       )}
-                      {link.open_in_app === 1 && (
+                      {link.open_in_app && (
                         <Badge variant="cyan" size="xs" icon={<Smartphone className="w-3 h-3" />}>
                           Deep Link
                         </Badge>
@@ -868,9 +868,9 @@ export default function LinksManagerClient({ initialLinks }: Props) {
                     <button
                       onClick={() => handleToggleArchive(link.id, link.is_archived)}
                       className="p-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition-colors"
-                      title={link.is_archived === 1 ? 'Qayta tiklash' : 'Arxivlash'}
+                      title={link.is_archived ? 'Qayta tiklash' : 'Arxivlash'}
                     >
-                      {link.is_archived === 1 ? (
+                      {link.is_archived ? (
                         <ArchiveRestore className="w-3.5 h-3.5 text-amber-400" />
                       ) : (
                         <Archive className="w-3.5 h-3.5" />

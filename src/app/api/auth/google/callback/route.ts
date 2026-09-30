@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       return loginErrorRedirect(request, 'Google hisobingiz email manzili tasdiqlanmagan');
     }
 
-    const user = db.upsertUser({
+    const user = await db.upsertUser({
       provider: 'google',
       providerId: String(info.sub),
       email: info.email,
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       role: roleFor({ email: info.email }),
     });
 
-    const response = completeRedirectLogin(request, user.id);
+    const response = await completeRedirectLogin(request, user.id);
     response.cookies.delete(OAUTH_STATE_COOKIE);
     return response;
   } catch (err) {

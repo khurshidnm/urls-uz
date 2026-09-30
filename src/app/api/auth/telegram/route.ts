@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, type UserRecord } from '@/lib/db';
 import { getClientIp, roleFor, setSessionCookie, toClientUser } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { pickTelegramFields, upsertTelegramUser, verifyTelegramLogin } from '@/lib/telegram-auth';
@@ -41,10 +41,9 @@ async function callGateway(method: string, payload: Record<string, unknown>) {
   return res.json();
 }
 
-function loginResponse(userId: string) {
-  const user = db.getUserById(userId)!;
+async function loginResponse(user: UserRecord) {
   const response = NextResponse.json({ success: true, user: toClientUser(user) });
-  setSessionCookie(response, userId);
+  await setSessionCookie(response, user.id);
   return response;
 }
 
@@ -66,7 +65,7 @@ export async function POST(request: NextRequest) {
     if (!verifyTelegramLogin(data)) {
       return NextResponse.json({ success: false, error: 'Telegram xavfsizlik imzosi noto‘g‘ri' }, { status: 401 });
     }
-    return loginResponse(upsertTelegramUser(data).id);
+    return loginResponse(await upsertTelegramUser(data));
   }
 
   // --- Phone OTP: send code ---
@@ -145,14 +144,14 @@ export async function POST(request: NextRequest) {
     }
     pendingOtps.delete(phone);
 
-    const user = db.upsertUser({
+    const user = await db.upsertUser({
       provider: 'phone',
       providerId: phone,
       phone: `+${phone}`,
       name: typeof body.name === 'string' && body.name.trim() ? body.name.trim().slice(0, 80) : `Foydalanuvchi (${phone.slice(-4)})`,
       role: roleFor({}),
     });
-    return loginResponse(user.id);
+    return loginResponse(user);
   }
 
   return NextResponse.json({ success: false, error: 'Noto‘g‘ri amal' }, { status: 400 });

@@ -1,11 +1,12 @@
 import { cookies, headers } from 'next/headers';
 import type { NextResponse } from 'next/server';
-import { db, type UserRecord, type UserRole } from '@/lib/db';
+import { db, type MemberRole, type UserRecord, type UserRole, type WorkspaceRecord } from '@/lib/db';
 
 /**
- * Server-side identity. The session cookie holds an opaque random token; the
- * database stores only its hash. Nothing the client sends (headers, body
- * fields, localStorage) is trusted to say who the user is or what role they have.
+ * Server-side identity and tenancy. The session cookie holds an opaque
+ * random token; the database stores only its hash. Nothing the client sends
+ * (headers, body fields, localStorage) is trusted to say who the user is,
+ * which workspace they may act in, or what role they have.
  */
 
 export const SESSION_COOKIE = 'urls_sid';
@@ -14,18 +15,21 @@ const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 /** Non-sensitive preference cookie; honoured only for superadmins. */
 export const DEMO_EDIT_COOKIE = 'urls_demo_edit';
 
-export const DEMO_USER_ID = 'demo_user';
+/** Which of the user's workspaces is active. Validated against memberships on every request. */
+export const WORKSPACE_COOKIE = 'urls_ws';
 
-export interface Actor {
-  /** Logged-in user (via session cookie or API key), or null for anonymous visitors. */
+export interface WorkspaceContext {
+  /** Logged-in user (via session or the API key's creator), or null for anonymous visitors. */
   user: UserRecord | null;
-  /** Whose data this request reads and writes. */
-  ownerId: string;
-  /** True when the request is looking at the shared demo workspace. */
-  isDemo: boolean;
+  /** The workspace this request reads and writes. */
+  workspace: WorkspaceRecord;
+  /** The user's role in the workspace; null for anonymous demo viewers. */
+  role: MemberRole | null;
   /** Anonymous visitors see the demo workspace read-only. */
   canWrite: boolean;
+  /** Platform superadmin (from server config). */
   isAdmin: boolean;
+  viaApiKey: boolean;
 }
 
 function listFromEnv(name: string): string[] {
@@ -43,8 +47,8 @@ export function roleFor(identity: { email?: string | null; telegramId?: string |
   return 'user';
 }
 
-export function setSessionCookie(response: NextResponse, userId: string) {
-  const token = db.createSession(userId, SESSION_MAX_AGE);
+export async function setSessionCookie(response: NextResponse, userId: string) {
+  const token = await db.createSession(userId, SESSION_MAX_AGE);
   response.cookies.set(SESSION_COOKIE, token, {
     path: '/',
     httpOnly: true,
@@ -57,50 +61,73 @@ export function setSessionCookie(response: NextResponse, userId: string) {
 export function clearSessionCookie(response: NextResponse) {
   response.cookies.delete(SESSION_COOKIE);
   response.cookies.delete(DEMO_EDIT_COOKIE);
+  response.cookies.delete(WORKSPACE_COOKIE);
 }
 
-/** Resolves the current user from an API key (Authorization header) or the session cookie. */
-export async function getCurrentUser(): Promise<UserRecord | null> {
-  const headerList = await headers();
-  const authHeader = headerList.get('authorization') || '';
-  if (authHeader.startsWith('Bearer ')) {
-    const ownerId = db.verifyApiKey(authHeader.slice('Bearer '.length).trim());
-    return ownerId ? db.getUserById(ownerId) ?? null : null;
-  }
-
+export async function getSessionUser(): Promise<UserRecord | null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  return db.getUserBySessionToken(token) ?? null;
+  return (await db.getUserBySessionToken(token)) ?? null;
 }
 
-export async function getActor(): Promise<Actor> {
-  const user = await getCurrentUser();
+/** Current user from an API key (Authorization header) or the session cookie. */
+export async function getCurrentUser(): Promise<UserRecord | null> {
+  return (await requireWorkspace()).user;
+}
 
-  if (!user) {
-    return { user: null, ownerId: DEMO_USER_ID, isDemo: true, canWrite: false, isAdmin: false };
+/**
+ * Resolves who is making the request and which workspace they act in.
+ * Every route handler and server component goes through this, so tenancy
+ * checks live in one place.
+ */
+export async function requireWorkspace(): Promise<WorkspaceContext> {
+  const authHeader = (await headers()).get('authorization') || '';
+
+  // API keys belong to a workspace
+  if (authHeader.startsWith('Bearer ')) {
+    const key = await db.verifyApiKey(authHeader.slice('Bearer '.length).trim());
+    const workspace = key ? await db.getWorkspace(key.workspaceId) : undefined;
+    if (!key || !workspace) return anonymousContext();
+    const user = key.createdBy ? (await db.getUserById(key.createdBy)) ?? null : null;
+    return { user, workspace, role: 'member', canWrite: !workspace.is_demo, isAdmin: false, viaApiKey: true };
   }
 
-  const isAdmin = user.role === 'superadmin';
-  const editingDemo = isAdmin && (await cookies()).get(DEMO_EDIT_COOKIE)?.value === '1';
+  const user = await getSessionUser();
+  if (!user) return anonymousContext();
 
-  return {
-    user,
-    ownerId: editingDemo ? DEMO_USER_ID : user.id,
-    isDemo: editingDemo,
-    canWrite: true,
-    isAdmin,
-  };
+  const isAdmin = user.role === 'superadmin';
+  const cookieStore = await cookies();
+
+  // Superadmins can switch into the demo workspace to curate it
+  if (isAdmin && cookieStore.get(DEMO_EDIT_COOKIE)?.value === '1') {
+    return { user, workspace: await db.getDemoWorkspace(), role: 'admin', canWrite: true, isAdmin, viaApiKey: false };
+  }
+
+  let memberships = await db.listWorkspacesForUser(user.id);
+  if (memberships.length === 0) {
+    await db.ensurePersonalWorkspace(user);
+    memberships = await db.listWorkspacesForUser(user.id);
+  }
+
+  const requested = cookieStore.get(WORKSPACE_COOKIE)?.value;
+  const active = memberships.find((m) => m.workspace.id === requested) ?? memberships[0];
+
+  return { user, workspace: active.workspace, role: active.role, canWrite: true, isAdmin, viaApiKey: false };
+}
+
+async function anonymousContext(): Promise<WorkspaceContext> {
+  return { user: null, workspace: await db.getDemoWorkspace(), role: null, canWrite: false, isAdmin: false, viaApiKey: false };
 }
 
 /** Shape of the user object sent to the browser. */
-export function toClientUser(user: UserRecord) {
+export function toClientUser(user: UserRecord, workspace?: WorkspaceRecord) {
   return {
     id: user.id,
     name: user.name,
     email: user.email ?? '',
     phone: user.phone ?? undefined,
     provider: user.provider,
-    plan: user.plan,
+    plan: workspace?.plan ?? 'free',
     role: user.role,
     avatar: user.avatar_url ?? undefined,
   };

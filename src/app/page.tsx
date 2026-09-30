@@ -12,8 +12,8 @@ import { db } from '@/lib/db';
 // Landing stats are real database counts, refreshed at most once a minute
 export const revalidate = 60;
 
-export default function HomePage() {
-  const stats = db.getPublicStats();
+export default async function HomePage() {
+  const stats = await db.getPublicStats();
 
   return (
     <main className="min-h-screen bg-mesh flex flex-col bg-grid-pattern">

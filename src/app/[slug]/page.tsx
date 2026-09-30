@@ -24,7 +24,7 @@ export default async function SlugRedirectPage({ params }: Props) {
     notFound();
   }
 
-  const link = db.getLinkBySlug(slug);
+  const link = await db.getLinkBySlug(slug);
 
   if (!link) {
     notFound();
@@ -104,7 +104,7 @@ export default async function SlugRedirectPage({ params }: Props) {
   let withinLimit = true;
   if (!BOT_UA.test(userAgentStr)) {
     try {
-      withinLimit = db.recordClick({
+      withinLimit = await db.recordClick({
         link_id: link.id,
         ip_hash: hashIp(getClientIp(headerList)),
         referer: refererStr.includes('t.me') ? 'Telegram' : refererStr.includes('instagram') ? 'Instagram' : refererStr.includes('google') ? 'Google' : 'Direct',

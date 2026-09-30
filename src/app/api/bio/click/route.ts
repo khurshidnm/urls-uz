@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     const { linkId } = await request.json();
     if (linkId) {
-      db.recordBioLinkClick(linkId);
+      await db.recordBioLinkClick(linkId);
     }
     return NextResponse.json({ success: true });
   } catch (error: any) {

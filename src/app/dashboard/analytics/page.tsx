@@ -1,6 +1,7 @@
 import React from 'react';
 import { db, toPublicLink } from '@/lib/db';
-import { getActor } from '@/lib/auth';
+import { requireWorkspace } from '@/lib/auth';
+import { toClientJson } from '@/lib/serialize';
 import AnalyticsViewClient from './analytics-client';
 
 interface PageProps {
@@ -9,9 +10,9 @@ interface PageProps {
 
 export default async function AnalyticsPage(props: PageProps) {
   const searchParams = props.searchParams ? await props.searchParams : {};
-  const { ownerId } = await getActor();
-  const overview = db.getAnalyticsOverview(ownerId);
-  const allLinks = db.getAllLinks(ownerId);
+  const { workspace } = await requireWorkspace();
+  const overview = await db.getAnalyticsOverview(workspace.id);
+  const allLinks = await db.getAllLinks(workspace.id);
 
   // Only links in the current workspace can be selected
   let initialLinkId: string | null = null;
@@ -24,16 +25,16 @@ export default async function AnalyticsPage(props: PageProps) {
 
   let initialLinkAnalytics = null;
   if (initialLinkId) {
-    const analytics = db.getLinkAnalytics(initialLinkId)!;
-    initialLinkAnalytics = { ...analytics, link: toPublicLink(analytics.link) };
+    const analytics = await db.getLinkAnalytics(initialLinkId);
+    if (analytics) initialLinkAnalytics = { ...analytics, link: toPublicLink(analytics.link) };
   }
 
   return (
     <AnalyticsViewClient
-      overview={overview}
-      links={allLinks.map(toPublicLink)}
+      overview={toClientJson(overview)}
+      links={toClientJson(allLinks.map(toPublicLink))}
       initialLinkId={initialLinkId}
-      initialLinkAnalytics={initialLinkAnalytics}
+      initialLinkAnalytics={toClientJson(initialLinkAnalytics)}
     />
   );
 }

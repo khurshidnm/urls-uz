@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const link = db.getLinkBySlug(slug);
+    const link = await db.getLinkBySlug(slug);
     if (!link || !link.password) {
       return NextResponse.json({ success: false, error: 'Havola topilmadi' }, { status: 404 });
     }

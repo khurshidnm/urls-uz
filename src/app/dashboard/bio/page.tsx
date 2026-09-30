@@ -1,11 +1,12 @@
 import React from 'react';
 import { db } from '@/lib/db';
-import { getActor } from '@/lib/auth';
+import { requireWorkspace } from '@/lib/auth';
+import { toClientJson } from '@/lib/serialize';
 import BioBuilderClient from './bio-builder-client';
 
 export default async function BioBuilderPage() {
-  const { ownerId } = await getActor();
-  const bioPage = db.getBioPageByUserId(ownerId);
+  const { workspace } = await requireWorkspace();
+  const bioPage = await db.getBioPageByWorkspace(workspace.id);
 
-  return <BioBuilderClient initialBio={bioPage} />;
+  return <BioBuilderClient initialBio={toClientJson(bioPage)} />;
 }

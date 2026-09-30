@@ -9,11 +9,11 @@ export interface PublicStats {
   linksLast7Days: number;
   totalUsers: number;
   totalBioPages: number;
-  recentClicks: { country: string; region: string; os: string; browser: string; created_at: string }[];
+  recentClicks: { country: string; region: string; os: string; browser: string; created_at: Date }[];
 }
 
-function timeAgo(sqliteUtc: string): string {
-  const seconds = Math.max(0, Math.floor((Date.now() - new Date(sqliteUtc.replace(' ', 'T') + 'Z').getTime()) / 1000));
+function timeAgo(date: Date): string {
+  const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
   if (seconds < 60) return `${seconds}s ago`;
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;

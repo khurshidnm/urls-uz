@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { pg } from '@/db/client';
+import { seedDemo } from '@/db/seed-demo';
 import { getCurrentUser } from '@/lib/auth';
 
 export async function POST() {
@@ -12,7 +13,7 @@ export async function POST() {
       );
     }
 
-    db.resetDemoData();
+    await seedDemo(pg);
     return NextResponse.json({
       success: true,
       message: 'Demo maʼlumotlari muvaffaqiyatli dastlabki holatga qaytarildi (ApexTech Solutions).',

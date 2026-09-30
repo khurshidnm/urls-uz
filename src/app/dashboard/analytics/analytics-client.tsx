@@ -21,7 +21,7 @@ import {
   Clock,
   Navigation,
 } from 'lucide-react';
-import { formatNumber, formatDate, copyToClipboard } from '@/lib/utils';
+import { formatNumber, formatDate, formatDateTime, copyToClipboard } from '@/lib/utils';
 import { getCountryInfo } from '@/lib/geo';
 
 interface Props {
@@ -247,10 +247,10 @@ export default function AnalyticsViewClient({
                 <span className="font-bold text-base text-white truncate">
                   {activeData.link.title}
                 </span>
-                {activeData.link.is_archived === 1 && (
+                {activeData.link.is_archived && (
                   <Badge variant="warning" size="xs">Arxivlangan</Badge>
                 )}
-                {activeData.link.open_in_app === 1 && (
+                {activeData.link.open_in_app && (
                   <Badge variant="cyan" size="xs" icon={<Smartphone className="w-3 h-3" />}>Deep Link</Badge>
                 )}
                 {activeData.link.has_password && (
@@ -657,7 +657,7 @@ export default function AnalyticsViewClient({
                       <td className="py-2.5 px-3 whitespace-nowrap text-zinc-400 text-[11px]">
                         <div className="flex items-center gap-1.5">
                           <Clock className="w-3 h-3 text-zinc-500" />
-                          <span>{click.created_at}</span>
+                          <span>{formatDateTime(click.created_at)}</span>
                         </div>
                       </td>
                       <td className="py-2.5 px-3 whitespace-nowrap font-sans">

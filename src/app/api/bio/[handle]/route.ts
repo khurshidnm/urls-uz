@@ -7,14 +7,14 @@ export async function GET(
 ) {
   try {
     const { handle } = await params;
-    const bioPage = db.getBioPageByHandle(handle);
+    const bioPage = await db.getBioPageByHandle(handle);
 
     if (!bioPage) {
       return NextResponse.json({ success: false, error: 'Bio page not found' }, { status: 404 });
     }
 
     // Increment view count
-    db.recordBioPageView(bioPage.id);
+    await db.recordBioPageView(bioPage.id);
 
     return NextResponse.json({ success: true, bioPage });
   } catch (error: any) {
