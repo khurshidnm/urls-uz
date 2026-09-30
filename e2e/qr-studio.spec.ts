@@ -40,3 +40,16 @@ test('QR studio saves designs to links and turns URLs into dynamic QR codes', as
   await page.getByRole('tab', { name: 'Wi-Fi' }).click();
   await expect(page.getByText(/ma’lumot QR ichiga yoziladi/)).toBeVisible();
 });
+
+test('landing page QR studio works without an account and offers sign-up for dynamic QR', async ({ page }) => {
+  await page.goto('/#qr-studio');
+  const studio = page.locator('#qr-studio');
+  // Static QR types work for everyone; the vCard form is the landing default
+  await expect(studio.getByRole('tab', { name: 'vCard' })).toHaveAttribute('aria-selected', 'true');
+  await studio.getByRole('tab', { name: 'Havola' }).click();
+  // No "my links" picker for visitors
+  await expect(studio.getByRole('button', { name: 'Mening havolam (dinamik)' })).toHaveCount(0);
+  await studio.locator('#qr-url').fill('https://example.com/menu');
+  await studio.getByRole('button', { name: 'Bepul ro‘yxatdan o‘tib, dinamik qilish' }).click();
+  await expect(page.getByText('Xavfsiz Tizimga Kirish')).toBeVisible();
+});

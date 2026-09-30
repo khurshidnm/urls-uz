@@ -67,7 +67,7 @@ function FrameTextControl({ design, update }: { design: QrDesign; update: Update
 
 export type PreviewMode =
   | { kind: 'link'; link: ClientLink; dirty: boolean; saving: boolean; onSave: () => void }
-  | { kind: 'custom-url'; converting: boolean; onMakeDynamic: () => void }
+  | { kind: 'custom-url'; converting: boolean; onMakeDynamic: () => void; actionLabel: string }
   | { kind: 'static' };
 
 interface Props {
@@ -141,7 +141,7 @@ export default function QrPreviewPanel({ payload, design, update, resolution, se
             className="w-full py-3 px-4 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {mode.converting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-            Qisqa havola orqali dinamik qilish
+            {mode.actionLabel}
           </button>
         </div>
       )}

@@ -29,6 +29,10 @@ interface Props {
   /** Open the studio on this link (from /dashboard/qr?link=...). */
   initialLinkId: string | null;
   canWrite: boolean;
+  /** Landing page visitor without an account: "make dynamic" asks them to sign up. */
+  guest?: { onSignup: (url: string) => void };
+  initialType?: QrDataType;
+  showHeader?: boolean;
 }
 
 const TYPES = [
@@ -52,19 +56,19 @@ const TYPE_DEFAULTS: Record<QrDataType, Pick<QrDesign, 'centerLogo' | 'frameText
 
 type Pane = 'content' | 'colors' | 'logo' | 'design';
 
-export default function QrStudioClient({ links: initialLinks, initialLinkId, canWrite }: Props) {
+export default function QrStudioClient({ links: initialLinks, initialLinkId, canWrite, guest, initialType = 'url', showHeader = true }: Props) {
   const { t } = useLanguage();
   const { showToast } = useToast();
 
   const [links, setLinks] = useState(initialLinks);
   const initialLink = initialLinks.find((l) => l.id === initialLinkId);
 
-  const [activeType, setActiveType] = useState<QrDataType>('url');
+  const [activeType, setActiveType] = useState<QrDataType>(initialType);
   const [activePane, setActivePane] = useState<Pane | null>('content');
   const [resolution, setResolution] = useState(1000);
 
   // Content
-  const [urlMode, setUrlMode] = useState<'existing' | 'custom'>(initialLink || links.length > 0 ? 'existing' : 'custom');
+  const [urlMode, setUrlMode] = useState<'existing' | 'custom'>(!guest && (initialLink || links.length > 0) ? 'existing' : 'custom');
   const [selectedLinkId, setSelectedLinkId] = useState(initialLink?.id ?? links[0]?.id ?? '');
   const [customUrl, setCustomUrl] = useState('');
   const [vcard, setVcard] = useState<VCardPayload>(QR_SAMPLE_DATA.vcard);
@@ -146,11 +150,13 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
 
   /** Turns the typed URL into a short link, so the QR becomes dynamic and trackable. */
   const makeDynamic = async () => {
-    if (!canWrite) return demoRestricted();
     if (!customUrl.trim()) {
       showToast('error', 'Avval URL manzilini kiriting');
       return;
     }
+    // After signing up, the pending URL becomes a short link automatically
+    if (guest) return guest.onSignup(customUrl.trim());
+    if (!canWrite) return demoRestricted();
     setConverting(true);
     try {
       const res = await fetch('/api/links', {
@@ -209,13 +215,19 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
         onSave: handleSave,
       }
     : activeType === 'url'
-      ? { kind: 'custom-url', converting, onMakeDynamic: makeDynamic }
+      ? {
+          kind: 'custom-url',
+          converting,
+          onMakeDynamic: makeDynamic,
+          actionLabel: guest ? 'Bepul ro‘yxatdan o‘tib, dinamik qilish' : 'Qisqa havola orqali dinamik qilish',
+        }
       : { kind: 'static' };
 
   const toggle = (pane: Pane) => setActivePane(activePane === pane ? null : pane);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      {showHeader && (
       <div className="border-b border-zinc-800 pb-5">
         <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
           <QrCode className="w-6 h-6 text-indigo-400" />
@@ -225,6 +237,7 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
           Havolalaringiz uchun dinamik QR kodlar, shuningdek vCard, Wi-Fi, joylashuv va tadbir uchun statik QR kodlar.
         </p>
       </div>
+      )}
 
       <div role="tablist" className="flex items-center gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-xl overflow-x-auto scrollbar-none shadow-sm">
         {TYPES.map((tab) => {
@@ -259,6 +272,7 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
           >
             {activeType === 'url' && (
               <UrlForm
+                allowExisting={!guest}
                 links={links}
                 urlMode={urlMode}
                 setUrlMode={setUrlMode}
@@ -320,6 +334,7 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
 }
 
 function UrlForm({
+  allowExisting,
   links,
   urlMode,
   setUrlMode,
@@ -328,6 +343,7 @@ function UrlForm({
   customUrl,
   setCustomUrl,
 }: {
+  allowExisting: boolean;
   links: ClientLink[];
   urlMode: 'existing' | 'custom';
   setUrlMode: (mode: 'existing' | 'custom') => void;
@@ -341,6 +357,7 @@ function UrlForm({
 
   return (
     <div className="space-y-3">
+      {allowExisting && (
       <div className="flex gap-2">
         <button type="button" onClick={() => setUrlMode('existing')} className={modeButton(urlMode === 'existing')}>
           Mening havolam (dinamik)
@@ -349,6 +366,7 @@ function UrlForm({
           Ixtiyoriy URL (statik)
         </button>
       </div>
+      )}
 
       {urlMode === 'existing' ? (
         links.length > 0 ? (

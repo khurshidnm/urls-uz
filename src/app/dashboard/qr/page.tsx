@@ -2,7 +2,7 @@ import React from 'react';
 import { db, toPublicLink } from '@/lib/db';
 import { requireWorkspace } from '@/lib/auth';
 import { toClientJson } from '@/lib/serialize';
-import QrStudioClient from './qr-studio-client';
+import QrStudioClient from '@/components/qr-studio/qr-studio';
 
 interface Props {
   searchParams: Promise<{ link?: string }>;
