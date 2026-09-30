@@ -27,9 +27,21 @@ export const httpUrl = z
     } catch {
       return false;
     }
-  }, 'URL manzil formati noto‘g‘ri');
+  }, 'URL manzil formati noto‘g‘ri')
+  // "https://paypal.com@evil.example" shows one site and opens another: a classic phishing trick
+  .refine((v) => !hasUserInfo(v), 'Manzilda login yoki parol (…@) bo‘lishi mumkin emas: bu fishing usuli.');
 
 const optionalHttpUrl = z.preprocess(blankToUndefined, httpUrl.optional());
+
+/** A URL with a user name or password before the host ("user:pass@host"). */
+export function hasUserInfo(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return Boolean(url.username || url.password);
+  } catch {
+    return false;
+  }
+}
 
 /** Schemes a visitor's browser may open from a bio page. */
 const SAFE_LINK_PROTOCOLS = new Set(['http:', 'https:', 'tg:', 'mailto:', 'tel:']);
@@ -43,7 +55,8 @@ export const safeLinkUrl = z
     } catch {
       return false;
     }
-  }, 'Havolalar http(s)://, tg:, mailto: yoki tel: bilan boshlanishi kerak');
+  }, 'Havolalar http(s)://, tg:, mailto: yoki tel: bilan boshlanishi kerak')
+  .refine((v) => !/^https?:/i.test(v) || !hasUserInfo(v), 'Manzilda login yoki parol (…@) bo‘lishi mumkin emas: bu fishing usuli.');
 
 /** ISO timestamp (clients send `new Date(localInput).toISOString()`) that lies in the future. */
 const futureDate = z

@@ -93,9 +93,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Telefon raqam noto‘g‘ri' }, { status: 400 });
     }
 
-    const perPhone = rateLimit(`otp-send:${phone}`, 3, 10 * 60 * 1000);
+    const perPhone = await rateLimit(`otp-send:${phone}`, 3, 10 * 60 * 1000);
     if (!perPhone.ok) return tooMany(perPhone.retryAfterSec);
-    const perIp = rateLimit(`otp-send-ip:${ip}`, 10, 60 * 60 * 1000);
+    const perIp = await rateLimit(`otp-send-ip:${ip}`, 10, 60 * 60 * 1000);
     if (!perIp.ok) return tooMany(perIp.retryAfterSec);
 
     if (gatewayConfigured) {
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Telefon va kod kiritilishi shart' }, { status: 400 });
     }
 
-    const attempts = rateLimit(`otp-verify:${phone}`, 5, 10 * 60 * 1000);
+    const attempts = await rateLimit(`otp-verify:${phone}`, 5, 10 * 60 * 1000);
     if (!attempts.ok) return tooMany(attempts.retryAfterSec);
 
     const pending = pendingOtps.get(phone);

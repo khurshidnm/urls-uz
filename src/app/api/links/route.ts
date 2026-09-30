@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, toPublicLink } from '@/lib/db';
 import { routeError } from '@/lib/route-error';
+import { checkCreationLimit, tooManyRequests } from '@/lib/rate-limit';
 import { requireWorkspace } from '@/lib/auth';
 import { createLink } from '@/lib/links/create-link';
 import { parseLinkFilter } from '@/lib/links/list-filter';
@@ -44,6 +45,12 @@ export async function POST(request: NextRequest) {
       body = await request.json();
     } catch {
       return NextResponse.json({ success: false, error: 'So‘rov JSON formatida bo‘lishi kerak', code: 'INVALID_JSON' }, { status: 400 });
+    }
+
+    const limit = await checkCreationLimit(ctx.user?.id ?? ctx.workspace.id);
+    if (!limit.ok) {
+      const { body: tooMany, init } = tooManyRequests(limit.retryAfterSec);
+      return NextResponse.json(tooMany, init);
     }
 
     // `source` only labels where the link came from (for analytics); API keys are always "api"

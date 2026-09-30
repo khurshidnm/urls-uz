@@ -3,6 +3,7 @@ import { routeError } from '@/lib/route-error';
 import { requireWorkspace } from '@/lib/auth';
 import { qrRepo } from '@/lib/qr/qr-repo';
 import { createQrCode } from '@/lib/qr/save-qr';
+import { checkCreationLimit, tooManyRequests } from '@/lib/rate-limit';
 
 export async function GET() {
   try {
@@ -18,6 +19,11 @@ export async function POST(request: NextRequest) {
     const ctx = await requireWorkspace({ apiKey: true });
     if (!ctx.canWrite) {
       return NextResponse.json({ success: false, error: 'QR kodni saqlash uchun tizimga kiring.', code: 'DEMO_RESTRICTED' }, { status: 403 });
+    }
+    const limit = await checkCreationLimit(ctx.user?.id ?? ctx.workspace.id);
+    if (!limit.ok) {
+      const { body: tooMany, init } = tooManyRequests(limit.retryAfterSec);
+      return NextResponse.json(tooMany, init);
     }
     let body: unknown;
     try {

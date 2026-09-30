@@ -1,7 +1,8 @@
 import { cookies, headers } from 'next/headers';
 import type { NextResponse } from 'next/server';
 import { limitsFor } from '@/lib/plans';
-import { db, type MemberRole, type UserRecord, type UserRole, type WorkspaceRecord } from '@/lib/db';
+import { rateLimit } from '@/lib/rate-limit';
+import { db, sha256, type MemberRole, type UserRecord, type UserRole, type WorkspaceRecord } from '@/lib/db';
 
 /**
  * Server-side identity and tenancy. The session cookie holds an opaque
@@ -95,8 +96,8 @@ export async function getCurrentUser(): Promise<UserRecord | null> {
 /** A request with an API key that can't be served; routes turn it into a 401/403 via routeError(). */
 export class ApiAuthError extends Error {
   constructor(
-    readonly status: 401 | 403,
-    readonly code: 'INVALID_API_KEY' | 'API_KEY_NOT_ACCEPTED' | 'PLAN_REQUIRED',
+    readonly status: 401 | 403 | 429,
+    readonly code: 'INVALID_API_KEY' | 'API_KEY_NOT_ACCEPTED' | 'PLAN_REQUIRED' | 'RATE_LIMITED',
     message: string
   ) {
     super(message);
@@ -115,7 +116,11 @@ export async function requireWorkspace({ apiKey = false }: { apiKey?: boolean } 
   // API keys belong to a workspace
   if (authHeader.startsWith('Bearer ')) {
     if (!apiKey) throw new ApiAuthError(401, 'API_KEY_NOT_ACCEPTED', 'Bu endpoint API kalit bilan ishlamaydi.');
-    const key = await db.verifyApiKey(authHeader.slice('Bearer '.length).trim());
+    const rawKey = authHeader.slice('Bearer '.length).trim();
+    // 300 requests a minute per key (counted before the lookup, so guessing keys is limited too)
+    const limit = await rateLimit(`apikey:${sha256(rawKey).slice(0, 24)}`, 300, 60_000);
+    if (!limit.ok) throw new ApiAuthError(429, 'RATE_LIMITED', `Juda ko‘p so‘rov. ${limit.retryAfterSec} soniyadan keyin qayta urinib ko‘ring.`);
+    const key = await db.verifyApiKey(rawKey);
     const workspace = key ? await db.getWorkspace(key.workspaceId) : undefined;
     if (!key || !workspace) throw new ApiAuthError(401, 'INVALID_API_KEY', 'API kalit noto‘g‘ri yoki bekor qilingan.');
     // Keys stop working when the workspace moves to a plan without API access

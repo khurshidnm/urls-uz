@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.ok) return parsed.response;
 
   // A 6-digit code is guessable only with many tries
-  const attempts = rateLimit(`2fa-login:${userId}`, 5, 10 * 60 * 1000);
+  const attempts = await rateLimit(`2fa-login:${userId}`, 5, 10 * 60 * 1000);
   if (!attempts.ok) {
     return NextResponse.json(
       { success: false, error: `Juda ko‘p urinish. ${attempts.retryAfterSec} soniyadan keyin qayta urinib ko‘ring.` },

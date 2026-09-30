@@ -5,7 +5,7 @@ import { toJsonLimit, type PlanLimits } from '@/lib/plans';
 
 export type RuleFailure = {
   ok: false;
-  status: 400 | 403 | 404 | 409;
+  status: 400 | 403 | 404 | 409 | 429;
   code: string;
   error: string;
   details?: Record<string, unknown>;

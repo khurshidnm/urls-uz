@@ -364,6 +364,24 @@ export const payments = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Rate limits (shared by every server process)
+// ---------------------------------------------------------------------------
+
+/** One fixed window of one limit: how many requests `key` made in it. */
+export const rateLimits = pgTable(
+  'rate_limits',
+  {
+    key: text('key').notNull(),
+    /** Window number: floor(time / window length). */
+    window: integer('window').notNull(),
+    count: integer('count').notNull(),
+    /** When the window ends; expired rows are deleted. */
+    expires_at: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.key, t.window] }), index('rate_limits_expiry').on(t.expires_at)]
+);
+
+// ---------------------------------------------------------------------------
 // API keys
 // ---------------------------------------------------------------------------
 

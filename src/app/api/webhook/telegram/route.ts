@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, type WorkspaceRecord } from '@/lib/db';
 import { createLink } from '@/lib/links/create-link';
+import { fail } from '@/lib/links/rules';
+import { checkCreationLimit } from '@/lib/rate-limit';
 import { TelegramBot, TelegramInlineButton } from '@/lib/telegram-bot';
 import { formatNumber } from '@/lib/utils';
 import { detectAndBuildDeepLink } from '@/lib/deep-link';
@@ -29,6 +31,9 @@ async function workspaceFor(from: TelegramFrom): Promise<{ userId: string; works
  * the app when the plan still allows a deep link; otherwise a regular link.
  */
 async function createBotLink(owner: { userId: string; workspace: WorkspaceRecord }, destinationUrl: string, slug?: string, title?: string) {
+  // Inline mode sends a query per message; this also stops spam through the bot
+  const limit = await checkCreationLimit(owner.userId);
+  if (!limit.ok) return fail(429, 'RATE_LIMITED', `Juda ko‘p havola. ${limit.retryAfterSec} soniyadan keyin qayta urinib ko‘ring.`);
   const ctx = { workspace: owner.workspace, userId: owner.userId };
   const input = { destination_url: destinationUrl, slug, title };
   const wantsApp = detectAndBuildDeepLink(destinationUrl).isDeepLinkable;

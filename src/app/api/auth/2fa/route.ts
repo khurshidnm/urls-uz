@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, ...(await startSetup(user)) });
   }
 
-  const attempts = rateLimit(`2fa-settings:${user.id}`, 5, 10 * 60 * 1000);
+  const attempts = await rateLimit(`2fa-settings:${user.id}`, 5, 10 * 60 * 1000);
   if (!attempts.ok) {
     return NextResponse.json(
       { success: false, error: `Juda ko‘p urinish. ${attempts.retryAfterSec} soniyadan keyin qayta urinib ko‘ring.` },

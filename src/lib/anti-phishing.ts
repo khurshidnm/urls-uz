@@ -36,6 +36,11 @@ export function checkUrlSafety(rawUrl: string): SecurityCheckResult {
     const hostname = url.hostname.toLowerCase();
     const pathname = url.pathname.toLowerCase();
 
+    // 0. "https://bank.uz@evil.example" displays one host and opens another
+    if (url.username || url.password) {
+      return { isSafe: false, reason: 'Manzilda login yoki parol (…@) bo‘lishi mumkin emas: bu fishing usuli.' };
+    }
+
     // 1. Raw IPv4 / IPv6 addresses are commonly used by malicious phishing kits
     const isIpAddress = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname.startsWith('[') || hostname.includes('::');
     if (isIpAddress) {

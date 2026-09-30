@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     if (!parsed.ok) return parsed.response;
     const { slug, password } = parsed.data;
 
-    const limit = rateLimit(`unlock:${getClientIp(request.headers)}:${slug}`, 10, 15 * 60 * 1000);
+    const limit = await rateLimit(`unlock:${getClientIp(request.headers)}:${slug}`, 10, 15 * 60 * 1000);
     if (!limit.ok) {
       return NextResponse.json(
         { success: false, error: `Juda ko‘p urinish. ${limit.retryAfterSec} soniyadan keyin qayta urinib ko‘ring.` },

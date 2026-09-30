@@ -16,7 +16,9 @@ export const RESERVED_SLUGS = new Set([
   'privacy', 'status', 'health', '404', '500', 'favicon.ico', 'robots.txt',
   'sitemap.xml', '_next', 'manifest.json', 'assets', 'static', 'webhook',
   'callback', 'public', 'pricing', 'features', 'docs', 'about', 'contact',
-  'signin', 'signup', 'logout', 'help', 'app', 'system'
+  'signin', 'signup', 'logout', 'help', 'app', 'system',
+  // Pages and files the app itself serves at the top level (a link there could never open)
+  'demo', 'icon', 'apple-icon', 'opengraph-image', 'twitter-image', 'manifest', 'sitemap', 'robots',
 ]);
 
 export function isReservedSlug(slug: string): boolean {

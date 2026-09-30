@@ -2,6 +2,8 @@ import { sql } from 'drizzle-orm';
 import { pg } from '@/db/client';
 import { DEMO_WORKSPACE_ID } from '@/lib/db';
 import { PLAN_LIMITS } from '@/lib/plans';
+import { rateLimits } from '@/db/schema';
+import { lt } from 'drizzle-orm';
 
 const BATCH = 10_000;
 
@@ -30,5 +32,7 @@ export async function pruneRawClicks(): Promise<Record<string, number>> {
       if ((result.rowCount ?? 0) < BATCH) break;
     }
   }
+  // Finished rate-limit windows (the limiter also cleans up now and then)
+  await pg.delete(rateLimits).where(lt(rateLimits.expires_at, new Date()));
   return deleted;
 }
