@@ -50,8 +50,12 @@ export default function Footer() {
             <ul className="space-y-2 text-xs">
               <li><Link href="/dashboard/api-keys" className="hover:text-white transition-colors">REST API Docs</Link></li>
               <li><Link href="/dashboard/api-keys" className="hover:text-white transition-colors">API Playground</Link></li>
-              <li><a href="https://github.com/khurshidnm/urls-uz" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub Repository</a></li>
-              <li><span className="text-zinc-600">Telegram Bot Webhook (v3)</span></li>
+              <li>
+                <Link href="/dashboard/api-keys#telegram-webhook" className="hover:text-white transition-colors flex items-center gap-1.5">
+                  <span>Telegram Bot Webhook</span>
+                  <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">v3</span>
+                </Link>
+              </li>
             </ul>
           </div>
 
