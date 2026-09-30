@@ -34,7 +34,7 @@ export async function seedDemo(pg: Database) {
         android_url: 'https://play.google.com/store/apps/details?id=uz.apexpay.android',
         huawei_url: 'https://appgallery.huawei.com/app/C10459201',
         desktop_url: 'https://apextech.uz/web-app',
-        tags: 'Fintech, Ilova, Mobile',
+        tags: ['Fintech', 'Ilova', 'Mobile'],
       },
       {
         ...base,
@@ -47,7 +47,7 @@ export async function seedDemo(pg: Database) {
         utm_source: 'telegram',
         utm_medium: 'channel',
         utm_campaign: 'community_growth',
-        tags: 'Telegram, Bot',
+        tags: ['Telegram', 'Bot'],
       },
       {
         ...base,
@@ -57,7 +57,7 @@ export async function seedDemo(pg: Database) {
         slug: 'investor-report',
         click_count: 620,
         password: hashLinkPassword('investor2025'),
-        tags: 'Investor, Maxfiy',
+        tags: ['Investor', 'Maxfiy'],
       },
       {
         ...base,
@@ -69,7 +69,7 @@ export async function seedDemo(pg: Database) {
         utm_source: 'instagram',
         utm_medium: 'stories',
         utm_campaign: 'navruz_cashback',
-        tags: 'Marketing, Promo',
+        tags: ['Marketing', 'Promo'],
       },
       {
         ...base,
@@ -78,7 +78,7 @@ export async function seedDemo(pg: Database) {
         destination_url: 'https://careers.apextech.uz',
         slug: 'vakansiyalar',
         click_count: 730,
-        tags: 'HR, Ish',
+        tags: ['HR', 'Ish'],
       },
       {
         ...base,
@@ -87,7 +87,7 @@ export async function seedDemo(pg: Database) {
         destination_url: 'https://docs.apextech.uz/v2/api',
         slug: 'api-docs',
         click_count: 1120,
-        tags: 'Dev, API',
+        tags: ['Dev', 'API'],
       },
     ]);
 

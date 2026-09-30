@@ -92,7 +92,7 @@ async function main() {
       slug: String(l.slug),
       is_active: bool(l.is_active ?? 1),
       is_archived: bool(l.is_archived ?? 0),
-      tags: str(l.tags) ?? '',
+      tags: (str(l.tags) ?? '').split(',').map((t) => t.trim()).filter(Boolean),
       // Very old rows may still hold a plain-text password
       password: password ? (password.startsWith('scrypt$') ? password : hashLinkPassword(password)) : null,
       expires_at: date(l.expires_at),

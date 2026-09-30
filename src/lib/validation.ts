@@ -68,6 +68,56 @@ const clickLimit = z.coerce
 /** Accepts booleans and the legacy 0/1 flags. */
 const flag = z.union([z.boolean(), z.literal(0), z.literal(1)]).transform(Boolean);
 
+/**
+ * Tags as an array, or the legacy comma-separated string ("promo, telegram").
+ * Trimmed, empty ones dropped, de-duplicated case-insensitively.
+ */
+export const tagsSchema = z
+  .union([z.string().max(1000), z.array(z.string().max(100)).max(50)])
+  .transform((v) => (typeof v === 'string' ? v.split(',') : v).map((t) => t.trim()).filter(Boolean))
+  .pipe(z.array(z.string().max(40, 'Teg ko‘pi bilan 40 ta belgi')).max(20, 'Ko‘pi bilan 20 ta teg'))
+  .transform((tags) => {
+    const seen = new Set<string>();
+    return tags.filter((t) => !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
+  });
+
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{3,8}$/, 'Rang HEX formatida bo‘lishi kerak');
+const MAX_LOGO_BYTES = 105 * 1024;
+
+/** Saved QR design; mirrors the QrCanvas props that describe appearance. */
+export const qrConfigSchema = z
+  .object({
+    fgColor: hexColor,
+    gradientColor2: hexColor,
+    bgColor: hexColor,
+    colorMode: z.enum(['single', 'gradient']),
+    gradientType: z.enum(['linear', 'radial']),
+    customEyeColor: z.boolean(),
+    eyeFrameColor: hexColor,
+    eyeBallColor: hexColor,
+    bodyShape: z.enum(['square', 'dots', 'rounded', 'diamond', 'mosaic']),
+    eyeFrameShape: z.enum(['square', 'rounded', 'circle', 'leaf']),
+    eyeBallShape: z.enum(['square', 'circle', 'rounded', 'diamond']),
+    centerLogo: z.string().max(40),
+    centerEmoji: z.string().max(16).nullable(),
+    customLogoUrl: z
+      .string()
+      .refine((v) => v.startsWith('https://') || v.startsWith('data:image/'), 'Logo manzili noto‘g‘ri')
+      .refine(
+        (v) => !v.startsWith('data:image/') || Math.round(((v.split(',')[1] || '').length * 3) / 4) <= MAX_LOGO_BYTES,
+        'Logo hajmi 100 KB dan oshmasligi kerak'
+      )
+      .nullable(),
+    removeBgBehindLogo: z.boolean(),
+    frameText: z.string().max(40),
+    frameStyle: z.enum(['bottom', 'top', 'none']),
+    errorLevel: z.enum(['L', 'M', 'Q', 'H']),
+  })
+  .partial()
+  .strict();
+
+const folderId = z.string().trim().min(1).max(64);
+
 // ---------------------------------------------------------------------------
 // Links
 // ---------------------------------------------------------------------------
@@ -91,7 +141,8 @@ export const createLinkSchema = z.object({
   huawei_url: optionalHttpUrl,
   desktop_url: optionalHttpUrl,
   open_in_app: flag.optional(),
-  tags: optionalText(500),
+  tags: tagsSchema.optional(),
+  folder_id: z.preprocess(blankToUndefined, folderId.optional()),
 });
 export type CreateLinkInput = z.output<typeof createLinkSchema>;
 
@@ -106,7 +157,9 @@ export const updateLinkSchema = z
     slug: z.string().trim().min(1).max(50).optional(),
     is_active: flag.optional(),
     is_archived: flag.optional(),
-    tags: z.string().trim().max(500).optional(),
+    tags: tagsSchema.optional(),
+    folder_id: clearable(folderId),
+    qr_config: clearable(qrConfigSchema),
     password: clearable(z.string().max(128)),
     expires_at: clearable(futureDate),
     click_limit: clearable(clickLimit),
@@ -122,6 +175,10 @@ export const updateLinkSchema = z
     open_in_app: flag.optional(),
   })
   .refine((v) => Object.values(v).some((x) => x !== undefined), 'O‘zgartirish uchun kamida bitta maydon yuboring');
+
+export const folderSchema = z.object({
+  name: z.string().trim().min(1, 'Papka nomi kiritilishi shart').max(60),
+});
 
 export const unlockLinkSchema = z.object({
   slug: z.string().trim().min(1).max(100),

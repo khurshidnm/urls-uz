@@ -90,14 +90,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
   // Extract all unique tags
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
-    links.forEach((l) => {
-      if (l.tags) {
-        l.tags.split(',').forEach((t: string) => {
-          const trimmed = t.trim();
-          if (trimmed) tagSet.add(trimmed);
-        });
-      }
-    });
+    links.forEach((l) => l.tags.forEach((t) => tagSet.add(t)));
     return Array.from(tagSet);
   }, [links]);
 
@@ -110,7 +103,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
         l.title.toLowerCase().includes(search.toLowerCase()) ||
         l.slug.toLowerCase().includes(search.toLowerCase()) ||
         l.destination_url.toLowerCase().includes(search.toLowerCase()) ||
-        (l.tags && l.tags.toLowerCase().includes(search.toLowerCase()));
+        l.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()));
 
       // Status
       const matchesStatus =
@@ -123,7 +116,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
       // Tag
       const matchesTag =
         !selectedTag ||
-        (l.tags && l.tags.split(',').map((t: string) => t.trim()).includes(selectedTag));
+        l.tags.includes(selectedTag);
 
       return matchesSearch && matchesStatus && matchesTag;
     });
@@ -184,26 +177,18 @@ export default function LinksManagerClient({ initialLinks }: Props) {
     const targetLink = links.find((l) => l.id === linkId);
     if (!targetLink) return;
 
-    const currentTags = targetLink.tags
-      ? targetLink.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
-      : [];
-
     const newTag = inlineTagValue.trim().toLowerCase();
-    if (!currentTags.includes(newTag)) {
-      currentTags.push(newTag);
-    }
-
-    const updatedTagsString = currentTags.join(', ');
+    const updatedTags = targetLink.tags.includes(newTag) ? targetLink.tags : [...targetLink.tags, newTag];
 
     try {
       const res = await fetch(`/api/links/${linkId}`, {
         method: 'PATCH',
         headers: getHeaders(),
-        body: JSON.stringify({ tags: updatedTagsString }),
+        body: JSON.stringify({ tags: updatedTags }),
       });
       const data = await res.json();
       if (data.success) {
-        setLinks(links.map((l) => (l.id === linkId ? { ...l, tags: updatedTagsString } : l)));
+        setLinks(links.map((l) => (l.id === linkId ? { ...l, tags: data.link.tags } : l)));
         showToast('success', `Teg #${newTag} qo‘shildi`);
       }
     } catch {
@@ -218,24 +203,19 @@ export default function LinksManagerClient({ initialLinks }: Props) {
   const removeInlineTag = async (linkId: string, tagToRemove: string) => {
     if (checkDemoRestricted('Tegni o‘chirish')) return;
     const targetLink = links.find((l) => l.id === linkId);
-    if (!targetLink || !targetLink.tags) return;
+    if (!targetLink) return;
 
-    const currentTags = targetLink.tags
-      .split(',')
-      .map((t: string) => t.trim())
-      .filter((t: string) => t && t !== tagToRemove);
-
-    const updatedTagsString = currentTags.join(', ');
+    const updatedTags = targetLink.tags.filter((t) => t !== tagToRemove);
 
     try {
       const res = await fetch(`/api/links/${linkId}`, {
         method: 'PATCH',
         headers: getHeaders(),
-        body: JSON.stringify({ tags: updatedTagsString }),
+        body: JSON.stringify({ tags: updatedTags }),
       });
       const data = await res.json();
       if (data.success) {
-        setLinks(links.map((l) => (l.id === linkId ? { ...l, tags: updatedTagsString } : l)));
+        setLinks(links.map((l) => (l.id === linkId ? { ...l, tags: data.link.tags } : l)));
         showToast('info', `Teg #${tagToRemove} olib tashlandi`);
       }
     } catch {
@@ -341,14 +321,11 @@ export default function LinksManagerClient({ initialLinks }: Props) {
     for (const id of selectedIds) {
       const link = links.find((l) => l.id === id);
       if (link) {
-        const curTags = link.tags ? link.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
-        if (!curTags.includes(tagToAdd)) {
-          curTags.push(tagToAdd);
-          const updated = curTags.join(', ');
+        if (!link.tags.includes(tagToAdd)) {
           await fetch(`/api/links/${id}`, {
             method: 'PATCH',
             headers: getHeaders(),
-            body: JSON.stringify({ tags: updated }),
+            body: JSON.stringify({ tags: [...link.tags, tagToAdd] }),
           });
         }
       }
@@ -357,9 +334,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
     setLinks(
       links.map((l) => {
         if (!selectedIds.has(l.id)) return l;
-        const curTags = l.tags ? l.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
-        if (!curTags.includes(tagToAdd)) curTags.push(tagToAdd);
-        return { ...l, tags: curTags.join(', ') };
+        return l.tags.includes(tagToAdd) ? l : { ...l, tags: [...l.tags, tagToAdd] };
       })
     );
 
@@ -374,7 +349,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
     const selected = links.filter((l) => selectedIds.has(l.id));
     let csv = 'Title,Short URL,Destination URL,Clicks,Tags,Archived,Created At\n';
     selected.forEach((l) => {
-      csv += `"${l.title}","urls.uz/${l.slug}","${l.destination_url}",${l.click_count},"${l.tags || ''}",${l.is_archived ? 'Yes' : 'No'},"${l.created_at}"\n`;
+      csv += `"${l.title}","urls.uz/${l.slug}","${l.destination_url}",${l.click_count},"${l.tags.join(', ')}",${l.is_archived ? 'Yes' : 'No'},"${l.created_at}"\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -624,9 +599,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
             const isTitleEditing = inlineEditingTitleId === link.id;
             const isAddingTag = inlineTagId === link.id;
 
-            const linkTags = link.tags
-              ? link.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
-              : [];
+            const linkTags = link.tags;
 
             return (
               <div

@@ -24,6 +24,8 @@ export const authProvider = pgEnum('auth_provider', ['google', 'telegram', 'phon
 export const platformRole = pgEnum('platform_role', ['user', 'superadmin']);
 export const memberRole = pgEnum('member_role', ['owner', 'admin', 'member']);
 export const plan = pgEnum('plan', ['free', 'pro', 'enterprise']);
+/** What happened to a link, for its history tab. */
+export const linkEventAction = pgEnum('link_event_action', ['created', 'updated', 'archived', 'unarchived']);
 /** Where a link was created. Bio-page blocks are links too, but don't count toward plan limits. */
 export const linkSource = pgEnum('link_source', ['dashboard', 'landing', 'api', 'telegram', 'bio']);
 
@@ -89,6 +91,39 @@ export const memberships = pgTable(
 // Links & clicks
 // ---------------------------------------------------------------------------
 
+export const folders = pgTable(
+  'folders',
+  {
+    id: text('id').primaryKey(),
+    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    created_at: createdAt(),
+  },
+  (t) => [uniqueIndex('folders_workspace_name').on(t.workspace_id, sql`lower(${t.name})`)]
+);
+
+/** Saved QR design for a link. The QR always encodes the short URL, so it stays dynamic. */
+export type QrConfig = {
+  fgColor?: string;
+  gradientColor2?: string;
+  bgColor?: string;
+  colorMode?: 'single' | 'gradient';
+  gradientType?: 'linear' | 'radial';
+  customEyeColor?: boolean;
+  eyeFrameColor?: string;
+  eyeBallColor?: string;
+  bodyShape?: 'square' | 'dots' | 'rounded' | 'diamond' | 'mosaic';
+  eyeFrameShape?: 'square' | 'rounded' | 'circle' | 'leaf';
+  eyeBallShape?: 'square' | 'circle' | 'rounded' | 'diamond';
+  centerLogo?: string;
+  centerEmoji?: string | null;
+  customLogoUrl?: string | null;
+  removeBgBehindLogo?: boolean;
+  frameText?: string;
+  frameStyle?: 'bottom' | 'top' | 'none';
+  errorLevel?: 'L' | 'M' | 'Q' | 'H';
+};
+
 export const links = pgTable(
   'links',
   {
@@ -100,7 +135,9 @@ export const links = pgTable(
     slug: text('slug').notNull(),
     is_active: boolean('is_active').notNull().default(true),
     is_archived: boolean('is_archived').notNull().default(false),
-    tags: text('tags').notNull().default(''),
+    tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
+    folder_id: text('folder_id').references(() => folders.id, { onDelete: 'set null' }),
+    qr_config: jsonb('qr_config').$type<QrConfig>(),
     /** scrypt hash, never sent to clients. */
     password: text('password'),
     expires_at: timestamp('expires_at', { withTimezone: true }),
@@ -124,7 +161,24 @@ export const links = pgTable(
     // Slugs are compared case-sensitively, like the SQLite version
     uniqueIndex('links_slug').on(t.slug),
     index('links_workspace').on(t.workspace_id, t.created_at),
+    index('links_folder').on(t.folder_id),
+    index('links_tags').using('gin', t.tags),
   ]
+);
+
+/** Audit trail shown on a link's history tab. Sensitive values (passwords) are never stored. */
+export const linkEvents = pgTable(
+  'link_events',
+  {
+    id: text('id').primaryKey(),
+    link_id: text('link_id').notNull().references(() => links.id, { onDelete: 'cascade' }),
+    user_id: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+    action: linkEventAction('action').notNull(),
+    /** field -> { from, to } */
+    changes: jsonb('changes').$type<Record<string, { from: unknown; to: unknown }>>().notNull().default({}),
+    created_at: createdAt(),
+  },
+  (t) => [index('link_events_link_time').on(t.link_id, t.created_at)]
 );
 
 export const clicks = pgTable(

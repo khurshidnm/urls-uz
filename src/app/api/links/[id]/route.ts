@@ -57,7 +57,11 @@ export async function PATCH(
       }
     }
 
-    const updated = await db.updateLink(id, ctx.workspace.id, changes);
+    if (changes.folder_id && !(await db.getFolder(changes.folder_id, ctx.workspace.id))) {
+      return NextResponse.json({ success: false, error: 'Papka topilmadi', code: 'FOLDER_NOT_FOUND' }, { status: 400 });
+    }
+
+    const updated = await db.updateLink(id, ctx.workspace.id, changes, ctx.user?.id ?? null);
     if (!updated) return notFound();
 
     return NextResponse.json({ success: true, link: toPublicLink(updated) });

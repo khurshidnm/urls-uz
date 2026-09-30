@@ -5,6 +5,7 @@ import { checkUrlSafety } from '@/lib/anti-phishing';
 import { limitsFor, toJsonLimit } from '@/lib/plans';
 import { generateRandomSlug, isReservedSlug, isValidSlug } from '@/lib/utils';
 import { createLinkSchema } from '@/lib/validation';
+import { isUniqueViolation } from '@/lib/pg-errors';
 
 /**
  * The single way links are created: the dashboard, the landing page, the
@@ -39,12 +40,6 @@ const fail = (
 ): CreateLinkResult => ({ ok: false, status, code, error, details });
 
 const PRO_SOON = 'Cheksiz imkoniyatlar Pro tarifda tez kunda ishga tushadi!';
-
-/** Postgres unique_violation, e.g. two requests racing for the same slug. */
-function isUniqueViolation(err: unknown): boolean {
-  const code = (err as { code?: string; cause?: { code?: string } })?.code ?? (err as { cause?: { code?: string } })?.cause?.code;
-  return code === '23505';
-}
 
 async function pickRandomSlug(): Promise<string> {
   for (let attempt = 0; attempt < 20; attempt++) {
@@ -86,6 +81,10 @@ export async function createLink(ctx: CreateLinkContext, raw: unknown, source: L
       return fail(409, 'SLUG_TAKEN', 'Ushbu qisqa havola (slug) allaqachon band qilingan. Boshqa nom tanlang.');
     }
   }
+  if (input.folder_id && !(await db.getFolder(input.folder_id, ctx.workspace.id))) {
+    return fail(400, 'FOLDER_NOT_FOUND', 'Papka topilmadi');
+  }
+
   const slug = requestedSlug || (await pickRandomSlug());
 
   const wantsDeepLink = Boolean(input.open_in_app);
@@ -145,11 +144,13 @@ export async function createLink(ctx: CreateLinkContext, raw: unknown, source: L
           huawei_url: input.huawei_url ?? null,
           desktop_url: input.desktop_url ?? null,
           open_in_app: wantsDeepLink,
-          tags: input.tags ?? '',
+          tags: input.tags ?? [],
+          folder_id: input.folder_id ?? null,
           source,
         },
         tx
       );
+      await db.recordLinkEvent({ link_id: link.id, user_id: ctx.userId, action: 'created' }, tx);
       return { ok: true as const, link };
     });
   } catch (err) {

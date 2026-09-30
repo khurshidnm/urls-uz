@@ -71,3 +71,66 @@ test('free plan: one deep link, one device-targeted link, no hidden click cap', 
   expect((await api.json()).link.source).toBe('landing');
   await ctx.dispose();
 });
+
+test('tags, folders, QR settings and history', async ({ playwright }) => {
+  const alice = await playwright.request.newContext({ baseURL: E2E_ENV.NEXT_PUBLIC_APP_URL });
+  const bob = await playwright.request.newContext({ baseURL: E2E_ENV.NEXT_PUBLIC_APP_URL });
+  await loginAsTelegramUser(alice, 900000204, 'Alice Folders');
+  await loginAsTelegramUser(bob, 900000205, 'Bob Folders');
+
+  // Tags: the legacy comma string and arrays both work; duplicates collapse
+  const created = await alice.post('/api/links', {
+    data: { destination_url: 'https://example.com/tags', tags: 'Promo, telegram, promo,  ' },
+  });
+  const link = (await created.json()).link;
+  expect(link.tags).toEqual(['Promo', 'telegram']);
+
+  // Folders are per workspace
+  const folderRes = await alice.post('/api/folders', { data: { name: 'Kampaniyalar' } });
+  expect(folderRes.status()).toBe(201);
+  const folder = (await folderRes.json()).folder;
+  expect((await alice.post('/api/folders', { data: { name: 'kampaniyalar' } })).status()).toBe(409);
+  expect((await (await bob.get('/api/folders')).json()).folders).toHaveLength(0);
+
+  const bobLink = (await (await bob.post('/api/links', { data: { destination_url: 'https://example.com/bob' } })).json()).link;
+  const stolen = await bob.patch(`/api/links/${bobLink.id}`, { data: { folder_id: folder.id } });
+  expect(stolen.status()).toBe(400);
+  expect((await bob.delete(`/api/folders/${folder.id}`)).status()).toBe(404);
+
+  // Move into the folder, change the password, save a QR design
+  let res = await alice.patch(`/api/links/${link.id}`, {
+    data: { folder_id: folder.id, password: 'secret-1', qr_config: { fgColor: '#0f172a', bodyShape: 'dots', frameText: 'SCAN ME' } },
+  });
+  expect(res.status()).toBe(200);
+  const updated = (await res.json()).link;
+  expect(updated.folder_id).toBe(folder.id);
+  expect(updated.qr_config).toEqual({ fgColor: '#0f172a', bodyShape: 'dots', frameText: 'SCAN ME' });
+
+  res = await alice.patch(`/api/links/${link.id}`, { data: { qr_config: { fgColor: 'red' } } });
+  expect(res.status()).toBe(400);
+  res = await alice.patch(`/api/links/${link.id}`, { data: { qr_config: { onclick: 'x' } } });
+  expect(res.status()).toBe(400);
+
+  await alice.patch(`/api/links/${link.id}`, { data: { is_archived: true } });
+
+  const folders = (await (await alice.get('/api/folders')).json()).folders;
+  expect(folders[0]).toMatchObject({ name: 'Kampaniyalar', link_count: 1 });
+
+  // History: newest first, attributed, and never contains the password
+  const history = await alice.get(`/api/links/${link.id}/history`);
+  const events = (await history.json()).events as { action: string; changes: Record<string, { from: unknown; to: unknown }>; user: { name: string } }[];
+  expect(events.map((e) => e.action)).toEqual(['archived', 'updated', 'created']);
+  expect(events[1].changes.folder_id).toEqual({ from: null, to: folder.id });
+  expect(events[1].changes.password).toEqual({ from: null, to: 'set' });
+  expect(JSON.stringify(events)).not.toContain('secret-1');
+  expect(events[0].user.name).toBe('Alice Folders');
+  expect((await bob.get(`/api/links/${link.id}/history`)).status()).toBe(404);
+
+  // Deleting a folder keeps its links
+  expect((await alice.delete(`/api/folders/${folder.id}`)).status()).toBe(200);
+  const after = (await (await alice.get('/api/links')).json()).links.find((l: { id: string }) => l.id === link.id);
+  expect(after.folder_id).toBeNull();
+
+  await alice.dispose();
+  await bob.dispose();
+});

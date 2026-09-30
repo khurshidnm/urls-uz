@@ -6,6 +6,8 @@ import {
   bioLinks,
   bioPages,
   clicks,
+  folders,
+  linkEvents,
   links,
   memberships,
   sessions,
@@ -24,6 +26,8 @@ export type BioLinkRecord = typeof bioLinks.$inferSelect;
 export type ApiKeyRecord = typeof apiKeys.$inferSelect;
 export type UserRecord = typeof users.$inferSelect;
 export type WorkspaceRecord = typeof workspaces.$inferSelect;
+export type FolderRecord = typeof folders.$inferSelect;
+export type LinkEventRecord = typeof linkEvents.$inferSelect;
 export type AuthProvider = UserRecord['provider'];
 export type UserRole = UserRecord['role'];
 export type MemberRole = (typeof memberships.$inferSelect)['role'];
@@ -113,7 +117,8 @@ export type LinkInput = {
   huawei_url?: string | null;
   desktop_url?: string | null;
   open_in_app?: boolean;
-  tags?: string;
+  tags?: string[];
+  folder_id?: string | null;
   is_archived?: boolean;
   source?: LinkRecord['source'];
 };
@@ -121,7 +126,7 @@ export type LinkInput = {
 export type LinkChanges = Partial<
   Pick<
     LinkRecord,
-    | 'title' | 'destination_url' | 'slug' | 'is_active' | 'is_archived' | 'tags'
+    | 'title' | 'destination_url' | 'slug' | 'is_active' | 'is_archived' | 'tags' | 'folder_id' | 'qr_config'
     | 'click_limit' | 'utm_source' | 'utm_medium' | 'utm_campaign' | 'utm_term' | 'utm_content'
     | 'ios_url' | 'android_url' | 'huawei_url' | 'desktop_url' | 'open_in_app'
   >
@@ -131,6 +136,27 @@ function toDate(value: string | Date | null | undefined): Date | null {
   if (!value) return null;
   const d = value instanceof Date ? value : new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** Fields tracked in link history. Passwords are recorded as set/unset only. */
+const HISTORY_FIELDS = [
+  'title', 'destination_url', 'slug', 'is_active', 'is_archived', 'tags', 'folder_id', 'password',
+  'expires_at', 'click_limit', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+  'ios_url', 'android_url', 'huawei_url', 'desktop_url', 'open_in_app', 'qr_config',
+] as const;
+
+function diffLink(before: LinkRecord, after: LinkRecord): Record<string, { from: unknown; to: unknown }> {
+  const changes: Record<string, { from: unknown; to: unknown }> = {};
+  for (const field of HISTORY_FIELDS) {
+    const a = before[field];
+    const b = after[field];
+    if (JSON.stringify(a) === JSON.stringify(b)) continue;
+    changes[field] =
+      field === 'password'
+        ? { from: a ? 'set' : null, to: b ? 'set' : null }
+        : { from: a ?? null, to: b ?? null };
+  }
+  return changes;
 }
 
 export const db = {
@@ -185,7 +211,8 @@ export const db = {
         huawei_url: data.huawei_url || null,
         desktop_url: data.desktop_url || null,
         open_in_app: Boolean(data.open_in_app),
-        tags: data.tags || '',
+        tags: data.tags ?? [],
+        folder_id: data.folder_id ?? null,
         is_archived: Boolean(data.is_archived),
         source: data.source ?? 'dashboard',
       })
@@ -206,19 +233,59 @@ export const db = {
     return row;
   },
 
-  /** Updates a link in the workspace. Returns undefined if it doesn't exist there. */
-  async updateLink(id: string, workspaceId: string, data: LinkChanges): Promise<LinkRecord | undefined> {
+  /**
+   * Updates a link in the workspace and records what changed in its history.
+   * Returns undefined if the link doesn't exist there.
+   */
+  async updateLink(id: string, workspaceId: string, data: LinkChanges, userId: string | null = null): Promise<LinkRecord | undefined> {
     const { password, expires_at, ...rest } = data;
-    const values: Partial<typeof links.$inferInsert> = { ...rest, updated_at: new Date() };
+    const values: Partial<typeof links.$inferInsert> = { ...rest };
     if (password !== undefined) values.password = password ? hashLinkPassword(password) : null;
     if (expires_at !== undefined) values.expires_at = toDate(expires_at);
 
-    const [row] = await pg
-      .update(links)
-      .set(values)
-      .where(and(eq(links.id, id), eq(links.workspace_id, workspaceId)))
-      .returning();
-    return row;
+    return pg.transaction(async (tx) => {
+      const [before] = await tx
+        .select()
+        .from(links)
+        .where(and(eq(links.id, id), eq(links.workspace_id, workspaceId)))
+        .for('update');
+      if (!before) return undefined;
+
+      const [after] = await tx
+        .update(links)
+        .set({ ...values, updated_at: new Date() })
+        .where(eq(links.id, id))
+        .returning();
+
+      const changes = diffLink(before, after);
+      const fields = Object.keys(changes);
+      if (fields.length > 0) {
+        // Archiving on its own gets a dedicated entry; anything else is an update
+        const action =
+          fields.length === 1 && fields[0] === 'is_archived'
+            ? after.is_archived ? 'archived' : 'unarchived'
+            : 'updated';
+        await this.recordLinkEvent({ link_id: id, user_id: userId, action, changes }, tx);
+      }
+      return after;
+    });
+  },
+
+  async recordLinkEvent(
+    event: { link_id: string; user_id: string | null; action: LinkEventRecord['action']; changes?: LinkEventRecord['changes'] },
+    exec: Executor = pg
+  ) {
+    await exec.insert(linkEvents).values({ id: newId('evt'), changes: {}, ...event });
+  },
+
+  async getLinkEvents(linkId: string) {
+    return pg
+      .select({ event: linkEvents, user: { id: users.id, name: users.name, avatar_url: users.avatar_url } })
+      .from(linkEvents)
+      .leftJoin(users, eq(users.id, linkEvents.user_id))
+      .where(eq(linkEvents.link_id, linkId))
+      .orderBy(desc(linkEvents.created_at))
+      .limit(100);
   },
 
   async deleteLink(id: string, workspaceId: string): Promise<boolean> {
@@ -504,6 +571,52 @@ export const db = {
       .where(eq(apiKeys.key_hash, sha256(rawKey)))
       .returning({ workspaceId: apiKeys.workspace_id, createdBy: apiKeys.created_by });
     return key ?? null;
+  },
+
+  // --- Folders -------------------------------------------------------------
+
+  /** Folders with the number of links in each. */
+  async listFolders(workspaceId: string) {
+    return pg
+      .select({
+        id: folders.id,
+        name: folders.name,
+        created_at: folders.created_at,
+        link_count: sql<number>`count(${links.id})::int`,
+      })
+      .from(folders)
+      .leftJoin(links, eq(links.folder_id, folders.id))
+      .where(eq(folders.workspace_id, workspaceId))
+      .groupBy(folders.id)
+      .orderBy(asc(sql`lower(${folders.name})`));
+  },
+
+  async getFolder(id: string, workspaceId: string): Promise<FolderRecord | undefined> {
+    const [row] = await pg.select().from(folders).where(and(eq(folders.id, id), eq(folders.workspace_id, workspaceId)));
+    return row;
+  },
+
+  async createFolder(workspaceId: string, name: string): Promise<FolderRecord> {
+    const [row] = await pg.insert(folders).values({ id: newId('fld'), workspace_id: workspaceId, name }).returning();
+    return row;
+  },
+
+  async renameFolder(id: string, workspaceId: string, name: string): Promise<FolderRecord | undefined> {
+    const [row] = await pg
+      .update(folders)
+      .set({ name })
+      .where(and(eq(folders.id, id), eq(folders.workspace_id, workspaceId)))
+      .returning();
+    return row;
+  },
+
+  /** Links in the folder are kept and simply become unfiled. */
+  async deleteFolder(id: string, workspaceId: string): Promise<boolean> {
+    const deleted = await pg
+      .delete(folders)
+      .where(and(eq(folders.id, id), eq(folders.workspace_id, workspaceId)))
+      .returning({ id: folders.id });
+    return deleted.length > 0;
   },
 
   // --- Users & sessions ----------------------------------------------------

@@ -15,6 +15,13 @@
       "when": 1790758741509,
       "tag": "0001_link_source",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790758934307,
+      "tag": "0002_folders_tags_qr_history",
+      "breakpoints": true
     }
   ]
 }
