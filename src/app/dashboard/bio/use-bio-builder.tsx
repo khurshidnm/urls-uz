@@ -254,6 +254,8 @@ export function useBioBuilder(initialBio: ClientBioPage | undefined, owner: { na
 
   return {
     checkDemoRestricted,
+    /** The handle as saved; it stays valid even if it predates the current rules. */
+    savedHandle: initialBio?.handle ?? '',
     handle,
     setHandle,
     title,

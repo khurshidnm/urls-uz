@@ -2,13 +2,19 @@
 
 import React from 'react';
 import { BioAvatar } from '@/components/ui/bio-avatar';
+import { cleanHandle, handleProblem, HANDLE_MAX_LENGTH, HANDLE_MIN_LENGTH } from '@/lib/bio/handle';
 import { Check, Upload, Crop } from 'lucide-react';
 import { AVATAR_PRESETS } from './bio-builder-constants';
 import type { BioBuilder } from './use-bio-builder';
 
 /** Handle, title, bio text and avatar. */
 export default function ProfileTab({ b }: { b: BioBuilder }) {
-  const { handle, setHandle, title, setTitle, bio, setBio, avatarUrl, setAvatarUrl, setCropModalOpen, rawImageSrc, avatarSizeKb, setAvatarSizeKb, fileInputRef, handleFileSelect } = b;
+  const { handle, savedHandle, setHandle, title, setTitle, bio, setBio, avatarUrl, setAvatarUrl, setCropModalOpen, rawImageSrc, avatarSizeKb, setAvatarSizeKb, fileInputRef, handleFileSelect } = b;
+  // The saved handle stays valid even if it predates the current rules
+  const problem = handle && handle !== savedHandle ? handleProblem(handle) : null;
+  const handleHint = problem
+    ? { error: true, text: problem.message }
+    : { error: false, text: `Kamida ${HANDLE_MIN_LENGTH} ta belgi: faqat lotin harflari va raqamlar.` };
   return (
     <div className="space-y-4">
       <div className="p-5 rounded-2xl bg-zinc-900/40 border border-zinc-800 space-y-4">
@@ -32,11 +38,16 @@ export default function ProfileTab({ b }: { b: BioBuilder }) {
               <input
                 type="text"
                 value={handle}
-                onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                onChange={(e) => setHandle(cleanHandle(e.target.value))}
+                maxLength={HANDLE_MAX_LENGTH}
+                aria-describedby="bio-handle-hint"
                 className="w-full bg-transparent text-white focus:outline-none pl-0.5"
                 placeholder="username"
               />
             </div>
+            <p id="bio-handle-hint" className={`mt-1.5 text-[11px] leading-relaxed ${handleHint.error ? 'text-amber-400' : 'text-zinc-500'}`}>
+              {handleHint.text}
+            </p>
           </div>
 
           <div>

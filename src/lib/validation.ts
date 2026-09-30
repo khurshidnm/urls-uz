@@ -207,10 +207,10 @@ export const saveBioSchema = z.object({
   handle: z
     .string()
     .trim()
-    .transform((v) => v.replace(/^@/, ''))
-    .pipe(
-      z.string().regex(/^[a-zA-Z0-9_.-]{3,30}$/, 'Handle 3–30 ta belgi: harf, raqam, nuqta, tire yoki tagchiziq bo‘lishi kerak')
-    ),
+    .transform((v) => v.replace(/^@/, '').toLowerCase())
+    // Loose on purpose: pages keep handles from before the current rules. New
+    // handles are checked by handleProblem() in the save service.
+    .pipe(z.string().regex(/^[a-z0-9_.-]{1,30}$/, 'Handle faqat lotin harflari va raqamlardan iborat bo‘lishi kerak')),
   title: z.string().trim().min(1, 'Sarlavha kiritilishi shart').max(100),
   bio: z.string().trim().max(500).default(''),
   avatar_url: z

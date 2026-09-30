@@ -139,12 +139,12 @@ test('security and validation checks', async () => {
   check("Dashboard renders Alice's links for Alice", r.text.includes('Renamed') && !r.text.includes('ApexPay'));
 
   // == Bio pages ==
-  r = await req('/api/bio', { method: 'POST', cookie: a.session.cookie, body: { handle: 'alice_test', title: 'Alice', links: [{ title: 'x', url: 'javascript:alert(document.cookie)' }] } });
+  r = await req('/api/bio', { method: 'POST', cookie: a.session.cookie, body: { handle: 'alicetest', title: 'Alice', links: [{ title: 'x', url: 'javascript:alert(document.cookie)' }] } });
   check('javascript: bio links rejected', r.status === 400, `status ${r.status}`);
-  r = await req('/api/bio', { method: 'POST', cookie: a.session.cookie, body: { handle: 'alice_test', title: 'Alice', links: [{ title: 'Site', url: 'https://example.com' }] } });
+  r = await req('/api/bio', { method: 'POST', cookie: a.session.cookie, body: { handle: 'alicetest', title: 'Alice', links: [{ title: 'Site', url: 'https://example.com' }] } });
   check('Alice saves her own bio page', r.status === 200 && r.json?.bioPage?.workspace_id === aliceWs, `status ${r.status}`);
   check('new bio page is not auto-verified', r.json?.bioPage?.verified === false);
-  r = await req('/api/bio', { method: 'POST', cookie: b.session.cookie, body: { handle: 'alice_test', title: 'Bob' } });
+  r = await req('/api/bio', { method: 'POST', cookie: b.session.cookie, body: { handle: 'alicetest', title: 'Bob' } });
   check("Bob cannot take Alice's handle", r.status === 409, `status ${r.status}`);
   r = await req('/api/bio', { method: 'POST', cookie: b.session.cookie, body: { handle: 'apextech', title: 'Bob' } });
   check('Bob cannot overwrite the demo bio page', r.status === 409, `status ${r.status}`);
@@ -214,7 +214,7 @@ test('security and validation checks', async () => {
   r = await req(`/api/links/${normLink.id}`, { method: 'PATCH', cookie: a.session.cookie, body: { expires_at: null } });
   check('null clears optional field', r.status === 200 && r.json?.link?.expires_at === null);
   r = await req('/api/bio', { method: 'POST', cookie: a.session.cookie, body: { handle: 'x', title: 'Alice' } });
-  check('too-short handle rejected', r.status === 400 && r.json?.code === 'VALIDATION_ERROR');
+  check('too-short handle rejected', r.status === 400 && r.json?.code === 'HANDLE_TOO_SHORT');
   r = await req('/api/api-keys', { method: 'POST', cookie: a.session.cookie, body: { name: '   ' } });
   check('blank API key name rejected', r.status === 400);
 

@@ -1,5 +1,6 @@
 import { db, type WorkspaceRecord } from '@/lib/db';
 import { limitsFor } from '@/lib/plans';
+import { handleProblem } from '@/lib/bio/handle';
 import { saveBioSchema } from '@/lib/validation';
 import { createLink } from '@/lib/links/create-link';
 import { updateLink } from '@/lib/links/update-link';
@@ -33,6 +34,13 @@ export async function saveBio(ctx: SaveBioContext, raw: unknown): Promise<SaveBi
   }
   const input = parsed.data;
 
+  // A new or changed handle follows the current rules; an existing page keeps its handle
+  const current = await db.getBioPageByWorkspace(ctx.workspace.id);
+  if (current?.handle.toLowerCase() !== input.handle) {
+    const problem = handleProblem(input.handle);
+    if (problem) return fail(400, problem.code, problem.message);
+  }
+
   // Handles are unique across all workspaces
   const handleOwner = await db.getBioPageByHandle(input.handle);
   if (handleOwner && handleOwner.workspace_id !== ctx.workspace.id) {
@@ -43,7 +51,7 @@ export async function saveBio(ctx: SaveBioContext, raw: unknown): Promise<SaveBi
   const buttons = input.links.slice(0, limits.bioLinks);
   const theme = limits.bioThemes === null || limits.bioThemes.includes(input.theme) ? input.theme : 'midnight';
 
-  const existing = await db.getBioPageByWorkspace(ctx.workspace.id);
+  const existing = current;
   const previous = new Map((existing?.links ?? []).map((b) => [b.id, b]));
   const serviceCtx = { workspace: ctx.workspace, userId: ctx.userId, isAdmin: ctx.isAdmin };
 

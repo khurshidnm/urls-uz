@@ -69,10 +69,10 @@ test('connecting needs a session, and two bio pages are not merged silently', as
   await anonymous.dispose();
 
   await loginAsTelegramUser(page.request, 900000712, 'Bio One');
-  await page.request.post('/api/bio', { data: { handle: `bio_one_${Date.now().toString(36)}`, title: 'One', links: [] } });
+  await page.request.post('/api/bio', { data: { handle: `bioone${Date.now().toString(36)}`, title: 'One', links: [] } });
   const other = await playwrightRequest.newContext({ baseURL: BASE });
   await loginAsTelegramUser(other, 900000713, 'Bio Two');
-  await other.post('/api/bio', { data: { handle: `bio_two_${Date.now().toString(36)}`, title: 'Two', links: [] } });
+  await other.post('/api/bio', { data: { handle: `biotwo${Date.now().toString(36)}`, title: 'Two', links: [] } });
 
   const res = await connectTelegram(page.request, 900000713, 'Bio Two');
   expect(res.status()).toBe(409);

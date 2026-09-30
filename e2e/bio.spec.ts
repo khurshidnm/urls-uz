@@ -5,7 +5,7 @@ type Button = { id: string; title: string; url: string; link_id: string | null; 
 
 test('bio buttons are real links: tracked, editable without losing stats, cleaned up', async ({ page }) => {
   await loginAsTelegramUser(page.request, 900000501, 'Bio Owner');
-  const handle = `bio_${Date.now().toString(36)}`;
+  const handle = `bio${Date.now().toString(36)}`;
   const save = (links: Record<string, unknown>[]) => page.request.post('/api/bio', { data: { handle, title: 'Bio Owner', links } });
 
   let res = await save([
@@ -74,7 +74,7 @@ test('a new user starts with an empty bio page and publishes it from the builder
   await expect(page.getByPlaceholder('username')).toHaveValue('');
   await expect(page.getByPlaceholder('Ismingiz yoki brend nomi')).toHaveValue('Nodira Karimova');
 
-  const handle = `nodira_${Date.now().toString(36)}`;
+  const handle = `nodira${Date.now().toString(36)}`;
   await page.getByPlaceholder('username').fill(handle);
   await page.getByRole('button', { name: /Tugmalar/ }).click();
   await expect(page.getByPlaceholder('https://...')).toHaveCount(0);
@@ -89,4 +89,34 @@ test('a new user starts with an empty bio page and publishes it from the builder
   await expect(page.getByRole('button', { name: /Portfolio/ })).toBeVisible();
   // No stock photo: initials instead
   await expect(page.getByLabel('Nodira Karimova').first()).toContainText('NK');
+});
+
+test('bio handles: letters and digits only, at least 6 characters', async ({ page }) => {
+  await loginAsTelegramUser(page.request, 900000503, 'Handle Picker');
+  const save = (handle: string) => page.request.post('/api/bio', { data: { handle, title: 'Handle Picker', links: [] } });
+
+  // 5 characters and fewer are held back for a later paid option
+  let res = await save('abcde');
+  expect(res.status()).toBe(400);
+  expect((await res.json()).code).toBe('HANDLE_TOO_SHORT');
+  for (const bad of ['my_page1', 'my-page1', 'my.page1', 'sahifa‘1']) {
+    res = await save(bad);
+    expect((await res.json()).code, bad).toMatch(/HANDLE_INVALID|VALIDATION_ERROR/);
+  }
+
+  // Stored in lowercase
+  const handle = `Page${Date.now().toString(36)}`;
+  res = await save(handle);
+  expect(res.status()).toBe(200);
+  expect((await res.json()).bioPage.handle).toBe(handle.toLowerCase());
+
+  // The builder keeps only letters and digits and explains the rule
+  await page.goto('/dashboard/bio');
+  const input = page.getByPlaceholder('username');
+  await input.fill('');
+  await input.pressSequentially('Ab_c.1');
+  await expect(input).toHaveValue('abc1');
+  await expect(page.locator('#bio-handle-hint')).toContainText('kamida 6 ta belgidan');
+  await input.pressSequentially('xyz');
+  await expect(page.locator('#bio-handle-hint')).toContainText('faqat lotin harflari va raqamlar');
 });
