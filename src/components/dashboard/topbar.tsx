@@ -3,9 +3,9 @@
 import React, { useEffect } from 'react';
 import { useLanguage } from '@/lib/language-context';
 import { useAuth } from '@/lib/auth-context';
-import { Plus, Globe, Command, Menu } from 'lucide-react';
-import { Locale } from '@/lib/translations';
+import { Plus, Command, Menu } from 'lucide-react';
 import { TelegramIcon } from '@/components/ui/icons';
+import LanguageMenu from '@/components/ui/language-menu';
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'urlsuzbot';
 
@@ -15,7 +15,7 @@ interface TopbarProps {
 }
 
 export default function Topbar({ onCreateLink, onToggleMobileSidebar }: TopbarProps) {
-  const { locale, setLocale, t } = useLanguage();
+  const { t } = useLanguage();
   const { user } = useAuth();
 
   // Global keyboard shortcut: Cmd+K or Ctrl+K or hotkey 'C'
@@ -30,11 +30,6 @@ export default function Topbar({ onCreateLink, onToggleMobileSidebar }: TopbarPr
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onCreateLink]);
 
-  const locales: { code: Locale; label: string; flag: string }[] = [
-    { code: 'uz', label: "O'zbekcha", flag: 'UZ' },
-    { code: 'ru', label: 'Русский', flag: 'RU' },
-    { code: 'en', label: 'English', flag: 'EN' },
-  ];
 
   return (
     <header className="h-12 bg-zinc-950 border-b border-zinc-800/80 px-4 md:px-6 flex items-center justify-between shrink-0">
@@ -81,28 +76,7 @@ export default function Topbar({ onCreateLink, onToggleMobileSidebar }: TopbarPr
         </a>
 
         {/* Language Switcher */}
-        <div className="relative group">
-          <button className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-900/60 hover:bg-zinc-900 text-[11px] font-mono text-zinc-400 border border-zinc-800 transition-colors">
-            <Globe className="w-3 h-3 text-zinc-500" />
-            <span className="uppercase font-semibold">{locale}</span>
-          </button>
-          <div className="absolute right-0 mt-1 w-28 py-1 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-150 z-50">
-            {locales.map((l) => (
-              <button
-                key={l.code}
-                onClick={() => setLocale(l.code)}
-                className={`w-full flex items-center justify-between px-2.5 py-1 text-xs text-left transition-colors font-mono ${
-                  locale === l.code
-                    ? 'bg-zinc-800 text-white font-medium'
-                    : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
-                }`}
-              >
-                <span>{l.label}</span>
-                <span className="text-[10px] text-zinc-500">{l.flag}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        <LanguageMenu />
       </div>
     </header>
   );

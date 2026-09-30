@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/language-context';
+import LanguageMenu from '@/components/ui/language-menu';
 import { useAuth } from '@/lib/auth-context';
 import { ArrowRight, Menu, X, Link2, Terminal, Eye } from 'lucide-react';
 import { Locale } from '@/lib/translations';
@@ -75,28 +76,7 @@ export default function Navbar() {
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-2">
           {/* Language Switcher */}
-          <div className="relative group">
-            <button className="flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-900/60 hover:bg-zinc-900 text-[11px] font-mono text-zinc-400 border border-zinc-800 transition-colors">
-              <span className="text-zinc-500">LOCALE:</span>
-              <span className="text-zinc-200 uppercase font-semibold">{locale}</span>
-            </button>
-            <div className="absolute right-0 mt-1 w-28 py-1 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-150 z-50">
-              {locales.map((l) => (
-                <button
-                  key={l.code}
-                  onClick={() => setLocale(l.code)}
-                  className={`w-full flex items-center justify-between px-2.5 py-1 text-xs text-left transition-colors font-mono ${
-                    locale === l.code
-                      ? 'bg-zinc-800 text-white font-medium'
-                      : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
-                  }`}
-                >
-                  <span>{l.label}</span>
-                  <span className="text-[10px] text-zinc-500">{l.flag}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <LanguageMenu prefix="LOCALE:" />
 
           {user ? (
             <div className="flex items-center gap-2">
