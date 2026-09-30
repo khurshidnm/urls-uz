@@ -12,5 +12,7 @@ export type Jsonified<T> = T extends Date
  * JSON API returns (dates as ISO strings), so client code sees one format.
  */
 export function toClientJson<T>(value: T): Jsonified<T> {
+  // JSON.stringify(undefined) is undefined, which JSON.parse can't read (e.g. a user without a bio page)
+  if (value === undefined) return undefined as Jsonified<T>;
   return JSON.parse(JSON.stringify(value));
 }

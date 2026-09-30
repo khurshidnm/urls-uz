@@ -5,8 +5,8 @@ import { toClientJson } from '@/lib/serialize';
 import BioBuilderClient from './bio-builder-client';
 
 export default async function BioBuilderPage() {
-  const { workspace } = await requireWorkspace();
+  const { workspace, user } = await requireWorkspace();
   const bioPage = await db.getBioPageByWorkspace(workspace.id);
 
-  return <BioBuilderClient initialBio={toClientJson(bioPage)} />;
+  return <BioBuilderClient initialBio={toClientJson(bioPage)} owner={{ name: user?.name ?? '', avatar: user?.avatar_url ?? '' }} />;
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { BioAvatar } from '@/components/ui/bio-avatar';
 import Link from 'next/link';
 import {
   CheckCircle2,
@@ -210,11 +211,7 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
         {/* Avatar */}
         <div className="relative mb-4 group">
           <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 shadow-xl">
-            <img
-              src={bioPage.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'}
-              alt={bioPage.title}
-              className="w-full h-full rounded-full object-cover bg-slate-800"
-            />
+            <BioAvatar src={bioPage.avatar_url} name={bioPage.title} className="w-full h-full rounded-full object-cover bg-slate-800" />
           </div>
         </div>
 

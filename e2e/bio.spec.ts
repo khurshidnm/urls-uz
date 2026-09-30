@@ -65,3 +65,28 @@ test('bio buttons are real links: tracked, editable without losing stats, cleane
   expect(res.status()).toBe(400);
   expect((await res.json()).error).toContain('Soxta bank');
 });
+
+test('a new user starts with an empty bio page and publishes it from the builder', async ({ page }) => {
+  await loginAsTelegramUser(page.request, 900000502, 'Nodira Karimova');
+  await page.goto('/dashboard/bio');
+
+  // No demo company data: empty handle, the user's own name, no placeholder buttons
+  await expect(page.getByPlaceholder('username')).toHaveValue('');
+  await expect(page.getByPlaceholder('Ismingiz yoki brend nomi')).toHaveValue('Nodira Karimova');
+
+  const handle = `nodira_${Date.now().toString(36)}`;
+  await page.getByPlaceholder('username').fill(handle);
+  await page.getByRole('button', { name: /Tugmalar/ }).click();
+  await expect(page.getByPlaceholder('https://...')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Tugma qo‘shish' }).click();
+  await page.getByPlaceholder('Masalan: Telegram Kanal').fill('Portfolio');
+  await page.getByPlaceholder('https://...').fill('https://example.com/portfolio');
+  await page.getByRole('button', { name: /Saqlash|Save/ }).first().click();
+  await expect(page.getByText('Saqlandi!')).toBeVisible();
+
+  await page.goto(`/b/${handle}`);
+  await expect(page.getByRole('heading', { name: 'Nodira Karimova' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Portfolio/ })).toBeVisible();
+  // No stock photo: initials instead
+  await expect(page.getByLabel('Nodira Karimova').first()).toContainText('NK');
+});
