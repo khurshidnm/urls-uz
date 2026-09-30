@@ -12,6 +12,9 @@ import { UAParser } from 'ua-parser-js';
 import { Lock, AlertCircle, ArrowLeft } from 'lucide-react';
 import PasswordUnlockForm from './password-form';
 import DeepLinkRedirector from './deep-link-redirector';
+import HostedQrPage from './hosted-qr-page';
+import { qrRepo } from '@/lib/qr/qr-repo';
+import { isHostedType } from '@/lib/qr/content';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -125,6 +128,12 @@ export default async function SlugRedirectPage({ params }: Props) {
   // Another request used the last allowed click between the check above and now
   if (!withinLimit) {
     return <ClickLimitReached />;
+  }
+
+  // Dynamic vCard / event / text QR codes open their (editable) page instead of redirecting
+  if (link.source === 'qr') {
+    const qr = await qrRepo.getByLinkId(link.id);
+    if (qr && isHostedType(qr.type)) return <HostedQrPage qr={qr} />;
   }
 
   // 5. Intelligent Device Routing (iOS, Huawei, Android, Desktop, Fallback)

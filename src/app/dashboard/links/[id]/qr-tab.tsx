@@ -101,7 +101,7 @@ export default function QrTab({ link, canWrite, onSaved }: { link: ClientLink; c
             </p>
           </div>
           <Link
-            href={`/dashboard/qr?link=${link.id}`}
+            href={`/dashboard/qr/new?link=${link.id}`}
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs text-zinc-300 shrink-0"
           >
             <Wand2 className="w-3.5 h-3.5" /> QR Studio

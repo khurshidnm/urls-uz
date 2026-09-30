@@ -149,6 +149,7 @@ export type LinkInput = {
   tags?: string[];
   folder_id?: string | null;
   is_archived?: boolean;
+  qr_config?: LinkRecord['qr_config'];
   source?: LinkRecord['source'];
 };
 
@@ -317,6 +318,7 @@ export const db = {
         tags: data.tags ?? [],
         folder_id: data.folder_id ?? null,
         is_archived: Boolean(data.is_archived),
+        qr_config: data.qr_config ?? null,
         source: data.source ?? 'dashboard',
       })
       .returning();

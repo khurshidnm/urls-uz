@@ -2,10 +2,11 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ExternalLink, FileText, Info, Loader2, Save, Zap } from 'lucide-react';
+import { ExternalLink, FileText, Info, Loader2, Save } from 'lucide-react';
 import { QrCanvas } from '@/components/ui/qr-canvas';
 import type { ClientLink } from '@/lib/client-types';
 import type { QrDesign, UpdateDesign } from './qr-design';
+import SavePanel, { type SavePanelProps } from './save-panel';
 
 const FRAME_PRESETS = ['SCAN ME', 'VISIT LINK', 'SAVE CONTACT', 'CONNECT WI-FI', 'OPEN MAP'];
 
@@ -67,8 +68,7 @@ function FrameTextControl({ design, update }: { design: QrDesign; update: Update
 
 export type PreviewMode =
   | { kind: 'link'; link: ClientLink; dirty: boolean; saving: boolean; onSave: () => void }
-  | { kind: 'custom-url'; converting: boolean; onMakeDynamic: () => void; actionLabel: string }
-  | { kind: 'static' };
+  | { kind: 'qr'; save: SavePanelProps };
 
 interface Props {
   payload: string;
@@ -101,7 +101,21 @@ export default function QrPreviewPanel({ payload, design, update, resolution, se
         />
       </div>
 
-      <QrCanvas value={payload} size={240} exportResolution={resolution} {...design} errorLevel={payload.length > 200 ? 'M' : design.errorLevel} showControls />
+      {mode.kind === 'qr' && mode.save.pendingDynamic && (
+        <div className="w-full mb-3 p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/25 text-[11px] text-indigo-200/90 flex gap-2">
+          <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" />
+          <span>Saqlaganingizda QR qisqa havolaga o‘tadi. Chop etish uchun saqlangandan keyin yuklab oling.</span>
+        </div>
+      )}
+
+      <QrCanvas
+        value={payload}
+        size={240}
+        exportResolution={resolution}
+        {...design}
+        errorLevel={payload.length > 200 ? 'M' : design.errorLevel}
+        showControls={!(mode.kind === 'qr' && mode.save.pendingDynamic)}
+      />
 
       <FrameTextControl design={design} update={update} />
 
@@ -128,29 +142,7 @@ export default function QrPreviewPanel({ payload, design, update, resolution, se
         </div>
       )}
 
-      {mode.kind === 'custom-url' && (
-        <div className="w-full mt-3 space-y-2">
-          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-[11px] text-amber-200/90 flex gap-2">
-            <Info className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-            <span>Statik QR: URL QR ichiga yoziladi — keyin o‘zgartirib bo‘lmaydi va skanerlar hisoblanmaydi.</span>
-          </div>
-          <button
-            type="button"
-            onClick={mode.onMakeDynamic}
-            disabled={mode.converting}
-            className="w-full py-3 px-4 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {mode.converting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-            {mode.actionLabel}
-          </button>
-        </div>
-      )}
-
-      {mode.kind === 'static' && (
-        <p className="mt-4 text-[11px] text-zinc-500 text-center">
-          Statik QR: ma’lumot QR ichiga yoziladi, internet talab qilmaydi. Yuklab oling va chop eting.
-        </p>
-      )}
+      {mode.kind === 'qr' && <SavePanel {...mode.save} />}
     </div>
   );
 }

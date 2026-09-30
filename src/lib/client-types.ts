@@ -5,6 +5,7 @@
  */
 import type { db, PublicApiKey, PublicLink } from '@/lib/db';
 import type { Jsonified } from '@/lib/serialize';
+import type { qrRepo } from '@/lib/qr/qr-repo';
 
 type Result<F extends (...args: never[]) => unknown> = NonNullable<Awaited<ReturnType<F>>>;
 
@@ -34,3 +35,6 @@ export interface WorkspaceUsage {
   usage: { activeLinks: number; deepLinks: number; deviceTargeting: number };
   limits: { activeLinks: number | null; deepLinks: number | null; deviceTargeting: number | null; bioLinks: number | null };
 }
+
+/** A saved QR code; `link` is set for dynamic ones. */
+export type ClientQrCode = Jsonified<Result<typeof qrRepo.get>>;

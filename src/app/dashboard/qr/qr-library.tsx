@@ -1,0 +1,252 @@
+'use client';
+
+import React, { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { BarChart3, Calendar, FileText, Link2, MapPin, Pencil, Plus, QrCode, Search, Trash2, UserCheck, Wifi, Zap } from 'lucide-react';
+import { QrCanvas } from '@/components/ui/qr-canvas';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/toast';
+import { designFrom } from '@/components/qr-studio/qr-design';
+import { describeContent, staticPayload } from '@/lib/qr/content';
+import { formatDate, formatNumber, shortUrl } from '@/lib/utils';
+import type { ClientQrCode } from '@/lib/client-types';
+import type { QrDataType } from '@/lib/qr-payloads';
+
+const TYPE_META: Record<QrDataType, { label: string; icon: React.ElementType }> = {
+  url: { label: 'Havola', icon: Link2 },
+  vcard: { label: 'vCard', icon: UserCheck },
+  location: { label: 'Joylashuv', icon: MapPin },
+  event: { label: 'Tadbir', icon: Calendar },
+  text: { label: 'Matn', icon: FileText },
+  wifi: { label: 'Wi-Fi', icon: Wifi },
+};
+
+interface Props {
+  qrCodes: ClientQrCode[];
+  canWrite: boolean;
+}
+
+/** Saved QR codes: open one to edit it, see its scans, or delete it. */
+export default function QrLibrary({ qrCodes: initial, canWrite }: Props) {
+  const { showToast } = useToast();
+  const [qrCodes, setQrCodes] = useState(initial);
+  const [query, setQuery] = useState('');
+  const [type, setType] = useState<QrDataType | 'all'>('all');
+  // Two-step delete: the first click arms the button for a few seconds
+  const [armedDelete, setArmedDelete] = useState<string | null>(null);
+
+  const counts = useMemo(() => {
+    const byType = new Map<QrDataType, number>();
+    for (const qr of qrCodes) byType.set(qr.type, (byType.get(qr.type) ?? 0) + 1);
+    return byType;
+  }, [qrCodes]);
+
+  const visible = qrCodes.filter((qr) => {
+    if (type !== 'all' && qr.type !== type) return false;
+    const q = query.trim().toLowerCase();
+    return !q || qr.name.toLowerCase().includes(q) || describeContent(qr.type, qr.content).toLowerCase().includes(q);
+  });
+
+  const remove = async (qr: ClientQrCode) => {
+    if (!canWrite) {
+      window.dispatchEvent(new CustomEvent('open-demo-restriction', { detail: { actionTitle: 'QR kodni o‘chirish' } }));
+      return;
+    }
+    if (armedDelete !== qr.id) {
+      setArmedDelete(qr.id);
+      setTimeout(() => setArmedDelete((current) => (current === qr.id ? null : current)), 3000);
+      return;
+    }
+    setArmedDelete(null);
+    try {
+      const res = await fetch(`/api/qr-codes/${qr.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!data.success) {
+        showToast('error', data.error || 'O‘chirib bo‘lmadi');
+        return;
+      }
+      setQrCodes((all) => all.filter((x) => x.id !== qr.id));
+      showToast('success', 'QR kod o‘chirildi');
+    } catch {
+      showToast('error', 'Tarmoq xatosi yuz berdi');
+    }
+  };
+
+  const chip = (active: boolean) =>
+    `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border whitespace-nowrap transition-colors ${
+      active ? 'bg-zinc-800 text-white border-zinc-700' : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-zinc-200'
+    }`;
+
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-zinc-800 pb-5">
+        <div>
+          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            <QrCode className="w-6 h-6 text-indigo-400" />
+            <span>QR kodlarim</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+            Saqlangan QR kodlar. Dinamik QR kodlarning ma’lumotini chop etilgandan keyin ham o‘zgartirishingiz mumkin.
+          </p>
+        </div>
+        <Link
+          href="/dashboard/qr/new"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-semibold shrink-0"
+        >
+          <Plus className="w-4 h-4" /> Yangi QR kod
+        </Link>
+      </div>
+
+      {qrCodes.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <>
+          <div className="flex flex-col md:flex-row md:items-center gap-3">
+            <div className="relative md:w-72">
+              <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Nomi yoki tarkibi bo‘yicha qidirish"
+                aria-label="QR kodlarni qidirish"
+                className="w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-xs focus:outline-none focus:border-zinc-600"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+              <button type="button" onClick={() => setType('all')} className={chip(type === 'all')}>
+                Barchasi <span className="text-zinc-500 font-mono">{qrCodes.length}</span>
+              </button>
+              {(Object.keys(TYPE_META) as QrDataType[])
+                .filter((t) => counts.has(t))
+                .map((t) => {
+                  const Icon = TYPE_META[t].icon;
+                  return (
+                    <button key={t} type="button" onClick={() => setType(t)} className={chip(type === t)}>
+                      <Icon className="w-3.5 h-3.5 text-indigo-400" /> {TYPE_META[t].label}
+                      <span className="text-zinc-500 font-mono">{counts.get(t)}</span>
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+
+          {visible.length === 0 ? (
+            <p className="py-16 text-center text-xs text-zinc-500">Hech narsa topilmadi.</p>
+          ) : (
+            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {visible.map((qr) => (
+                <QrCard key={qr.id} qr={qr} armed={armedDelete === qr.id} canWrite={canWrite} onDelete={() => remove(qr)} />
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function QrCard({ qr, armed, canWrite, onDelete }: { qr: ClientQrCode; armed: boolean; canWrite: boolean; onDelete: () => void }) {
+  const meta = TYPE_META[qr.type];
+  const Icon = meta.icon;
+  const payload = qr.link ? shortUrl(qr.link.slug) : staticPayload(qr.type, qr.content);
+  const design = designFrom(qr.design);
+  const summary = describeContent(qr.type, qr.content);
+
+  return (
+    <li className="rounded-2xl border border-zinc-800 bg-zinc-950 overflow-hidden flex flex-col group">
+      <Link href={`/dashboard/qr/${qr.id}`} className="flex justify-center p-4 bg-zinc-900/50 border-b border-zinc-800" aria-label={`${qr.name} tahrirlash`}>
+        <QrCanvas value={payload} size={132} {...design} errorLevel={payload.length > 200 ? 'M' : design.errorLevel} showControls={false} />
+      </Link>
+      <div className="p-4 flex-1 flex flex-col gap-2">
+        <div className="flex items-start justify-between gap-2">
+          <Link href={`/dashboard/qr/${qr.id}`} className="font-semibold text-white text-sm hover:text-indigo-300 transition-colors break-words min-w-0">
+            {qr.name}
+          </Link>
+          {qr.link ? (
+            <Badge variant="success" size="xs" icon={<Zap className="w-3 h-3" />}>
+              Dinamik
+            </Badge>
+          ) : (
+            <Badge variant="default" size="xs">
+              Statik
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 min-w-0">
+          <Icon className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <span className="shrink-0">{meta.label}</span>
+          {summary && <span className="truncate" title={summary}>· {summary}</span>}
+        </div>
+        <div className="mt-auto pt-2 flex items-center justify-between text-[11px] font-mono text-zinc-500">
+          {qr.link ? (
+            <Link href={`/dashboard/links/${qr.link.id}`} className="flex items-center gap-1 hover:text-zinc-300" title="Statistika">
+              <BarChart3 className="w-3 h-3" /> {formatNumber(qr.link.click_count)} skan
+            </Link>
+          ) : (
+            <span>—</span>
+          )}
+          <span>{formatDate(qr.updated_at)}</span>
+        </div>
+        <div className="flex items-center gap-1.5 pt-1">
+          <Link
+            href={`/dashboard/qr/${qr.id}`}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-[11px] font-medium"
+          >
+            <Pencil className="w-3 h-3" /> Tahrirlash
+          </Link>
+          {canWrite && (
+            <button
+              type="button"
+              onClick={onDelete}
+              title={qr.link ? 'O‘chirish: chop etilgan nusxalar ishlamay qoladi' : 'O‘chirish'}
+              className={
+                armed
+                  ? 'flex items-center gap-1 px-2 py-1.5 rounded-md bg-rose-600 text-white text-[11px] font-semibold'
+                  : 'p-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-rose-400 border border-zinc-800 transition-colors'
+              }
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              {armed && <span>Tasdiqlash</span>}
+            </button>
+          )}
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function EmptyState() {
+  const starters: { type: QrDataType; text: string }[] = [
+    { type: 'vcard', text: 'Vizitka: kontakt ma’lumotlari o‘zgarsa ham QR eskirmaydi' },
+    { type: 'url', text: 'Sayt, menyu yoki aksiya sahifasi uchun' },
+    { type: 'wifi', text: 'Mehmonlar uchun Wi-Fi ulanishi' },
+  ];
+  return (
+    <div className="rounded-2xl border border-dashed border-zinc-800 p-10 text-center space-y-5">
+      <QrCode className="w-10 h-10 text-zinc-600 mx-auto" />
+      <div>
+        <h2 className="text-sm font-semibold text-white">Hali saqlangan QR kod yo‘q</h2>
+        <p className="text-xs text-zinc-500 mt-1 max-w-md mx-auto">
+          QR kod yarating va saqlang — keyin istalgan vaqt ochib tahrirlaysiz. Dinamik QR kodlar chop etilgandan keyin ham yangilanadi.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto">
+        {starters.map(({ type, text }) => {
+          const Icon = TYPE_META[type].icon;
+          return (
+            <Link
+              key={type}
+              href={`/dashboard/qr/new?type=${type}`}
+              className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-zinc-700 text-left transition-colors"
+            >
+              <Icon className="w-4 h-4 text-indigo-400" />
+              <div className="mt-2 text-xs font-semibold text-white">{TYPE_META[type].label}</div>
+              <div className="mt-0.5 text-[11px] text-zinc-500">{text}</div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, Archive, ArchiveRestore, Link2, Loader2, Power, Save, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
@@ -21,9 +22,11 @@ interface Props {
   folders: ClientFolder[];
   canWrite: boolean;
   onSaved: (link: ClientLink) => void;
+  /** Set for a dynamic QR code's link, whose destination follows the QR's content. */
+  qrCodeId: string | null;
 }
 
-export default function SettingsTab({ link, folders, canWrite, onSaved }: Props) {
+export default function SettingsTab({ link, folders, canWrite, onSaved, qrCodeId }: Props) {
   const router = useRouter();
   const { showToast } = useToast();
   const { usage, reload: reloadUsage } = useWorkspaceUsage();
@@ -107,9 +110,19 @@ export default function SettingsTab({ link, folders, canWrite, onSaved }: Props)
               value={values.destination_url}
               onChange={(e) => set('destination_url', e.target.value)}
               required
-              className="w-full pl-10 pr-4 py-2.5 bg-zinc-900 border border-zinc-800 focus:border-zinc-600 rounded-xl text-white text-sm focus:outline-none transition-colors"
+              readOnly={Boolean(qrCodeId)}
+              className="w-full pl-10 pr-4 py-2.5 bg-zinc-900 border border-zinc-800 focus:border-zinc-600 rounded-xl text-white text-sm focus:outline-none transition-colors read-only:text-zinc-500"
             />
           </div>
+          {qrCodeId && (
+            <p className="mt-1.5 text-[11px] text-zinc-500">
+              Bu havola QR kodga tegishli: manzil{' '}
+              <Link href={`/dashboard/qr/${qrCodeId}`} className="text-indigo-400 hover:text-indigo-300">
+                QR studiyada
+              </Link>{' '}
+              o‘zgartiriladi.
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

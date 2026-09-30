@@ -1,23 +1,14 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Calendar, FileText, Image as ImageIcon, Link2, MapPin, Paintbrush, QrCode, Sliders, UserCheck, Wifi } from 'lucide-react';
 import { useLanguage } from '@/lib/language-context';
 import { useToast } from '@/components/ui/toast';
 import { shortUrl } from '@/lib/utils';
-import type { ClientLink } from '@/lib/client-types';
-import {
-  QR_SAMPLE_DATA,
-  generateEventString,
-  generateLocationString,
-  generateVCardString,
-  generateWifiString,
-  type EventPayload,
-  type LocationPayload,
-  type QrDataType,
-  type VCardPayload,
-  type WifiPayload,
-} from '@/lib/qr-payloads';
+import type { ClientLink, ClientQrCode } from '@/lib/client-types';
+import { QR_SAMPLE_DATA, type EventPayload, type LocationPayload, type QrDataType, type VCardPayload, type WifiPayload } from '@/lib/qr-payloads';
+import { canBeDynamic, describeContent, staticPayload } from '@/lib/qr/content';
 import StudioPane from './studio-pane';
 import { EventForm, LocationForm, TextForm, VCardForm, WifiForm } from './content-forms';
 import { ColorsPane, LogoPane, ShapesPane } from './design-panes';
@@ -26,11 +17,13 @@ import { DEFAULT_DESIGN, designFrom, type QrDesign } from './qr-design';
 
 interface Props {
   links: ClientLink[];
-  /** Open the studio on this link (from /dashboard/qr?link=...). */
+  /** Open the studio on this link (from /dashboard/qr/new?link=...). */
   initialLinkId: string | null;
   canWrite: boolean;
-  /** Landing page visitor without an account: "make dynamic" asks them to sign up. */
-  guest?: { onSignup: (url: string) => void };
+  /** The saved QR code being edited (/dashboard/qr/[id]). */
+  saved?: ClientQrCode | null;
+  /** Landing page visitor without an account: saving asks them to sign up first. */
+  guest?: { requireAuth: (afterLogin: () => void) => void };
   initialType?: QrDataType;
   showHeader?: boolean;
 }
@@ -54,56 +47,106 @@ const TYPE_DEFAULTS: Record<QrDataType, Pick<QrDesign, 'centerLogo' | 'frameText
   event: { centerLogo: 'event', frameText: 'ADD EVENT' },
 };
 
+/** Empty forms for a new QR code in the dashboard (the landing page shows samples). */
+const EMPTY = {
+  text: '',
+  vcard: {
+    version: '3.0', firstName: '', lastName: '', organization: '', jobTitle: '', phoneWork: '', phonePrivate: '', phoneMobile: '',
+    faxWork: '', faxPrivate: '', email: '', website: '', street: '', zipCode: '', city: '', state: '', country: '',
+  } satisfies VCardPayload as VCardPayload,
+  wifi: { ssid: '', password: '', encryption: 'WPA', hidden: false } satisfies WifiPayload as WifiPayload,
+  location: { latitude: '', longitude: '', addressSearch: '', format: 'google_maps' } satisfies LocationPayload as LocationPayload,
+  event: { title: '', location: '', description: '', startDate: '', startTime: '10:00', endDate: '', endTime: '18:00', allDay: false } satisfies EventPayload as EventPayload,
+};
+
+/** The form values for every type: a saved QR code's content for its type, otherwise empty (or samples). */
+function formValues(saved: ClientQrCode | null | undefined, samples: boolean) {
+  const base = samples ? QR_SAMPLE_DATA : EMPTY;
+  const c = saved?.content ?? {};
+  const is = (type: QrDataType) => saved?.type === type;
+  return {
+    customUrl: is('url') ? String(c.url ?? '') : '',
+    text: is('text') ? String(c.text ?? '') : base.text,
+    vcard: is('vcard') ? (c as unknown as VCardPayload) : base.vcard,
+    wifi: is('wifi') ? (c as unknown as WifiPayload) : base.wifi,
+    location: is('location') ? (c as unknown as LocationPayload) : base.location,
+    event: is('event') ? (c as unknown as EventPayload) : base.event,
+  };
+}
+
 type Pane = 'content' | 'colors' | 'logo' | 'design';
 
-export default function QrStudioClient({ links: initialLinks, initialLinkId, canWrite, guest, initialType = 'url', showHeader = true }: Props) {
+export default function QrStudioClient({ links: initialLinks, initialLinkId, canWrite, saved, guest, initialType = 'url', showHeader = true }: Props) {
   const { t } = useLanguage();
   const { showToast } = useToast();
+  const router = useRouter();
 
   const [links, setLinks] = useState(initialLinks);
-  const initialLink = initialLinks.find((l) => l.id === initialLinkId);
+  const initialLink = saved ? undefined : initialLinks.find((l) => l.id === initialLinkId);
+  const [savedQr, setSavedQr] = useState(saved ?? null);
 
-  const [activeType, setActiveType] = useState<QrDataType>(initialType);
+  const [activeType, setActiveType] = useState<QrDataType>(saved?.type ?? initialType);
   const [activePane, setActivePane] = useState<Pane | null>('content');
   const [resolution, setResolution] = useState(1000);
 
   // Content
-  const [urlMode, setUrlMode] = useState<'existing' | 'custom'>(!guest && (initialLink || links.length > 0) ? 'existing' : 'custom');
+  const initial = formValues(saved, Boolean(guest));
+  const [urlMode, setUrlMode] = useState<'existing' | 'custom'>(!guest && !saved && (initialLink || links.length > 0) ? 'existing' : 'custom');
   const [selectedLinkId, setSelectedLinkId] = useState(initialLink?.id ?? links[0]?.id ?? '');
-  const [customUrl, setCustomUrl] = useState('');
-  const [vcard, setVcard] = useState<VCardPayload>(QR_SAMPLE_DATA.vcard);
-  const [textContent, setTextContent] = useState(QR_SAMPLE_DATA.text);
-  const [wifi, setWifi] = useState<WifiPayload>(QR_SAMPLE_DATA.wifi);
-  const [location, setLocation] = useState<LocationPayload>(QR_SAMPLE_DATA.location);
+  const [customUrl, setCustomUrl] = useState(initial.customUrl);
+  const [vcard, setVcard] = useState<VCardPayload>(initial.vcard);
+  const [textContent, setTextContent] = useState(initial.text);
+  const [wifi, setWifi] = useState<WifiPayload>(initial.wifi);
+  const [location, setLocation] = useState<LocationPayload>(initial.location);
   const [isLocating, setIsLocating] = useState(false);
-  const [eventData, setEventData] = useState<EventPayload>(QR_SAMPLE_DATA.event);
+  const [eventData, setEventData] = useState<EventPayload>(initial.event);
 
-  // Design (for a link: its saved design)
+  // Design: a saved QR code's, or (designing an existing link's QR) the link's
   const selectedLink = links.find((l) => l.id === selectedLinkId);
-  const [design, setDesign] = useState<QrDesign>(() => (initialLink ?? selectedLink ? designFrom((initialLink ?? selectedLink)!.qr_config) : DEFAULT_DESIGN));
+  const [design, setDesign] = useState<QrDesign>(() => {
+    if (saved) return designFrom(saved.design);
+    const link = initialLink ?? selectedLink;
+    if (link && initialType === 'url') return designFrom(link.qr_config);
+    return { ...DEFAULT_DESIGN, ...TYPE_DEFAULTS[initialType] };
+  });
   const update = (patch: Partial<QrDesign>) => setDesign((d) => ({ ...d, ...patch }));
   const [saving, setSaving] = useState(false);
-  const [converting, setConverting] = useState(false);
 
-  const linkMode = activeType === 'url' && urlMode === 'existing' && selectedLink;
+  // Saved QR codes
+  const [name, setName] = useState(saved?.name ?? '');
+  const [dynamic, setDynamic] = useState(saved ? Boolean(saved.link) : !guest);
+  const dynamicAllowed = canBeDynamic(activeType);
 
-  const payload = useMemo(() => {
+  const linkMode = !savedQr && activeType === 'url' && urlMode === 'existing' && selectedLink;
+
+  // Spread: the payload interfaces aren't index-signature records
+  const content: Record<string, unknown> = useMemo(() => {
     switch (activeType) {
       case 'url':
-        if (urlMode === 'existing') return selectedLink ? shortUrl(selectedLink.slug) : 'https://urls.uz';
-        return customUrl.trim() || 'https://urls.uz';
-      case 'vcard':
-        return generateVCardString(vcard);
-      case 'wifi':
-        return generateWifiString(wifi);
-      case 'location':
-        return generateLocationString(location);
-      case 'event':
-        return generateEventString(eventData);
+        return { url: customUrl };
       case 'text':
-        return textContent || 'urls.uz';
+        return { text: textContent };
+      case 'vcard':
+        return { ...vcard };
+      case 'wifi':
+        return { ...wifi };
+      case 'location':
+        return { ...location };
+      case 'event':
+        return { ...eventData };
     }
-  }, [activeType, urlMode, selectedLink, customUrl, vcard, wifi, location, eventData, textContent]);
+  }, [activeType, customUrl, textContent, vcard, wifi, location, eventData]);
+
+  // A dynamic QR encodes its short link; everything else encodes the content itself
+  const payload = linkMode
+    ? shortUrl(selectedLink.slug)
+    : savedQr?.link
+      ? shortUrl(savedQr.link.slug)
+      : activeType === 'url' && urlMode === 'existing'
+        ? 'https://urls.uz'
+        : staticPayload(activeType, content);
+
+  const namePlaceholder = describeContent(activeType, content) || `${TYPES.find((x) => x.id === activeType)?.label} QR`;
 
   const selectType = (type: QrDataType) => {
     setActiveType(type);
@@ -118,29 +161,26 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
     if (link) setDesign(designFrom(link.qr_config));
   };
 
-  const demoRestricted = () => window.dispatchEvent(new CustomEvent('open-demo-restriction', { detail: { actionTitle: 'QR dizaynini saqlash' } }));
+  const demoRestricted = () => window.dispatchEvent(new CustomEvent('open-demo-restriction', { detail: { actionTitle: 'QR kodni saqlash' } }));
 
-  const saveToLink = async (link: ClientLink, successMessage: string) => {
-    const res = await fetch(`/api/links/${link.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ qr_config: design }),
-    });
-    const data = await res.json();
-    if (!data.success) {
-      showToast('error', data.error || 'Saqlashda xatolik');
-      return;
-    }
-    setLinks((all) => all.map((l) => (l.id === link.id ? data.link : l)));
-    showToast('success', successMessage);
-  };
-
-  const handleSave = async () => {
+  /** Saves the design of an existing link's QR (the "my link" mode). */
+  const saveLinkDesign = async () => {
     if (!selectedLink) return;
     if (!canWrite) return demoRestricted();
     setSaving(true);
     try {
-      await saveToLink(selectedLink, 'QR dizayn havolaga saqlandi');
+      const res = await fetch(`/api/links/${selectedLink.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qr_config: design }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        showToast('error', data.error || 'Saqlashda xatolik');
+        return;
+      }
+      setLinks((all) => all.map((l) => (l.id === selectedLink.id ? data.link : l)));
+      showToast('success', 'QR dizayn havolaga saqlandi');
     } catch {
       showToast('error', 'Tarmoq xatosi yuz berdi');
     } finally {
@@ -148,38 +188,63 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
     }
   };
 
-  /** Turns the typed URL into a short link, so the QR becomes dynamic and trackable. */
-  const makeDynamic = async () => {
-    if (!customUrl.trim()) {
-      showToast('error', 'Avval URL manzilini kiriting');
-      return;
-    }
-    // After signing up, the pending URL becomes a short link automatically
-    if (guest) return guest.onSignup(customUrl.trim());
-    if (!canWrite) return demoRestricted();
-    setConverting(true);
+  /** Puts a saved QR code's (server-normalized) values back into the forms. */
+  const applySaved = (qr: ClientQrCode) => {
+    const values = formValues(qr, false);
+    setSavedQr(qr);
+    setName(qr.name);
+    setDesign(designFrom(qr.design));
+    setDynamic(Boolean(qr.link));
+    setCustomUrl(values.customUrl);
+    if (qr.type === 'text') setTextContent(values.text);
+    if (qr.type === 'vcard') setVcard(values.vcard);
+    if (qr.type === 'wifi') setWifi(values.wifi);
+    if (qr.type === 'location') setLocation(values.location);
+    if (qr.type === 'event') setEventData(values.event);
+  };
+
+  const persistQr = async () => {
+    setSaving(true);
     try {
-      const res = await fetch('/api/links', {
-        method: 'POST',
+      const body = { name: name.trim() || namePlaceholder, content, design, dynamic: dynamicAllowed && dynamic };
+      const res = await fetch(savedQr ? `/api/qr-codes/${savedQr.id}` : '/api/qr-codes', {
+        method: savedQr ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ destination_url: customUrl, source: 'dashboard' }),
+        body: JSON.stringify(savedQr ? body : { ...body, type: activeType }),
       });
       const data = await res.json();
       if (!data.success) {
-        showToast('error', data.error || 'Havola yaratib bo‘lmadi');
+        showToast('error', data.error || 'Saqlashda xatolik');
         return;
       }
-      const link: ClientLink = data.link;
-      setLinks((all) => [link, ...all]);
-      setSelectedLinkId(link.id);
-      setUrlMode('existing');
-      await saveToLink(link, `Dinamik QR tayyor: ${shortUrl(link.slug).replace(/^https?:\/\//, '')}`);
+      const qr: ClientQrCode = data.qrCode;
+      if (savedQr) {
+        applySaved(qr);
+        showToast('success', 'O‘zgarishlar saqlandi');
+      } else {
+        showToast('success', 'QR kod saqlandi');
+        // The editor URL, so a reload (or a bookmark) opens this QR code
+        if (guest) router.push(`/dashboard/qr/${qr.id}`);
+        else router.replace(`/dashboard/qr/${qr.id}`);
+      }
     } catch {
       showToast('error', 'Tarmoq xatosi yuz berdi');
     } finally {
-      setConverting(false);
+      setSaving(false);
     }
   };
+
+  const handleSaveQr = () => {
+    if (guest) return guest.requireAuth(() => void persistQr());
+    if (!canWrite) return demoRestricted();
+    void persistQr();
+  };
+
+  const dirty =
+    !savedQr ||
+    (!savedQr.link && dynamicAllowed && dynamic) ||
+    JSON.stringify({ name: name.trim(), content, design }) !==
+      JSON.stringify({ name: savedQr.name, content: savedQr.content, design: designFrom(savedQr.design) });
 
   const detectLocation = () => {
     if (!navigator.geolocation) {
@@ -212,16 +277,26 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
         link: selectedLink,
         dirty: JSON.stringify(design) !== JSON.stringify(designFrom(selectedLink.qr_config)),
         saving,
-        onSave: handleSave,
+        onSave: saveLinkDesign,
       }
-    : activeType === 'url'
-      ? {
-          kind: 'custom-url',
-          converting,
-          onMakeDynamic: makeDynamic,
-          actionLabel: guest ? 'Bepul ro‘yxatdan o‘tib, dinamik qilish' : 'Qisqa havola orqali dinamik qilish',
-        }
-      : { kind: 'static' };
+    : {
+        kind: 'qr',
+        save: {
+          name,
+          onNameChange: setName,
+          namePlaceholder,
+          dynamic,
+          onDynamicChange: setDynamic,
+          dynamicAllowed,
+          link: savedQr?.link ?? null,
+          pendingDynamic: dynamicAllowed && dynamic && !savedQr?.link,
+          isSaved: Boolean(savedQr),
+          dirty,
+          saving,
+          onSave: handleSaveQr,
+          guest: Boolean(guest),
+        },
+      };
 
   const toggle = (pane: Pane) => setActivePane(activePane === pane ? null : pane);
 
@@ -231,10 +306,12 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
       <div className="border-b border-zinc-800 pb-5">
         <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
           <QrCode className="w-6 h-6 text-indigo-400" />
-          <span>{t.qrStudio}</span>
+          <span>{savedQr ? savedQr.name : t.qrStudio}</span>
         </h1>
         <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-          Havolalaringiz uchun dinamik QR kodlar, shuningdek vCard, Wi-Fi, joylashuv va tadbir uchun statik QR kodlar.
+          {savedQr
+            ? 'Saqlangan QR kod. Tarkib yoki dizaynni o‘zgartiring va saqlang.'
+            : 'Havola, vCard, joylashuv, tadbir, matn va Wi-Fi uchun QR kod yarating va keyin tahrirlash uchun saqlang.'}
         </p>
       </div>
       )}
@@ -249,7 +326,9 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
               role="tab"
               aria-selected={activeType === tab.id}
               onClick={() => selectType(tab.id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              // A saved QR code keeps its type
+              disabled={Boolean(savedQr) && activeType !== tab.id}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all disabled:opacity-40 disabled:pointer-events-none ${
                 activeType === tab.id ? 'bg-zinc-800 text-white border border-zinc-700 shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
               }`}
             >
@@ -266,13 +345,19 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
             icon={<FileText className="w-4 h-4" />}
             iconClass="bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
             title="1. Tarkib"
-            subtitle={activeType === 'url' ? 'Qisqa havola (dinamik) yoki ixtiyoriy URL (statik)' : 'QR ichiga yoziladigan ma’lumot'}
+            subtitle={
+              savedQr?.link
+                ? 'O‘zgartirib saqlang: chop etilgan QR yangi ma’lumotni ko‘rsatadi'
+                : activeType === 'url' && !savedQr && !guest
+                  ? 'Mavjud havolangiz yoki yangi URL'
+                  : 'QR kod ma’lumoti'
+            }
             open={activePane === 'content'}
             onToggle={() => toggle('content')}
           >
             {activeType === 'url' && (
               <UrlForm
-                allowExisting={!guest}
+                allowExisting={!guest && !savedQr}
                 links={links}
                 urlMode={urlMode}
                 setUrlMode={setUrlMode}
@@ -360,10 +445,10 @@ function UrlForm({
       {allowExisting && (
       <div className="flex gap-2">
         <button type="button" onClick={() => setUrlMode('existing')} className={modeButton(urlMode === 'existing')}>
-          Mening havolam (dinamik)
+          Mening havolam
         </button>
         <button type="button" onClick={() => setUrlMode('custom')} className={modeButton(urlMode === 'custom')}>
-          Ixtiyoriy URL (statik)
+          Yangi URL
         </button>
       </div>
       )}
@@ -389,7 +474,7 @@ function UrlForm({
             <p className="text-[11px] text-zinc-500 mt-1.5">Havolaning saqlangan dizayni yuklandi. O‘zgartirib, saqlang.</p>
           </div>
         ) : (
-          <p className="text-xs text-zinc-400">Hali havola yo‘q. Ixtiyoriy URL kiriting va uni dinamik QR ga aylantiring.</p>
+          <p className="text-xs text-zinc-400">Hali havola yo‘q. «Yangi URL» ni tanlab, manzil kiriting.</p>
         )
       ) : (
         <div>

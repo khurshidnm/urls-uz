@@ -1,34 +1,17 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
 import { useLanguage } from '@/lib/language-context';
 import { useAuth } from '@/lib/auth-context';
-import { useToast } from '@/components/ui/toast';
 import QrStudio from '@/components/qr-studio/qr-studio';
 
 /**
- * The QR studio on the landing page, usable without an account. Turning a URL
- * into a dynamic (trackable, editable) QR asks the visitor to sign up; the
- * URL becomes their first short link.
+ * The QR studio on the landing page, usable without an account. Saving a QR
+ * code (to edit it later, or to make it dynamic) asks the visitor to sign up.
  */
 export default function QrPreviewSection() {
-  const router = useRouter();
   const { locale } = useLanguage();
   const { openAuthModal } = useAuth();
-  const { showToast } = useToast();
-
-  /** After an in-modal login: create the link and open it in the dashboard studio. */
-  const createDynamicQr = async (url: string) => {
-    const res = await fetch('/api/links', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ destination_url: url, source: 'landing' }),
-    });
-    const data = await res.json();
-    if (data.success) router.push(`/dashboard/qr?link=${data.link.id}`);
-    else showToast('error', data.error || 'Havola yaratib bo‘lmadi');
-  };
 
   return (
     <section id="qr-studio" className="py-20 md:py-28 bg-zinc-950 border-b border-zinc-800">
@@ -47,10 +30,10 @@ export default function QrPreviewSection() {
           </h2>
           <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed max-w-2xl">
             {locale === 'uz'
-              ? 'vCard, Wi-Fi, joylashuv, tadbir va havolalar uchun QR kodlar: 2000px gacha PNG va SVG. Havola QR kodlarini dinamik qiling — manzilni keyin o‘zgartirish va skanerlarni kuzatish mumkin.'
+              ? 'vCard, Wi-Fi, joylashuv, tadbir va havolalar uchun QR kodlar: 2000px gacha PNG va SVG. QR kodni saqlang va dinamik qiling — chop etilgandan keyin ham ma’lumotni o‘zgartirish va skanerlarni kuzatish mumkin.'
               : locale === 'ru'
-                ? 'QR-коды для vCard, Wi-Fi, геолокации, событий и ссылок: PNG и SVG до 2000px. Сделайте QR-код ссылки динамическим — меняйте адрес и отслеживайте сканирования.'
-                : 'QR codes for vCards, Wi-Fi, locations, events and links: PNG and SVG up to 2000px. Make link QR codes dynamic to change the destination later and track scans.'}
+                ? 'QR-коды для vCard, Wi-Fi, геолокации, событий и ссылок: PNG и SVG до 2000px. Сохраните QR-код и сделайте его динамическим — меняйте данные даже после печати и отслеживайте сканирования.'
+                : 'QR codes for vCards, Wi-Fi, locations, events and links: PNG and SVG up to 2000px. Save your QR codes and make them dynamic to edit the content after printing and track scans.'}
           </p>
         </div>
 
@@ -60,7 +43,8 @@ export default function QrPreviewSection() {
           canWrite={false}
           initialType="vcard"
           showHeader={false}
-          guest={{ onSignup: (url) => openAuthModal(url, () => createDynamicQr(url)) }}
+          // Saving needs an account; after signing up in the modal the QR code is saved and opened in the dashboard
+          guest={{ requireAuth: (afterLogin) => openAuthModal(undefined, afterLogin) }}
         />
       </div>
     </section>

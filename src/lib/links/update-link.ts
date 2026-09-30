@@ -47,6 +47,11 @@ export async function updateLink(ctx: UpdateLinkContext, linkId: string, raw: un
       const current = await db.getOwnedLink(linkId, ctx.workspace.id);
       if (!current) return fail(404, 'NOT_FOUND', 'Link not found');
 
+      // A dynamic QR code's link follows the QR's content; it's edited in the QR studio
+      if (current.source === 'qr' && changes.destination_url !== undefined && changes.destination_url !== current.destination_url) {
+        return fail(400, 'QR_MANAGED', 'Bu havola QR kodga tegishli: manzilni QR studiyada o‘zgartiring.');
+      }
+
       if (changes.slug !== undefined && changes.slug !== current.slug) {
         if (!isValidSlug(changes.slug)) return fail(400, 'INVALID_SLUG', 'Yaroqsiz slug formati.');
         if (await db.isSlugTaken(changes.slug)) return fail(409, 'SLUG_TAKEN', 'Ushbu slug allaqachon band qilingan.');

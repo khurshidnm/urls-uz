@@ -82,6 +82,7 @@ export default function LinksTable({
                       {link.title}
                     </Link>
                     {link.source === 'bio' && <Badge variant="indigo" size="xs">Bio tugma</Badge>}
+                    {link.source === 'qr' && <Badge variant="indigo" size="xs" icon={<QrCode className="w-3 h-3" />}>QR kod</Badge>}
                     {link.open_in_app && <Badge variant="cyan" size="xs" icon={<Smartphone className="w-3 h-3" />}>Deep Link</Badge>}
                     {deviceTargeted && <Badge variant="purple" size="xs" icon={<Target className="w-3 h-3" />}>Qurilmalar</Badge>}
                     {link.has_password && <Badge variant="warning" size="xs" icon={<Lock className="w-3 h-3" />}>Parolli</Badge>}

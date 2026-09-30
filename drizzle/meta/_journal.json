@@ -29,6 +29,13 @@
       "when": 1790760826296,
       "tag": "0003_bio_link_ids",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790765039515,
+      "tag": "0004_saved_qr_codes",
+      "breakpoints": true
     }
   ]
 }

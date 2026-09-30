@@ -28,9 +28,11 @@ interface Props {
   events: LinkEvent[];
   folders: ClientFolder[];
   canWrite: boolean;
+  /** The saved QR code this link belongs to; its content and design are edited in the QR studio. */
+  qrCodeId: string | null;
 }
 
-export default function LinkDetailClient({ initialTab, link: initialLink, analytics, events, folders, canWrite }: Props) {
+export default function LinkDetailClient({ initialTab, link: initialLink, analytics, events, folders, canWrite, qrCodeId }: Props) {
   const { showToast } = useToast();
   const [tab, setTab] = useState<LinkTab>(initialTab);
   const [link, setLink] = useState(initialLink);
@@ -133,8 +135,8 @@ export default function LinkDetailClient({ initialTab, link: initialLink, analyt
       </div>
 
       {tab === 'analytics' && <AnalyticsTab link={link} initialData={analytics} />}
-      {tab === 'qr' && <QrTab link={link} canWrite={canWrite} onSaved={setLink} />}
-      {tab === 'settings' && <SettingsTab link={link} folders={folders} canWrite={canWrite} onSaved={setLink} />}
+      {tab === 'qr' && (qrCodeId ? <QrCodeNotice qrCodeId={qrCodeId} /> : <QrTab link={link} canWrite={canWrite} onSaved={setLink} />)}
+      {tab === 'settings' && <SettingsTab link={link} folders={folders} canWrite={canWrite} onSaved={setLink} qrCodeId={qrCodeId} />}
       {tab === 'history' && <HistoryTab linkId={link.id} initialEvents={events} folders={folders} />}
     </div>
   );
@@ -145,6 +147,23 @@ function Metric({ label, value }: { label: string; value: string }) {
     <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
       <div className="text-[11px] text-zinc-500 font-mono">{label}</div>
       <div className="text-sm font-bold text-white font-mono mt-0.5">{value}</div>
+    </div>
+  );
+}
+
+/** A dynamic QR code's link: the QR itself is edited in the studio. */
+function QrCodeNotice({ qrCodeId }: { qrCodeId: string }) {
+  return (
+    <div className="glass-card-static p-6 rounded-2xl border border-[var(--border-subtle)] text-center space-y-3">
+      <QrCode className="w-8 h-8 text-indigo-400 mx-auto" />
+      <p className="text-sm text-zinc-300">Bu havola saqlangan dinamik QR kodga tegishli.</p>
+      <p className="text-xs text-zinc-500">QR kodning tarkibi va dizayni QR studiyada tahrirlanadi.</p>
+      <Link
+        href={`/dashboard/qr/${qrCodeId}`}
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-semibold"
+      >
+        QR kodni tahrirlash
+      </Link>
     </div>
   );
 }

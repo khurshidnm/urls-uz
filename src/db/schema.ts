@@ -27,7 +27,9 @@ export const plan = pgEnum('plan', ['free', 'pro', 'enterprise']);
 /** What happened to a link, for its history tab. */
 export const linkEventAction = pgEnum('link_event_action', ['created', 'updated', 'archived', 'unarchived']);
 /** Where a link was created. Bio-page blocks are links too, but don't count toward plan limits. */
-export const linkSource = pgEnum('link_source', ['dashboard', 'landing', 'api', 'telegram', 'bio']);
+export const linkSource = pgEnum('link_source', ['dashboard', 'landing', 'api', 'telegram', 'bio', 'qr']);
+/** What a saved QR code contains. */
+export const qrType = pgEnum('qr_type', ['url', 'text', 'vcard', 'location', 'wifi', 'event']);
 
 // ---------------------------------------------------------------------------
 // Identity
@@ -197,6 +199,35 @@ export const clicks = pgTable(
     created_at: createdAt(),
   },
   (t) => [index('clicks_link_time').on(t.link_id, t.created_at), index('clicks_time').on(t.created_at)]
+);
+
+// ---------------------------------------------------------------------------
+// Saved QR codes
+// ---------------------------------------------------------------------------
+
+/**
+ * A QR code the user saved to edit later. A dynamic one encodes its link's
+ * short URL, so the printed image never changes: editing `content` changes
+ * where the link goes (url, location) or what its hosted page shows (vcard,
+ * event, text). A static one encodes `content` directly.
+ */
+export const qrCodes = pgTable(
+  'qr_codes',
+  {
+    id: text('id').primaryKey(),
+    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    created_by: text('created_by').references(() => users.id, { onDelete: 'set null' }),
+    name: text('name').notNull(),
+    type: qrType('type').notNull(),
+    /** The form data for `type` (VCardPayload, WifiPayload, { url }, ...). */
+    content: jsonb('content').$type<Record<string, unknown>>().notNull(),
+    design: jsonb('design').$type<QrConfig>().notNull().default({}),
+    /** Set for dynamic QR codes; deleting the link deletes the QR code. */
+    link_id: text('link_id').references(() => links.id, { onDelete: 'cascade' }),
+    created_at: createdAt(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('qr_codes_workspace').on(t.workspace_id, t.updated_at), uniqueIndex('qr_codes_link').on(t.link_id)]
 );
 
 // ---------------------------------------------------------------------------

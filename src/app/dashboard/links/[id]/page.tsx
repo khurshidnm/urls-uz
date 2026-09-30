@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { db, toPublicLink } from '@/lib/db';
 import { requireWorkspace } from '@/lib/auth';
 import { toClientJson } from '@/lib/serialize';
+import { qrRepo } from '@/lib/qr/qr-repo';
 import LinkDetailClient, { type LinkTab } from './link-detail-client';
 
 interface Props {
@@ -20,10 +21,11 @@ export default async function LinkDetailPage({ params, searchParams }: Props) {
   const link = await db.getOwnedLink(id, ctx.workspace.id);
   if (!link) notFound();
 
-  const [analytics, events, folders] = await Promise.all([
+  const [analytics, events, folders, qrCode] = await Promise.all([
     db.getLinkAnalytics(link.id, '30d'),
     db.getLinkEvents(link.id),
     db.listFolders(ctx.workspace.id),
+    link.source === 'qr' ? qrRepo.getByLinkId(link.id) : undefined,
   ]);
 
   return (
@@ -35,6 +37,7 @@ export default async function LinkDetailPage({ params, searchParams }: Props) {
       events={toClientJson(events.map(({ event, user }) => ({ ...event, user })))}
       folders={toClientJson(folders)}
       canWrite={ctx.canWrite}
+      qrCodeId={qrCode?.id ?? null}
     />
   );
 }

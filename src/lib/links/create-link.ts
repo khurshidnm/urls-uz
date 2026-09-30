@@ -24,7 +24,7 @@ export interface CreateLinkContext {
 
 export type CreateLinkResult = { ok: true; link: LinkRecord } | RuleFailure;
 
-async function pickRandomSlug(): Promise<string> {
+export async function pickRandomSlug(): Promise<string> {
   for (let attempt = 0; attempt < 20; attempt++) {
     const candidate = generateRandomSlug(attempt > 8 ? 6 : 5);
     if (!isReservedSlug(candidate) && !(await db.isSlugTaken(candidate))) return candidate;
