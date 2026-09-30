@@ -91,6 +91,7 @@ export default function ShortenCard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          source: 'landing',
           destination_url: processedUrl,
           password: password.trim() || undefined,
           // datetime-local has no timezone; send the user's local time as an absolute instant

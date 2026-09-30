@@ -24,6 +24,8 @@ export const authProvider = pgEnum('auth_provider', ['google', 'telegram', 'phon
 export const platformRole = pgEnum('platform_role', ['user', 'superadmin']);
 export const memberRole = pgEnum('member_role', ['owner', 'admin', 'member']);
 export const plan = pgEnum('plan', ['free', 'pro', 'enterprise']);
+/** Where a link was created. Bio-page blocks are links too, but don't count toward plan limits. */
+export const linkSource = pgEnum('link_source', ['dashboard', 'landing', 'api', 'telegram', 'bio']);
 
 // ---------------------------------------------------------------------------
 // Identity
@@ -114,6 +116,7 @@ export const links = pgTable(
     huawei_url: text('huawei_url'),
     desktop_url: text('desktop_url'),
     open_in_app: boolean('open_in_app').notNull().default(false),
+    source: linkSource('source').notNull().default('dashboard'),
     created_at: createdAt(),
     updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

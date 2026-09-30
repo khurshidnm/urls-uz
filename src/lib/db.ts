@@ -84,6 +84,9 @@ export function newId(prefix: string, length = 12): string {
 
 const count = sql<number>`count(*)::int`;
 
+/** The pool itself, or an open transaction: repository writes can join a caller's transaction. */
+export type Executor = typeof pg | Parameters<Parameters<typeof pg.transaction>[0]>[0];
+
 /** Day buckets in Uzbekistan time, formatted like the old SQLite date() output. */
 const clickDay = sql<string>`to_char(${clicks.created_at} at time zone 'Asia/Tashkent', 'YYYY-MM-DD')`;
 
@@ -112,6 +115,7 @@ export type LinkInput = {
   open_in_app?: boolean;
   tags?: string;
   is_archived?: boolean;
+  source?: LinkRecord['source'];
 };
 
 export type LinkChanges = Partial<
@@ -158,8 +162,8 @@ export const db = {
     return pg.select().from(links).where(eq(links.workspace_id, workspaceId)).orderBy(desc(links.created_at));
   },
 
-  async createLink(data: LinkInput): Promise<LinkRecord> {
-    const [row] = await pg
+  async createLink(data: LinkInput, exec: Executor = pg): Promise<LinkRecord> {
+    const [row] = await exec
       .insert(links)
       .values({
         id: newId('link'),
@@ -183,8 +187,22 @@ export const db = {
         open_in_app: Boolean(data.open_in_app),
         tags: data.tags || '',
         is_archived: Boolean(data.is_archived),
+        source: data.source ?? 'dashboard',
       })
       .returning();
+    return row;
+  },
+
+  /** Usage that plan limits apply to. Bio-page blocks are excluded. */
+  async getLinkUsage(workspaceId: string, exec: Executor = pg) {
+    const [row] = await exec
+      .select({
+        activeLinks: count,
+        deepLinks: sql<number>`count(*) filter (where ${links.open_in_app})::int`,
+        deviceTargeting: sql<number>`count(*) filter (where coalesce(${links.ios_url}, ${links.android_url}, ${links.huawei_url}, ${links.desktop_url}) is not null)::int`,
+      })
+      .from(links)
+      .where(and(eq(links.workspace_id, workspaceId), eq(links.is_archived, false), ne(links.source, 'bio')));
     return row;
   },
 

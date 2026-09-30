@@ -1,0 +1,2 @@
+CREATE TYPE "public"."link_source" AS ENUM('dashboard', 'landing', 'api', 'telegram', 'bio');--> statement-breakpoint
+ALTER TABLE "links" ADD COLUMN "source" "link_source" DEFAULT 'dashboard' NOT NULL;
