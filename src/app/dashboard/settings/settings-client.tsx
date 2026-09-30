@@ -3,20 +3,33 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
-import { User, Shield, Globe, Save, Check, KeyRound } from 'lucide-react';
+import { User, Shield, Globe, Save, Check, RotateCcw } from 'lucide-react';
 import { Locale } from '@/lib/translations';
 
 export default function SettingsClient() {
-  const { user } = useAuth();
+  const {
+    user,
+    isSuperAdmin,
+    demoEditMode,
+    setDemoEditMode,
+    resetDemoData,
+  } = useAuth();
   const { locale, setLocale, t } = useLanguage();
 
-  const [name, setName] = useState(user?.name || 'Khurshid Nurmukhamedov');
-  const [email, setEmail] = useState(user?.email || 'admin@urls.uz');
-  const [customDomain, setCustomDomain] = useState('go.kompaniya.uz');
+  const [name, setName] = useState(user?.name || (user ? 'Foydalanuvchi' : 'ApexTech Solutions'));
+  const [email, setEmail] = useState(user?.email || (user ? 'user@urls.uz' : 'demo@apextech.uz'));
+  const [customDomain, setCustomDomain] = useState('go.apextech.uz');
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user && !isSuperAdmin) {
+      window.dispatchEvent(
+        new CustomEvent('open-demo-restriction', { detail: { actionTitle: 'Sozlamalarni saqlash' } })
+      );
+      return;
+    }
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 2500);
   };
@@ -120,6 +133,73 @@ export default function SettingsClient() {
             </p>
           </div>
         </div>
+
+        {/* Super Admin & Demo Boshqaruvi — admin role is assigned server-side (ADMIN_EMAILS / ADMIN_TELEGRAM_IDS) */}
+        {isSuperAdmin && (
+        <div className="glass-panel p-6 rounded-3xl border border-purple-500/20 bg-gradient-to-b from-purple-950/20 to-transparent space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-purple-500/20">
+            <div className="flex items-center gap-2.5">
+              <Shield className="w-4 h-4 text-purple-400" />
+              <h3 className="text-sm font-bold text-white">Super Admin & Demo Rejimi Boshqaruvi</h3>
+            </div>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+              isSuperAdmin
+                ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+            }`}>
+              {isSuperAdmin ? 'SUPER ADMIN (FAOL)' : 'MA’MURIYAT'}
+            </span>
+          </div>
+
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-zinc-950/80 border border-purple-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                    Demo Maʼlumotlarini Tahrirlash Rejimi
+                  </h4>
+                  <p className="text-[11px] text-zinc-400 mt-1 max-w-md leading-relaxed">
+                    Yoqilganda, siz yaratgan yoki tahrirlagan havolalar va bio sahifa barcha yangi mehmonlar uchun Demo sifatida aks etadi.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDemoEditMode(!demoEditMode)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                    demoEditMode
+                      ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/30'
+                      : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'
+                  }`}
+                >
+                  {demoEditMode ? 'Tahrirlash Rejimi: FAOL' : 'Tahrirlashni Yoqish'}
+                </button>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-zinc-950/80 border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-xs font-bold text-white">Demo Maʼlumotlarini Asl Holatiga Qaytarish</h4>
+                  <p className="text-[11px] text-zinc-400 mt-1 max-w-md leading-relaxed">
+                    «ApexTech Solutions» kompaniyasining dastlabki 6 ta havolasi, bio sahifasi va viloyatlar telemetriyasini toza holatda qayta generatsiya qiladi.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!confirm('Haqiqatan ham barcha Demo maʼlumotlarini asl holatiga qaytarmoqchimisiz?')) return;
+                    setIsResetting(true);
+                    await resetDemoData();
+                    setIsResetting(false);
+                  }}
+                  disabled={isResetting}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition-colors shrink-0 flex items-center gap-2 cursor-pointer"
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 text-zinc-400 ${isResetting ? 'animate-spin' : ''}`} />
+                  <span>{isResetting ? 'Qaytarilmoqda...' : 'Dastlabki Holatga Qaytarish (Reset)'}</span>
+                </button>
+              </div>
+            </div>
+        </div>
+        )}
 
         {/* Save button */}
         <div className="flex justify-end">

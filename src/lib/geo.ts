@@ -54,29 +54,41 @@ export function resolveRegionFromHeaders(headers: Headers): {
   region: string;
   city: string;
 } {
-  const cfCountry = headers.get('cf-ipcountry') || headers.get('x-vercel-ip-country') || 'UZ';
-  const cfCity = headers.get('cf-ipcity') || headers.get('x-vercel-ip-city') || 'Tashkent';
-  const cfRegion = headers.get('cf-region') || headers.get('x-vercel-ip-country-region') || 'Toshkent shahri';
+  // Only record what the CDN actually reports; missing data stays 'Unknown'
+  // instead of being attributed to Tashkent.
+  const decode = (v: string | null) => {
+    if (!v) return '';
+    try {
+      return decodeURIComponent(v);
+    } catch {
+      return v;
+    }
+  };
+  const country = (headers.get('cf-ipcountry') || headers.get('x-vercel-ip-country') || '').toUpperCase();
+  const city = decode(headers.get('cf-ipcity') || headers.get('x-vercel-ip-city'));
+  const region = decode(headers.get('cf-region') || headers.get('x-vercel-ip-country-region'));
 
-  const countryUpper = cfCountry.toUpperCase();
+  if (!country || country === 'XX') {
+    return { country: 'Unknown', region: 'Unknown', city: 'Unknown' };
+  }
 
-  if (countryUpper === 'UZ') {
+  if (country === 'UZ') {
     const matched = UZBEKISTAN_REGIONS.find((r) =>
-      cfRegion.toLowerCase().includes(r.toLowerCase()) ||
-      cfCity.toLowerCase().includes(r.toLowerCase())
+      (region && region.toLowerCase().includes(r.toLowerCase())) ||
+      (city && city.toLowerCase().includes(r.toLowerCase()))
     );
     return {
       country: 'UZ',
-      region: matched || 'Toshkent shahri',
-      city: cfCity || 'Toshkent',
+      region: matched || 'Unknown',
+      city: city || 'Unknown',
     };
   }
 
   // International traffic
-  const countryData = COUNTRY_META[countryUpper];
+  const countryData = COUNTRY_META[country];
   return {
-    country: countryUpper,
-    region: cfRegion || countryData?.nameUz || countryUpper,
-    city: cfCity || 'Unknown',
+    country,
+    region: region || countryData?.nameUz || country,
+    city: city || 'Unknown',
   };
 }

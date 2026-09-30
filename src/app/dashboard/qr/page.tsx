@@ -1,9 +1,11 @@
 import React from 'react';
-import { db } from '@/lib/db';
+import { db, toPublicLink } from '@/lib/db';
+import { getActor } from '@/lib/auth';
 import QrStudioClient from './qr-studio-client';
 
-export default function QrStudioPage() {
-  const links = db.getAllLinks();
+export default async function QrStudioPage() {
+  const { ownerId } = await getActor();
+  const links = db.getAllLinks(ownerId).map(toPublicLink);
 
   return <QrStudioClient links={links} />;
 }

@@ -1,11 +1,13 @@
 import React from 'react';
-import { db } from '@/lib/db';
+import { db, toPublicLink } from '@/lib/db';
+import { getActor } from '@/lib/auth';
 import DashboardOverviewClient from './overview-client';
 
-export default function DashboardOverviewPage() {
-  const analytics = db.getAnalyticsOverview();
-  const links = db.getAllLinks();
-  const bioPage = db.getBioPageByUserId('demo_user');
+export default async function DashboardOverviewPage() {
+  const { ownerId } = await getActor();
+  const analytics = db.getAnalyticsOverview(ownerId);
+  const links = db.getAllLinks(ownerId).map(toPublicLink);
+  const bioPage = db.getBioPageByUserId(ownerId);
 
   return (
     <DashboardOverviewClient

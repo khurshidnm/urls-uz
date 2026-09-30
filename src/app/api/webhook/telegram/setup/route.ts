@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TelegramBot } from '@/lib/telegram-bot';
+import { getCurrentUser } from '@/lib/auth';
+
+async function requireAdmin() {
+  const user = await getCurrentUser();
+  return user?.role === 'superadmin'
+    ? null
+    : NextResponse.json({ success: false, error: 'Faqat super admin ruxsatiga ega.' }, { status: 403 });
+}
 
 export const dynamic = 'force-dynamic';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://urls.uz';
 
 export async function GET() {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   if (!TelegramBot.isConfigured) {
     return NextResponse.json(
       {
@@ -29,6 +40,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   if (!TelegramBot.isConfigured) {
     return NextResponse.json(
       {
@@ -48,8 +62,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, result: res });
     }
 
-    const webhookUrl = body.url || `${APP_URL}/api/webhook/telegram`;
-    const secretToken = body.secret_token || process.env.TELEGRAM_WEBHOOK_SECRET;
+    const webhookUrl = `${APP_URL}/api/webhook/telegram`;
+    const secretToken = process.env.TELEGRAM_WEBHOOK_SECRET;
 
     const res = await TelegramBot.setWebhook(webhookUrl, secretToken);
 

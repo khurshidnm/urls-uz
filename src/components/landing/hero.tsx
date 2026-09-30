@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useLanguage } from '@/lib/language-context';
 import ShortenCard from './shorten-card';
-import { Zap, Smartphone, MapPin, Shield, Terminal } from 'lucide-react';
+import { Zap, Smartphone, MapPin, Shield, Terminal, Sparkles } from 'lucide-react';
 
 export default function Hero() {
   const { t, locale } = useLanguage();
@@ -18,12 +19,23 @@ export default function Hero() {
   return (
     <section className="relative pt-16 pb-20 md:pt-24 md:pb-28 overflow-hidden bg-mesh border-b border-zinc-800/60">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        {/* Engineering Release Pill */}
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 text-[11px] font-mono mb-6">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-zinc-300 font-semibold">INFRASTRUCTURE V3.4</span>
-          <span className="text-zinc-600">·</span>
-          <span>40M+ Redirects Processed</span>
+        {/* Engineering Release Pill & Live Demo Button */}
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 text-[11px] font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-zinc-300 font-semibold">INFRASTRUCTURE V3.4</span>
+            <span className="text-zinc-600">·</span>
+            <span>40M+ Redirects Processed</span>
+          </div>
+
+          <Link
+            href="/dashboard?demo=true"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-mono transition-all group"
+          >
+            <Sparkles className="w-3 h-3 text-amber-400" />
+            <span>Jonli Demo Versiya (Faqat ko‘rish)</span>
+            <span className="text-amber-400/80 group-hover:translate-x-0.5 transition-transform">→</span>
+          </Link>
         </div>
 
         {/* Hero Title (Confident, tight, weight 600, no blobby bold) */}

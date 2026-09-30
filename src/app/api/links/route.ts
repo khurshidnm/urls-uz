@@ -1,26 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, toPublicLink } from '@/lib/db';
 import { generateRandomSlug, isValidSlug, isReservedSlug } from '@/lib/utils';
 import { checkUrlSafety } from '@/lib/anti-phishing';
+import { getActor } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
+    const actor = await getActor();
     const { searchParams } = new URL(request.url);
     const q = searchParams.get('q')?.toLowerCase();
 
-    let links = db.getAllLinks();
+    let links = db.getAllLinks(actor.ownerId);
 
     if (q) {
-      links = links.filter(l => 
-        l.title.toLowerCase().includes(q) || 
-        l.slug.toLowerCase().includes(q) || 
+      links = links.filter(l =>
+        l.title.toLowerCase().includes(q) ||
+        l.slug.toLowerCase().includes(q) ||
         l.destination_url.toLowerCase().includes(q)
       );
     }
 
-    return NextResponse.json({ success: true, links });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true, links: links.map(toPublicLink) });
+  } catch (error) {
+    console.error('GET /api/links failed:', error);
+    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
   }
 }
 
@@ -43,42 +46,61 @@ export async function POST(request: NextRequest) {
       huawei_url,
       desktop_url,
       open_in_app,
-      user_id: bodyUserId,
     } = body;
 
-    // 1. Mandatory Authorization Check (Anti-Phishing / Identity enforcement)
-    const authHeader = request.headers.get('authorization') || '';
-    const headerUserId = request.headers.get('x-user-id');
-    const cookieSession = request.cookies.get('urls_session')?.value;
-    const cookieUserId = request.cookies.get('urls_user_id')?.value;
-
-    let authenticatedUserId: string | null = null;
-
-    // Check API Key
-    if (authHeader.startsWith('Bearer urls_live_')) {
-      const apiKey = authHeader.replace(/^Bearer\s+/, '').trim();
-      const isValidKey = db.verifyApiKey(apiKey);
-      if (!isValidKey) {
-        return NextResponse.json({
-          success: false,
-          error: 'Yaroqsiz API kalit (Invalid API Key)',
-          code: 'INVALID_API_KEY',
-        }, { status: 401 });
-      }
-      authenticatedUserId = 'api_user';
-    } else if (authHeader.startsWith('Bearer session_') || authHeader.startsWith('Bearer usr_')) {
-      authenticatedUserId = headerUserId || cookieUserId || bodyUserId || 'verified_user';
-    } else if (cookieSession || headerUserId || cookieUserId || bodyUserId) {
-      authenticatedUserId = headerUserId || cookieUserId || bodyUserId || 'verified_user';
-    }
-
-    // Mandatory Authorization: links must belong to authenticated user
-    if (!authenticatedUserId) {
+    // 1. Identity comes from the session cookie or an API key, never from the request body
+    const actor = await getActor();
+    if (!actor.canWrite) {
       return NextResponse.json({
         success: false,
         error: 'Havolani qisqartirish uchun tizimga kiring.',
         code: 'AUTH_REQUIRED',
       }, { status: 401 });
+    }
+
+    const isSuperAdmin = actor.isAdmin;
+
+    // 2. Free Plan Limits Check (bypassed for super admins)
+    const activeUserId = actor.ownerId;
+    const userLinks = db.getAllLinks(activeUserId);
+    const activeLinks = userLinks.filter((l) => !l.is_archived);
+    const activeCount = activeLinks.length;
+    const FREE_PLAN_LIMIT = 10;
+
+    if (!isSuperAdmin && activeCount >= FREE_PLAN_LIMIT) {
+      return NextResponse.json({
+        success: false,
+        error: `Bepul tarifda ko‘pi bilan ${FREE_PLAN_LIMIT} ta faol havola yaratish mumkin (${activeCount}/${FREE_PLAN_LIMIT}). Yangi havola yaratish uchun eskilarini arxivlang yoki o‘chiring. Cheksiz havolalar va kengaytirilgan imkoniyatlar Pro tarifda tez kunda ishga tushadi!`,
+        code: 'FREE_LIMIT_REACHED',
+        limit: FREE_PLAN_LIMIT,
+        currentCount: activeCount,
+      }, { status: 403 });
+    }
+
+    // Smart Deep Link quota (max 1 in free plan, bypassed for super admin)
+    const isDeepLinkRequested = Boolean(open_in_app);
+    const currentDeepLinksCount = activeLinks.filter((l) => Boolean(l.open_in_app)).length;
+    if (!isSuperAdmin && isDeepLinkRequested && currentDeepLinksCount >= 1) {
+      return NextResponse.json({
+        success: false,
+        error: `Bepul tarifda faqat 1 dona Smart Deep Link yaratish mumkin (${currentDeepLinksCount}/1 ishlatilgan). Yangi deep link yaratish uchun mavjud deep linkni o‘chiring yoki oddiy havola sifatida yarating. Cheksiz deep linklar Pro tarifda tez kunda ishga tushadi!`,
+        code: 'DEEP_LINK_LIMIT_REACHED',
+        currentCount: currentDeepLinksCount,
+        maxLimit: 1,
+      }, { status: 403 });
+    }
+
+    // Device Targeting quota (max 1 in free plan with 100 clicks cap)
+    const isDeviceTargetingRequested = Boolean(ios_url || android_url || huawei_url || desktop_url);
+    const currentDeviceTargetingCount = activeLinks.filter((l) => Boolean(l.ios_url || l.android_url || l.huawei_url || l.desktop_url)).length;
+    if (isDeviceTargetingRequested && currentDeviceTargetingCount >= 1) {
+      return NextResponse.json({
+        success: false,
+        error: `Bepul tarifda faqat 1 dona qurilmalarni aniqlaydigan (device targeting) havola yaratish mumkin (${currentDeviceTargetingCount}/1 ishlatilgan). Cheksiz qurilmalar bo‘yicha yo‘naltirish Pro tarifda tez kunda ishga tushadi!`,
+        code: 'DEVICE_TARGETING_LIMIT_REACHED',
+        currentCount: currentDeviceTargetingCount,
+        maxLimit: 1,
+      }, { status: 403 });
     }
 
     if (!destination_url) {
@@ -135,14 +157,20 @@ export async function POST(request: NextRequest) {
       } while ((db.getLinkBySlug(finalSlug) || isReservedSlug(finalSlug)) && attempts < 20);
     }
 
+    // Device targeting limit in free tier is capped to 100 clicks
+    let effectiveClickLimit = click_limit ? Number(click_limit) : null;
+    if (isDeviceTargetingRequested) {
+      effectiveClickLimit = effectiveClickLimit ? Math.min(effectiveClickLimit, 100) : 100;
+    }
+
     const created = db.createLink({
-      userId: authenticatedUserId,
+      userId: activeUserId,
       title: title?.trim() || finalSlug,
       destination_url: formattedUrl,
       slug: finalSlug,
       password: password?.trim() || null,
       expires_at: expires_at || null,
-      click_limit: click_limit ? Number(click_limit) : null,
+      click_limit: effectiveClickLimit,
       utm_source: utm_source?.trim() || null,
       utm_medium: utm_medium?.trim() || null,
       utm_campaign: utm_campaign?.trim() || null,
@@ -156,8 +184,9 @@ export async function POST(request: NextRequest) {
       tags: body.tags?.trim() || '',
     });
 
-    return NextResponse.json({ success: true, link: created }, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true, link: toPublicLink(created) }, { status: 201 });
+  } catch (error) {
+    console.error('POST /api/links failed:', error);
+    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
   }
 }

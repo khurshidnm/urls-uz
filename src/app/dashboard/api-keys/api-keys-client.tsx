@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useLanguage } from '@/lib/language-context';
+import { useAuth } from '@/lib/auth-context';
 import {
   KeyRound,
   Plus,
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export default function ApiKeysClient({ initialKeys }: Props) {
+  const { user } = useAuth();
   const { t, locale } = useLanguage();
   const [keys, setKeys] = useState(initialKeys);
   const [newKeyModal, setNewKeyModal] = useState(false);
@@ -33,6 +35,16 @@ export default function ApiKeysClient({ initialKeys }: Props) {
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const checkDemoRestricted = (actionName: string) => {
+    if (!user) {
+      window.dispatchEvent(
+        new CustomEvent('open-demo-restriction', { detail: { actionTitle: actionName } })
+      );
+      return true;
+    }
+    return false;
+  };
 
   // Webhook state
   const [webhookStatus, setWebhookStatus] = useState<any | null>(null);
@@ -46,8 +58,15 @@ export default function ApiKeysClient({ initialKeys }: Props) {
   const [playgroundLoading, setPlaygroundLoading] = useState(false);
   const [activeCodeTab, setActiveCodeTab] = useState<'curl' | 'js' | 'python'>('curl');
 
+  const handleOpenNewKeyModal = () => {
+    if (checkDemoRestricted('Yangi API kalit yaratish')) return;
+    setGeneratedKey(null);
+    setNewKeyModal(true);
+  };
+
   const handleGenerateKey = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (checkDemoRestricted('Yangi API kalit yaratish')) return;
     if (!keyName.trim()) return;
 
     setLoading(true);
@@ -79,6 +98,7 @@ export default function ApiKeysClient({ initialKeys }: Props) {
   };
 
   const handleDeleteKey = async (id: string) => {
+    if (checkDemoRestricted('API kalitni bekor qilish')) return;
     if (!confirm('Haqiqatan ham ushbu API kalitini bekor qilmoqchimisiz?')) return;
 
     try {
@@ -105,12 +125,12 @@ export default function ApiKeysClient({ initialKeys }: Props) {
     setPlaygroundOutput(null);
 
     try {
-      const apiKeyToUse = generatedKey || 'urls_live_9f830d12a67e20b348f9';
+      // Use the freshly generated key if there is one; otherwise the session cookie authenticates
       const res = await fetch('/api/links', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKeyToUse}`,
+          ...(generatedKey ? { Authorization: `Bearer ${generatedKey}` } : {}),
         },
         body: JSON.stringify({
           destination_url: testUrl,
@@ -179,10 +199,7 @@ print(response.json())`;
         </div>
 
         <button
-          onClick={() => {
-            setGeneratedKey(null);
-            setNewKeyModal(true);
-          }}
+          onClick={handleOpenNewKeyModal}
           className="flex items-center gap-1.5 px-3.5 py-2 bg-white text-zinc-950 text-xs font-semibold rounded-lg hover:bg-zinc-200 transition-colors active:scale-[0.98]"
         >
           <Plus className="w-3.5 h-3.5" />
@@ -263,10 +280,7 @@ print(response.json())`;
               urls.uz API dan foydalanish uchun birinchi xavfsiz kalitingizni yarating.
             </p>
             <button
-              onClick={() => {
-                setGeneratedKey(null);
-                setNewKeyModal(true);
-              }}
+              onClick={handleOpenNewKeyModal}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-semibold transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />

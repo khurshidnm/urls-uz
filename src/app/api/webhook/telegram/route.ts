@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
       const chatId = msg.chat?.id;
       const text = (msg.text || '').trim();
       const from = msg.from || {};
-      const userId = `tg_${from.id}`;
+      const userId = `usr_tg_${from.id}`;
 
       if (!chatId) {
         return NextResponse.json({ ok: true });
@@ -218,7 +218,7 @@ export async function POST(req: NextRequest) {
       const cb = update.callback_query;
       const chatId = cb.message?.chat?.id;
       const data = (cb.data || '').trim();
-      const userId = `tg_${cb.from?.id}`;
+      const userId = `usr_tg_${cb.from?.id}`;
 
       if (!chatId) {
         await TelegramBot.answerCallbackQuery(cb.id);
@@ -271,7 +271,7 @@ export async function POST(req: NextRequest) {
           title: `Inline Telegram Link`,
           destination_url: query,
           slug,
-          userId: `tg_${iq.from?.id}`,
+          userId: `usr_tg_${iq.from?.id}`,
           open_in_app: detectAndBuildDeepLink(query).isDeepLinkable,
         });
 
@@ -352,6 +352,20 @@ async function processAndCreateShortLink(
     finalSlug = getUniqueSlug();
   }
 
+  // 10 ta faol havola bepul limiti tekshiruvi
+  const FREE_PLAN_LIMIT = 10;
+  const userLinks = db.getAllLinks(userId);
+  const activeCount = userLinks.filter((l) => l.is_archived !== 1).length;
+  if (activeCount >= FREE_PLAN_LIMIT) {
+    await TelegramBot.sendMessage(
+      chatId,
+      `⚠️ <b>Bepul tarif limiti to‘lgan (${activeCount}/${FREE_PLAN_LIMIT} ta faol havola).</b>\n\n` +
+        `Yangi havola yaratish uchun avval yaratilgan keraksiz havolalarni dashboard orqali arxivlang yoki o‘chiring.\n\n` +
+        `🚀 <i>Cheksiz havolalar va kengaytirilgan imkoniyatlarga ega Pro tarif tez kunda ishga tushadi!</i>`
+    );
+    return;
+  }
+
   // Deep Link aniqlash
   const deepLinkInfo = detectAndBuildDeepLink(destinationUrl);
   const isOpenInApp = deepLinkInfo.isDeepLinkable;
@@ -414,6 +428,13 @@ async function sendStatsMessage(chatId: number, slug: string) {
       .join('\n');
   }
 
+  let devicesText = '—';
+  if (analytics?.devices && analytics.devices.length > 0) {
+    devicesText = analytics.devices
+      .map((d) => `• ${d.device_type}: <b>${d.count}</b>`)
+      .join('\n');
+  }
+
   let referrersText = '—';
   if (analytics?.referrers && analytics.referrers.length > 0) {
     referrersText = analytics.referrers
@@ -429,6 +450,7 @@ async function sendStatsMessage(chatId: number, slug: string) {
     `👁 <b>Jami bosishlar:</b> <b>${formatNumber(totalClicks)}</b> ta\n` +
     `📅 <b>Yaratilgan sana:</b> ${link.created_at}\n\n` +
     `🇺🇿 <b>Viloyatlar kesimida:</b>\n${regionsText}\n\n` +
+    `📱 <b>Qurilmalar turi:</b>\n${devicesText}\n\n` +
     `🌐 <b>Trafik manbalari (Referrers):</b>\n${referrersText}`;
 
   const keyboard: TelegramInlineButton[][] = [
@@ -437,7 +459,7 @@ async function sendStatsMessage(chatId: number, slug: string) {
       { text: '🖼 QR Kod', callback_data: `qr:${link.slug}` },
     ],
     [
-      { text: '📈 Veb Dashboardda ko‘rish', url: `${APP_URL}/dashboard/analytics` },
+      { text: '📈 Veb Dashboardda ko‘rish', url: `${APP_URL}/dashboard/analytics?link_id=${link.id}` },
     ],
   ];
 

@@ -46,7 +46,8 @@ export const TelegramBot = {
    */
   verifySecretToken(headerSecret: string | null, expectedSecret?: string): boolean {
     const secret = expectedSecret || process.env.TELEGRAM_WEBHOOK_SECRET;
-    if (!secret) return true; // If no secret is configured, allow
+    // Without a secret anyone could post fake updates; allow that only in local development
+    if (!secret) return process.env.NODE_ENV !== 'production';
     if (!headerSecret) return false;
 
     try {

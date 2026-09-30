@@ -1,9 +1,11 @@
 import React from 'react';
-import { db } from '@/lib/db';
+import { db, toPublicLink } from '@/lib/db';
+import { getActor } from '@/lib/auth';
 import LinksManagerClient from './links-client';
 
-export default function LinksPage() {
-  const links = db.getAllLinks();
+export default async function LinksPage() {
+  const { ownerId } = await getActor();
+  const links = db.getAllLinks(ownerId).map(toPublicLink);
 
   return <LinksManagerClient initialLinks={links} />;
 }

@@ -26,17 +26,37 @@ import {
   Save,
   Loader2,
   Plus,
+  BarChart3,
+  AlertCircle,
+  Sparkles,
 } from 'lucide-react';
 import { formatNumber, formatDate } from '@/lib/utils';
+import { useAuth } from '@/lib/auth-context';
 
 interface Props {
   initialLinks: any[];
 }
 
 export default function LinksManagerClient({ initialLinks }: Props) {
+  const { user, isSuperAdmin, demoEditMode } = useAuth();
   const { t } = useLanguage();
   const { showToast } = useToast();
   const [links, setLinks] = useState(initialLinks);
+
+  const checkDemoRestricted = (actionName: string) => {
+    if (isSuperAdmin && demoEditMode) {
+      return false;
+    }
+    if (!user) {
+      window.dispatchEvent(
+        new CustomEvent('open-demo-restriction', { detail: { actionTitle: actionName } })
+      );
+      return true;
+    }
+    return false;
+  };
+
+  const getHeaders = () => ({ 'Content-Type': 'application/json' });
 
   // Sync links when initialLinks change or fetch latest
   React.useEffect(() => {
@@ -134,6 +154,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
 
   // Inline Title Save
   const saveInlineTitle = async (id: string) => {
+    if (checkDemoRestricted('Havola nomini o‘zgartirish')) return;
     if (!inlineTitleValue.trim()) {
       setInlineEditingTitleId(null);
       return;
@@ -142,7 +163,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
     try {
       const res = await fetch(`/api/links/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders(),
         body: JSON.stringify({ title: inlineTitleValue.trim() }),
       });
       const data = await res.json();
@@ -159,6 +180,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
 
   // Inline Tag Add
   const addInlineTag = async (linkId: string) => {
+    if (checkDemoRestricted('Teg qo‘shish')) return;
     if (!inlineTagValue.trim()) {
       setInlineTagId(null);
       return;
@@ -181,7 +203,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
     try {
       const res = await fetch(`/api/links/${linkId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders(),
         body: JSON.stringify({ tags: updatedTagsString }),
       });
       const data = await res.json();
@@ -199,6 +221,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
 
   // Inline Tag Remove
   const removeInlineTag = async (linkId: string, tagToRemove: string) => {
+    if (checkDemoRestricted('Tegni o‘chirish')) return;
     const targetLink = links.find((l) => l.id === linkId);
     if (!targetLink || !targetLink.tags) return;
 
@@ -212,7 +235,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
     try {
       const res = await fetch(`/api/links/${linkId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders(),
         body: JSON.stringify({ tags: updatedTagsString }),
       });
       const data = await res.json();
@@ -227,9 +250,13 @@ export default function LinksManagerClient({ initialLinks }: Props) {
 
   // Delete Single Link
   const handleDelete = async (id: string) => {
+    if (checkDemoRestricted('Havolani o‘chirish')) return;
     if (!confirm("Haqiqatan ham ushbu havolani o'chirmoqchimisiz?")) return;
     try {
-      const res = await fetch(`/api/links/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/links/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      });
       const data = await res.json();
       if (data.success) {
         setLinks(links.filter((l) => l.id !== id));
@@ -242,11 +269,12 @@ export default function LinksManagerClient({ initialLinks }: Props) {
 
   // Archive Single Link
   const handleToggleArchive = async (id: string, currentArchived: number = 0) => {
+    if (checkDemoRestricted('Havolani arxivlash')) return;
     const nextStatus = currentArchived === 1 ? 0 : 1;
     try {
       const res = await fetch(`/api/links/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders(),
         body: JSON.stringify({ is_archived: nextStatus }),
       });
       const data = await res.json();
@@ -279,9 +307,13 @@ export default function LinksManagerClient({ initialLinks }: Props) {
 
   // Batch Delete
   const handleBatchDelete = async () => {
+    if (checkDemoRestricted('Havolalarni o‘chirish')) return;
     if (!confirm(`${selectedIds.size} ta havolani o'chirmoqchimisiz?`)) return;
     for (const id of selectedIds) {
-      await fetch(`/api/links/${id}`, { method: 'DELETE' });
+      await fetch(`/api/links/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      });
     }
     setLinks(links.filter((l) => !selectedIds.has(l.id)));
     setSelectedIds(new Set());
@@ -290,10 +322,11 @@ export default function LinksManagerClient({ initialLinks }: Props) {
 
   // Batch Archive
   const handleBatchArchive = async (archive: boolean = true) => {
+    if (checkDemoRestricted('Havolalarni arxivlash')) return;
     for (const id of selectedIds) {
       await fetch(`/api/links/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders(),
         body: JSON.stringify({ is_archived: archive ? 1 : 0 }),
       });
     }
@@ -306,6 +339,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
 
   // Batch Tag Apply
   const applyBatchTag = async () => {
+    if (checkDemoRestricted('Teglarni o‘zgartirish')) return;
     if (!batchTagInput.trim()) return;
     const tagToAdd = batchTagInput.trim().toLowerCase();
 
@@ -318,7 +352,7 @@ export default function LinksManagerClient({ initialLinks }: Props) {
           const updated = curTags.join(', ');
           await fetch(`/api/links/${id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getHeaders(),
             body: JSON.stringify({ tags: updated }),
           });
         }
@@ -401,6 +435,65 @@ export default function LinksManagerClient({ initialLinks }: Props) {
           </button>
         </div>
       </div>
+
+      {/* Free Plan 10 Links Limit Usage Banner */}
+      <div className="p-4 rounded-2xl bg-zinc-950/80 border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
+            10
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-white">Bepul Tarif (Hozir Faol)</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                Havolalar: {links.filter((l) => l.is_archived !== 1).length} / 10
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-indigo-500/15 text-indigo-400 border border-indigo-500/25">
+                Deep Link: {links.filter((l) => l.is_archived !== 1 && l.open_in_app).length} / 1
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-purple-500/15 text-purple-400 border border-purple-500/25">
+                Qurilmalar: {links.filter((l) => l.is_archived !== 1 && (l.ios_url || l.android_url || l.huawei_url || l.desktop_url)).length} / 1 (100 klik/kun)
+              </span>
+            </div>
+            <p className="text-[11px] text-zinc-400 mt-1">
+              Cheksiz havolalar, cheksiz deep linklar va kengaytirilgan imkoniyatlar Pro tarifda tez kunda ishga tushadi.
+            </p>
+          </div>
+        </div>
+
+        {/* Mini progress bar */}
+        <div className="w-full sm:w-44 space-y-1">
+          <div className="flex justify-between text-[10px] font-mono text-zinc-500">
+            <span>Ishlatildi</span>
+            <span>{Math.round((links.filter((l) => l.is_archived !== 1).length / 10) * 100)}%</span>
+          </div>
+          <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+            <div
+              className={`h-full rounded-full transition-all ${
+                links.filter((l) => l.is_archived !== 1).length >= 10
+                  ? 'bg-amber-400'
+                  : 'bg-emerald-400'
+              }`}
+              style={{
+                width: `${Math.min(100, (links.filter((l) => l.is_archived !== 1).length / 10) * 100)}%`,
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Limit Reached Warning */}
+      {links.filter((l) => l.is_archived !== 1).length >= 10 && (
+        <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-300 flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold text-white">Bepul tarif limiti to‘lgan (10/10 ta faol havola). </span>
+            <span className="text-amber-200/90 text-[11px]">
+              Yangi havola yaratish uchun eskilarini arxivlang yoki o‘chiring. Cheksiz havolalar imkoniyati Pro tarifda tez kunda ishga tushadi!
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Tag Filters Row */}
       {allTags.length > 0 && (
@@ -630,9 +723,14 @@ export default function LinksManagerClient({ initialLinks }: Props) {
                           Deep Link
                         </Badge>
                       )}
-                      {link.password && (
+                      {link.has_password && (
                         <Badge variant="warning" size="xs" icon={<Shield className="w-3 h-3" />}>
                           Parolli
+                        </Badge>
+                      )}
+                      {Boolean(link.ios_url || link.android_url || link.huawei_url || link.desktop_url) && (
+                        <Badge variant="purple" size="xs" icon={<Smartphone className="w-3 h-3" />}>
+                          Qurilmalar
                         </Badge>
                       )}
                     </div>
@@ -718,9 +816,14 @@ export default function LinksManagerClient({ initialLinks }: Props) {
                     <div className="flex items-center gap-4 text-[11px] text-zinc-500 mt-2">
                       <span className="font-mono">{formatDate(link.created_at)}</span>
                       <span className="text-zinc-700">•</span>
-                      <span className="text-zinc-200 font-medium font-mono tabular-nums">
-                        {formatNumber(link.click_count)} clicks
-                      </span>
+                      <a
+                        href={`/dashboard/analytics?link_id=${link.id}`}
+                        className="text-zinc-200 hover:text-indigo-400 font-medium font-mono tabular-nums transition-colors flex items-center gap-1 group/clicks"
+                        title="Ushbu havola bo‘yicha batafsil analitika"
+                      >
+                        <span>{formatNumber(link.click_count)} clicks</span>
+                        <BarChart3 className="w-3 h-3 text-indigo-400 opacity-60 group-hover/clicks:opacity-100 transition-opacity" />
+                      </a>
                     </div>
                   </div>
 
@@ -742,6 +845,15 @@ export default function LinksManagerClient({ initialLinks }: Props) {
                       )}
                       <span className="hidden sm:inline font-mono">{isCopied ? 'Copied' : 'Copy'}</span>
                     </button>
+
+                    {/* Analytics Direct Button */}
+                    <a
+                      href={`/dashboard/analytics?link_id=${link.id}`}
+                      className="p-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-indigo-300 border border-zinc-800 transition-colors"
+                      title="Havola bo‘yicha batafsil analitika"
+                    >
+                      <BarChart3 className="w-3.5 h-3.5" />
+                    </a>
 
                     {/* QR Button */}
                     <button

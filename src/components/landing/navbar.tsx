@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/language-context';
 import { useAuth } from '@/lib/auth-context';
-import { ArrowRight, Menu, X, Link2, Terminal } from 'lucide-react';
+import { ArrowRight, Menu, X, Link2, Terminal, Eye } from 'lucide-react';
 import { Locale } from '@/lib/translations';
 
 export default function Navbar() {
@@ -119,6 +119,13 @@ export default function Navbar() {
             </div>
           ) : (
             <div className="flex items-center gap-1.5">
+              <Link
+                href="/dashboard?demo=true"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 rounded-md border border-amber-500/30 transition-all"
+              >
+                <Eye className="w-3 h-3 text-amber-400" />
+                <span>{locale === 'uz' ? 'Demo ko‘rish' : locale === 'ru' ? 'Демо' : 'Live Demo'}</span>
+              </Link>
               <button
                 onClick={() => openAuthModal()}
                 className="px-2.5 py-1.5 text-xs font-medium text-zinc-300 hover:text-white bg-zinc-900/60 hover:bg-zinc-900 rounded-md border border-zinc-800 transition-colors"
@@ -138,6 +145,14 @@ export default function Navbar() {
 
         {/* Mobile Menu Button */}
         <div className="md:hidden flex items-center gap-2">
+          {!user && (
+            <Link
+              href="/dashboard?demo=true"
+              className="px-2.5 py-1 text-xs font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-md"
+            >
+              Demo
+            </Link>
+          )}
           {!user && (
             <button
               onClick={() => openAuthModal()}

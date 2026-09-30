@@ -1,9 +1,11 @@
 import React from 'react';
-import { db } from '@/lib/db';
+import { db, toPublicApiKey } from '@/lib/db';
+import { getActor } from '@/lib/auth';
 import ApiKeysClient from './api-keys-client';
 
-export default function ApiKeysPage() {
-  const keys = db.getApiKeys('demo_user');
+export default async function ApiKeysPage() {
+  const { ownerId } = await getActor();
+  const keys = db.getApiKeys(ownerId).map(toPublicApiKey);
 
   return <ApiKeysClient initialKeys={keys} />;
 }

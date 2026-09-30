@@ -89,13 +89,9 @@ export default function ShortenCard() {
     try {
       const res = await fetch('/api/links', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(user ? { 'x-user-id': user.id } : {}),
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           destination_url: processedUrl,
-          user_id: user?.id,
           password: password.trim() || undefined,
           expires_at: expiresAt || undefined,
         }),

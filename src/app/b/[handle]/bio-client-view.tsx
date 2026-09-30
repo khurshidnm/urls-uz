@@ -10,7 +10,7 @@ import {
   X,
   Check,
 } from 'lucide-react';
-import { TelegramIcon, InstagramIcon, YouTubeIcon, LinkedInIcon, GitHubIcon } from '@/components/ui/icons';
+import { TelegramIcon, InstagramIcon, YouTubeIcon, LinkedInIcon, GitHubIcon, TikTokIcon, TwitterXIcon } from '@/components/ui/icons';
 import { QrCanvas } from '@/components/ui/qr-canvas';
 
 interface BioClientViewProps {
@@ -83,6 +83,20 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
       subtext: 'text-slate-600',
       button: 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 shadow-sm',
     },
+    ocean: {
+      bg: 'bg-gradient-to-b from-[#0a192f] via-slate-950 to-[#020c1b]',
+      card: 'bg-sky-950/40 border-sky-800/40 text-sky-100',
+      text: 'text-sky-100',
+      subtext: 'text-sky-300/70',
+      button: 'bg-sky-900/40 hover:bg-sky-800/40 text-sky-100 border-sky-600/40 shadow-sky-950/50',
+    },
+    ruby: {
+      bg: 'bg-gradient-to-b from-[#2a0812] via-slate-950 to-zinc-950',
+      card: 'bg-rose-950/40 border-rose-800/40 text-rose-100',
+      text: 'text-rose-100',
+      subtext: 'text-rose-300/70',
+      button: 'bg-gradient-to-r from-rose-700/40 to-pink-700/40 hover:from-rose-700/60 hover:to-pink-700/60 text-white border-rose-500/40 shadow-rose-950/50',
+    },
   };
 
   const currentTheme = themeClasses[bioPage.theme] || themeClasses.midnight;
@@ -135,6 +149,12 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
     } else if (network === 'linkedin') {
       href = value.startsWith('http') ? value : `https://linkedin.com/in/${value}`;
       icon = <LinkedInIcon className="w-5 h-5 text-[#0077B5]" />;
+    } else if (network === 'tiktok') {
+      href = value.startsWith('http') ? value : `https://tiktok.com/@${value.replace(/^@/, '')}`;
+      icon = <TikTokIcon className="w-5 h-5 text-white" />;
+    } else if (network === 'twitter' || network === 'x') {
+      href = value.startsWith('http') ? value : `https://x.com/${value.replace(/^@/, '')}`;
+      icon = <TwitterXIcon className="w-5 h-5 text-white" />;
     }
 
     return (

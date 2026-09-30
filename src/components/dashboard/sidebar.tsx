@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  Shield,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -28,7 +29,7 @@ interface SidebarProps {
 export default function Sidebar({ onCreateLink }: SidebarProps) {
   const pathname = usePathname();
   const { t, locale } = useLanguage();
-  const { user, logout } = useAuth();
+  const { user, logout, openAuthModal, isSuperAdmin, demoEditMode, setDemoEditMode } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
   const navigation = [
@@ -90,8 +91,14 @@ export default function Sidebar({ onCreateLink }: SidebarProps) {
           {!collapsed && (
             <span className="font-semibold text-sm tracking-tight text-white font-mono flex items-center gap-1.5">
               urls<span className="text-zinc-500">.uz</span>
-              <span className="px-1.5 py-0.2 rounded bg-zinc-800 text-[10px] text-zinc-400 font-mono uppercase">
-                {user?.plan || 'pro'}
+              <span
+                className={`px-1.5 py-0.5 rounded text-[10px] font-mono uppercase font-bold ${
+                  !user
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    : 'bg-zinc-800 text-zinc-400'
+                }`}
+              >
+                {!user ? 'demo' : (user.plan || 'free')}
               </span>
             </span>
           )}
@@ -102,20 +109,6 @@ export default function Sidebar({ onCreateLink }: SidebarProps) {
           title={collapsed ? 'Kengaytirish' : "Yig'ish"}
         >
           {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
-        </button>
-      </div>
-
-      {/* Quick Create Link CTA */}
-      <div className={`${collapsed ? 'px-2' : 'px-3'} pt-3 pb-2`}>
-        <button
-          onClick={onCreateLink}
-          className={`w-full flex items-center ${
-            collapsed ? 'justify-center' : 'justify-center gap-1.5'
-          } px-3 py-1.5 bg-white text-zinc-950 hover:bg-zinc-200 text-xs font-semibold rounded-lg shadow-sm transition-all active:scale-[0.98]`}
-          title="Yangi havola yaratish (⌘K)"
-        >
-          <Plus className="w-3.5 h-3.5 shrink-0" />
-          {!collapsed && <span>{t.createNewLink}</span>}
         </button>
       </div>
 
@@ -154,9 +147,9 @@ export default function Sidebar({ onCreateLink }: SidebarProps) {
             <span>Bio Portal</span>
             <ExternalLink className="w-2.5 h-2.5 text-zinc-500" />
           </div>
-          <p className="text-[10px] text-zinc-500 mb-1.5 truncate font-mono">urls.uz/b/urls</p>
+          <p className="text-[10px] text-zinc-500 mb-1.5 truncate font-mono">urls.uz/b/apextech</p>
           <Link
-            href="/b/urls"
+            href="/b/apextech"
             target="_blank"
             className="block w-full py-1 text-center text-[10px] font-mono font-medium text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded transition-colors"
           >
@@ -165,15 +158,39 @@ export default function Sidebar({ onCreateLink }: SidebarProps) {
         </div>
       )}
 
+      {/* Super Admin Demo Switcher */}
+      {!collapsed && isSuperAdmin && (
+        <div className="px-3 pb-2">
+          <button
+            onClick={() => setDemoEditMode(!demoEditMode)}
+            className={`w-full py-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-between border transition-all cursor-pointer ${
+              demoEditMode
+                ? 'bg-purple-900/40 border-purple-500/60 text-purple-200 shadow-sm'
+                : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
+            }`}
+          >
+            <span className="flex items-center gap-1.5">
+              <Shield className="w-3.5 h-3.5 text-purple-400" />
+              <span>Demo Tahrirlash</span>
+            </span>
+            <span
+              className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${
+                demoEditMode ? 'bg-purple-500 text-white' : 'bg-zinc-800 text-zinc-500'
+              }`}
+            >
+              {demoEditMode ? 'FAOL' : 'O‘CHIK'}
+            </span>
+          </button>
+        </div>
+      )}
+
       {/* User Info Bar */}
       <div className={`${collapsed ? 'px-2' : 'px-3'} py-2.5 border-t border-zinc-800/80 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
         {collapsed ? (
-          <img
-            src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-            alt="Avatar"
-            className="w-7 h-7 rounded-full object-cover bg-zinc-800"
-          />
-        ) : (
+          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-500 to-indigo-500 text-white flex items-center justify-center font-bold text-xs">
+            {user?.name?.[0]?.toUpperCase() || 'A'}
+          </div>
+        ) : user ? (
           <>
             <div className="flex items-center gap-2 min-w-0">
               <img
@@ -182,8 +199,15 @@ export default function Sidebar({ onCreateLink }: SidebarProps) {
                 className="w-6 h-6 rounded-full object-cover bg-zinc-800 shrink-0"
               />
               <div className="min-w-0">
-                <p className="text-xs font-medium text-zinc-200 truncate">{user?.name || 'Khurshid'}</p>
-                <p className="text-[10px] text-zinc-500 truncate font-mono">{user?.email || 'admin@urls.uz'}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-medium text-zinc-200 truncate">{user?.name || 'Foydalanuvchi'}</p>
+                  {isSuperAdmin && (
+                    <span className="text-[9px] font-bold px-1 bg-purple-500/20 text-purple-300 rounded border border-purple-500/30">
+                      ADMIN
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-zinc-500 truncate font-mono">{user?.email || 'user@urls.uz'}</p>
               </div>
             </div>
 
@@ -193,6 +217,26 @@ export default function Sidebar({ onCreateLink }: SidebarProps) {
               className="p-1 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors shrink-0"
             >
               <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-amber-500 to-indigo-500 text-white flex items-center justify-center font-bold text-[10px] shrink-0">
+                A
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-zinc-200 truncate">ApexTech Solutions</p>
+                <p className="text-[10px] text-amber-400 truncate font-mono">Demo Rejimi</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => openAuthModal()}
+              title="Bepul ro‘yxatdan o‘tish"
+              className="px-2 py-1 text-[11px] font-bold text-zinc-950 bg-white hover:bg-zinc-200 rounded transition-colors shrink-0 cursor-pointer"
+            >
+              Kirish
             </button>
           </>
         )}

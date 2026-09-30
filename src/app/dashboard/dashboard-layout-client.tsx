@@ -4,15 +4,30 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/dashboard/sidebar';
 import Topbar from '@/components/dashboard/topbar';
 import CreateLinkDrawer from '@/components/dashboard/create-link-modal';
-import { Plus } from 'lucide-react';
+import { DemoBanner } from '@/components/dashboard/demo-banner';
+import { DemoRestrictionModal } from '@/components/dashboard/demo-restriction-modal';
+import { useAuth } from '@/lib/auth-context';
 
 export default function DashboardLayoutClient({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { user, openAuthModal, isSuperAdmin, demoEditMode } = useAuth();
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
+  const [demoModalOpen, setDemoModalOpen] = useState(false);
+  const [demoActionTitle, setDemoActionTitle] = useState<string | undefined>();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Trigger link creation or show demo restriction if not logged in
+  const handleRequestCreateLink = (actionTitle = 'Yangi havola yaratish') => {
+    if (!user && !isSuperAdmin) {
+      setDemoActionTitle(actionTitle);
+      setDemoModalOpen(true);
+      return;
+    }
+    setCreateDrawerOpen(true);
+  };
 
   // Global hotkeys: Cmd+K / Ctrl+K and key 'c'
   useEffect(() => {
@@ -20,7 +35,7 @@ export default function DashboardLayoutClient({
       // Cmd+K or Ctrl+K
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setCreateDrawerOpen((prev) => !prev);
+        handleRequestCreateLink();
         return;
       }
 
@@ -34,19 +49,26 @@ export default function DashboardLayoutClient({
 
       if (!isInput && !e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'c') {
         e.preventDefault();
-        setCreateDrawerOpen(true);
+        handleRequestCreateLink();
       }
     };
 
-    const handleOpenEvent = () => setCreateDrawerOpen(true);
+    const handleOpenEvent = () => handleRequestCreateLink();
+    const handleDemoEvent = (e: any) => {
+      if (isSuperAdmin && demoEditMode) return;
+      setDemoActionTitle(e.detail?.actionTitle);
+      setDemoModalOpen(true);
+    };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('open-create-link', handleOpenEvent);
+    window.addEventListener('open-demo-restriction', handleDemoEvent);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('open-create-link', handleOpenEvent);
+      window.removeEventListener('open-demo-restriction', handleDemoEvent);
     };
-  }, []);
+  }, [user]);
 
   return (
     <div className="flex h-screen bg-[var(--background)] text-slate-100 overflow-hidden relative">
@@ -60,34 +82,25 @@ export default function DashboardLayoutClient({
 
       {/* Sidebar */}
       <div className={`${mobileSidebarOpen ? 'fixed inset-y-0 left-0 z-50 block' : 'hidden'} md:relative md:block`}>
-        <Sidebar onCreateLink={() => { setCreateDrawerOpen(true); setMobileSidebarOpen(false); }} />
+        <Sidebar onCreateLink={() => { handleRequestCreateLink('Yangi havola yaratish'); setMobileSidebarOpen(false); }} />
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Topbar
-          onCreateLink={() => setCreateDrawerOpen(true)}
+          onCreateLink={() => handleRequestCreateLink('Yangi havola yaratish')}
           onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
         />
+        
+        {/* Demo Mode Notice Banner */}
+        <DemoBanner onStartFree={() => { setDemoActionTitle('Bepul ro‘yxatdan o‘tish'); openAuthModal(); }} />
+
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-dot-pattern">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>
         </main>
       </div>
-
-      {/* Floating Action Button (FAB) for quick create */}
-      <button
-        onClick={() => setCreateDrawerOpen(true)}
-        className="fixed bottom-6 right-6 z-30 flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-btn text-white font-semibold text-xs shadow-xl shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-105 active:scale-95 transition-all group"
-        title="Yangi havola yaratish (Hotkey: C yoki ⌘K)"
-      >
-        <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
-        <span className="hidden sm:inline">Havola yaratish</span>
-        <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-black/25 text-white/80 rounded border border-white/10">
-          C
-        </kbd>
-      </button>
 
       {/* Global Create Link Drawer */}
       <CreateLinkDrawer
@@ -97,6 +110,17 @@ export default function DashboardLayoutClient({
           if (typeof window !== 'undefined') {
             window.location.reload();
           }
+        }}
+      />
+
+      {/* Demo Mode Restriction Modal */}
+      <DemoRestrictionModal
+        isOpen={demoModalOpen}
+        onClose={() => setDemoModalOpen(false)}
+        actionTitle={demoActionTitle}
+        onStartFree={() => {
+          setDemoModalOpen(false);
+          openAuthModal();
         }}
       />
     </div>

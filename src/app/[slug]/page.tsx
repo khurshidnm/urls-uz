@@ -1,9 +1,11 @@
 import React from 'react';
 import { notFound, redirect } from 'next/navigation';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { db } from '@/lib/db';
 import { detectAndBuildDeepLink, resolveDeviceRedirect } from '@/lib/deep-link';
 import { resolveRegionFromHeaders } from '@/lib/geo';
+import { getClientIp } from '@/lib/auth';
+import { hashIp, isUnlocked, unlockCookieName } from '@/lib/link-unlock';
 import { isReservedSlug, appendUtmParams } from '@/lib/utils';
 import { UAParser } from 'ua-parser-js';
 import { Lock, AlertCircle, ArrowLeft } from 'lucide-react';
@@ -57,33 +59,12 @@ export default async function SlugRedirectPage({ params }: Props) {
 
   // 2. Check click limit
   if (link.click_limit && link.click_count >= link.click_limit) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-zinc-900/90 rounded-xl p-8 text-center border border-zinc-800 shadow-xl">
-          <div className="w-12 h-12 bg-rose-500/10 text-rose-400 rounded-lg flex items-center justify-center mx-auto mb-4 border border-rose-500/20">
-            <AlertCircle className="w-6 h-6" />
-          </div>
-          <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-mono font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20 mb-3">
-            STATUS // CLICK_LIMIT_REACHED
-          </span>
-          <h2 className="text-lg font-semibold text-white mb-2 tracking-tight">Bosishlar limiti tugagan</h2>
-          <p className="text-zinc-400 text-xs mb-6 leading-relaxed">
-            Ushbu havola uchun ajratilgan maksimal tashriflar soniga yetib bo‘lingan.
-          </p>
-          <a
-            href="/"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-medium transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>urls.uz Bosh sahifasi</span>
-          </a>
-        </div>
-      </div>
-    );
+    return <ClickLimitReached />;
   }
 
-  // 3. Password protection
-  if (link.password) {
+  // 3. Password protection (the destination is never sent to the browser before unlock)
+  const cookieStore = await cookies();
+  if (link.password && !isUnlocked(link, cookieStore.get(unlockCookieName(link))?.value)) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-zinc-900/90 rounded-xl p-8 border border-zinc-800 shadow-xl">
@@ -99,7 +80,7 @@ export default async function SlugRedirectPage({ params }: Props) {
               Manzilga xavfsiz o‘tish uchun belgilangan parolni kiriting.
             </p>
           </div>
-          <PasswordUnlockForm slug={slug} destinationUrl={link.destination_url} />
+          <PasswordUnlockForm slug={slug} />
         </div>
       </div>
     );
@@ -111,27 +92,38 @@ export default async function SlugRedirectPage({ params }: Props) {
   const refererStr = headerList.get('referer') || 'Direct';
 
   const parser = new UAParser(userAgentStr);
-  const deviceType = parser.getDevice().type || 'desktop';
-  const osName = parser.getOS().name || 'Other';
-  const browserName = parser.getBrowser().name || 'Other';
+  // ua-parser-js leaves device type empty for desktops
+  const deviceType = parser.getDevice().type || (userAgentStr ? 'desktop' : 'Unknown');
+  const osName = parser.getOS().name || 'Unknown';
+  const browserName = parser.getBrowser().name || 'Unknown';
 
   const geoInfo = resolveRegionFromHeaders(headerList);
 
-  // 4. Analytics Async Isolation: Tracking failures must never interrupt the redirect flow
-  try {
-    db.recordClick({
-      link_id: link.id,
-      referer: refererStr.includes('t.me') ? 'Telegram' : refererStr.includes('instagram') ? 'Instagram' : refererStr.includes('google') ? 'Google' : 'Direct',
-      country: geoInfo.country,
-      region: geoInfo.region,
-      city: geoInfo.city,
-      device_type: deviceType,
-      os: osName,
-      browser: browserName,
-    });
-  } catch (trackingErr) {
-    // Non-fatal telemetry failure log; client redirect proceeds unaffected
-    console.error('[Analytics Async Isolation] Telemetry warning:', trackingErr);
+  // 4. Analytics Async Isolation: Tracking failures must never interrupt the redirect flow.
+  // Link-preview crawlers (Telegram, WhatsApp, ...) are not visitors and are not counted.
+  let withinLimit = true;
+  if (!BOT_UA.test(userAgentStr)) {
+    try {
+      withinLimit = db.recordClick({
+        link_id: link.id,
+        ip_hash: hashIp(getClientIp(headerList)),
+        referer: refererStr.includes('t.me') ? 'Telegram' : refererStr.includes('instagram') ? 'Instagram' : refererStr.includes('google') ? 'Google' : 'Direct',
+        country: geoInfo.country,
+        region: geoInfo.region,
+        city: geoInfo.city,
+        device_type: deviceType,
+        os: osName,
+        browser: browserName,
+      });
+    } catch (trackingErr) {
+      // Non-fatal telemetry failure log; client redirect proceeds unaffected
+      console.error('[Analytics Async Isolation] Telemetry warning:', trackingErr);
+    }
+  }
+
+  // Another request used the last allowed click between the check above and now
+  if (!withinLimit) {
+    return <ClickLimitReached />;
   }
 
   // 5. Intelligent Device Routing (iOS, Huawei, Android, Desktop, Fallback)
@@ -172,4 +164,32 @@ export default async function SlugRedirectPage({ params }: Props) {
 
   // Direct fast HTTP 307 redirect (sub-15ms)
   redirect(targetUrl);
+}
+
+const BOT_UA = /bot|crawl|spider|preview|facebookexternalhit|whatsapp|slack|discord|embedly|vkshare|skypeuripreview|headless/i;
+
+function ClickLimitReached() {
+  return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-zinc-900/90 rounded-xl p-8 text-center border border-zinc-800 shadow-xl">
+          <div className="w-12 h-12 bg-rose-500/10 text-rose-400 rounded-lg flex items-center justify-center mx-auto mb-4 border border-rose-500/20">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-mono font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20 mb-3">
+            STATUS // CLICK_LIMIT_REACHED
+          </span>
+          <h2 className="text-lg font-semibold text-white mb-2 tracking-tight">Bosishlar limiti tugagan</h2>
+          <p className="text-zinc-400 text-xs mb-6 leading-relaxed">
+            Ushbu havola uchun ajratilgan maksimal tashriflar soniga yetib bo‘lingan.
+          </p>
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-medium transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>urls.uz Bosh sahifasi</span>
+          </a>
+        </div>
+      </div>
+  );
 }
