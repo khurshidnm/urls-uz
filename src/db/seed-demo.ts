@@ -4,6 +4,7 @@ import type { Database } from './client';
 import { apiKeys, bioLinks, bioPages, clicks, links, workspaces } from './schema';
 import { DEMO_WORKSPACE_ID, hashLinkPassword, sha256 } from '@/lib/db';
 import { rebuildLinkStats } from '@/lib/clicks/recorder';
+import { DEVICE_DEMO_APPS } from '@/lib/device-demo';
 
 /**
  * (Re)creates the read-only demo workspace shown to visitors who aren't
@@ -97,6 +98,21 @@ export async function seedDemo(pg: Database) {
       },
     ]);
 
+
+    // The landing page's device-routing demo: one short link per app, routed by device
+    await tx.insert(links).values(
+      DEVICE_DEMO_APPS.map((app) => ({
+        ...base,
+        id: `demo_device_${app.id}`,
+        title: `${app.name} ilovasi (qurilmaga qarab)`,
+        destination_url: app.web,
+        slug: app.slug,
+        ios_url: app.ios,
+        android_url: app.android,
+        huawei_url: app.huawei,
+        tags: ['Qurilmalar'],
+      }))
+    );
 
     await tx.insert(bioPages).values({
       id: 'bio_demo',

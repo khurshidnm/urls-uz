@@ -46,11 +46,6 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Real-time System Status Pill (Linear / Stripe style) */}
-          <div className="hidden lg:flex items-center gap-2 px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Edge Engine: 11.4ms</span>
-          </div>
         </div>
 
         {/* Desktop Navigation Links */}
