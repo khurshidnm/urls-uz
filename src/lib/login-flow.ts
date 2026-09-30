@@ -8,7 +8,17 @@ export const PENDING_URL_COOKIE = 'urls_pending_url';
 
 /** CSRF protection for the Google OAuth redirect. */
 export const OAUTH_STATE_COOKIE = 'urls_oauth_state';
+/** Marks an OAuth state as "connect this login method to my account". */
+export const CONNECT_STATE_SUFFIX = '.connect';
 
+
+/**
+ * Phone login sends codes through Telegram Gateway. Without it there's no way
+ * to deliver a code, so it's offered only in development (the code is shown on screen).
+ */
+export function phoneLoginAvailable(): boolean {
+  return Boolean(process.env.TELEGRAM_GATEWAY_TOKEN) || process.env.NODE_ENV !== 'production';
+}
 
 /** OAuth redirect URIs must match exactly, so production uses the configured public URL. */
 export function appOrigin(request: NextRequest): string {
@@ -50,6 +60,11 @@ export async function completeRedirectLogin(request: NextRequest, userId: string
   await setSessionCookie(response, userId);
   if (pendingUrl) response.cookies.delete(PENDING_URL_COOKIE);
   return response;
+}
+
+/** After connecting a login method from settings: back to settings with the outcome. */
+export function connectRedirect(request: NextRequest, params: Record<string, string>): NextResponse {
+  return NextResponse.redirect(`${appOrigin(request)}/dashboard/settings?${new URLSearchParams(params)}#login-methods`);
 }
 
 export function loginErrorRedirect(request: NextRequest, message: string): NextResponse {

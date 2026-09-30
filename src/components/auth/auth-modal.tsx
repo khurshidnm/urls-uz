@@ -40,7 +40,8 @@ function formatUzbekPhone(raw: string): string {
   return formatted;
 }
 
-export default function AuthModal() {
+/** `phoneLoginAvailable`: codes can be delivered (Telegram Gateway), or this is development. */
+export default function AuthModal({ phoneLoginAvailable }: { phoneLoginAvailable: boolean }) {
   const {
     isAuthModalOpen,
     closeAuthModal,
@@ -252,6 +253,8 @@ export default function AuthModal() {
               <TelegramLoginWidget botUsername={botUsername} />
             </div>
 
+            {phoneLoginAvailable && (
+            <>
             {/* Divider */}
             <div className="relative flex py-1 items-center">
               <div className="flex-grow border-t border-[var(--border-subtle)]"></div>
@@ -340,7 +343,7 @@ export default function AuthModal() {
                     className="w-full p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 hover:bg-emerald-500/15 text-xs text-center transition-all flex items-center justify-center gap-2 group"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-                    <span>Dev rejimi kodi: <strong className="font-mono font-bold tracking-wider">{demoCodeHint}</strong></span>
+                    <span>Dev rejimi (Telegram Gateway sozlanmagan), kod: <strong className="font-mono font-bold tracking-wider">{demoCodeHint}</strong></span>
                     <span className="text-[10px] text-emerald-300/70 underline group-hover:text-emerald-300">
                       (1-bosishda kiritish)
                     </span>
@@ -415,6 +418,8 @@ export default function AuthModal() {
                   </div>
                 </div>
               </form>
+            )}
+            </>
             )}
           </div>
         )}

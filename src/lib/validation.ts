@@ -265,15 +265,22 @@ export const createApiKeySchema = z.object({
 });
 
 export const telegramAuthSchema = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('verify-widget'), widgetData: z.record(z.string(), z.unknown()) }),
+  // `connect`: add this login method to the logged-in account (from settings)
+  z.object({ action: z.literal('verify-widget'), widgetData: z.record(z.string(), z.unknown()), connect: z.boolean().optional() }),
   z.object({ action: z.literal('send-otp'), phone: z.string().max(32) }),
   z.object({
     action: z.literal('verify-otp'),
     phone: z.string().max(32),
     code: z.string().trim().regex(/^\d{4,8}$/, 'Kod noto‘g‘ri'),
     name: z.string().trim().max(80).optional(),
+    connect: z.boolean().optional(),
   }),
 ]);
+
+export const disconnectIdentitySchema = z.object({
+  provider: z.enum(['google', 'telegram', 'phone']),
+  providerId: z.string().min(1).max(200),
+});
 
 export const demoEditSchema = z.object({ active: z.boolean() });
 

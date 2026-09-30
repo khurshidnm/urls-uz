@@ -1,9 +1,9 @@
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { db, type UserRecord } from '@/lib/db';
-import { getClientIp, roleFor, setSessionCookie, toClientUser } from '@/lib/auth';
+import { getClientIp, getSessionUser, setSessionCookie, toClientUser } from '@/lib/auth';
+import { signIn, type LoginProfile } from '@/lib/accounts';
 import { rateLimit } from '@/lib/rate-limit';
-import { pickTelegramFields, upsertTelegramUser, verifyTelegramLogin } from '@/lib/telegram-auth';
+import { pickTelegramFields, telegramProfile, verifyTelegramLogin } from '@/lib/telegram-auth';
 import { parseJson, telegramAuthSchema } from '@/lib/validation';
 
 const GATEWAY_URL = 'https://gatewayapi.telegram.org';
@@ -42,9 +42,21 @@ async function callGateway(method: string, payload: Record<string, unknown>) {
   return res.json();
 }
 
-async function loginResponse(user: UserRecord) {
-  const response = NextResponse.json({ success: true, user: toClientUser(user) });
-  await setSessionCookie(response, user.id);
+/**
+ * Logs in with a verified login method, or with `connect` adds it to the
+ * logged-in account (settings). Connecting keeps the current session.
+ */
+async function loginResponse(profile: LoginProfile, connect: boolean | undefined) {
+  const current = connect ? await getSessionUser() : null;
+  if (connect && !current) {
+    return NextResponse.json({ success: false, error: 'Avval tizimga kiring' }, { status: 401 });
+  }
+  const result = await signIn(profile, { connectTo: current?.id });
+  if (!result.ok) {
+    return NextResponse.json({ success: false, error: result.error, code: result.code }, { status: 409 });
+  }
+  const response = NextResponse.json({ success: true, user: toClientUser(result.user), outcome: result.outcome });
+  if (!current) await setSessionCookie(response, result.user.id);
   return response;
 }
 
@@ -63,7 +75,7 @@ export async function POST(request: NextRequest) {
     if (!verifyTelegramLogin(data)) {
       return NextResponse.json({ success: false, error: 'Telegram xavfsizlik imzosi noto‘g‘ri' }, { status: 401 });
     }
-    return loginResponse(await upsertTelegramUser(data));
+    return loginResponse(telegramProfile(data), body.connect);
   }
 
   // --- Phone OTP: send code ---
@@ -142,14 +154,16 @@ export async function POST(request: NextRequest) {
     }
     pendingOtps.delete(phone);
 
-    const user = await db.upsertUser({
-      provider: 'phone',
-      providerId: phone,
-      phone: `+${phone}`,
-      name: body.name || `Foydalanuvchi (${phone.slice(-4)})`,
-      role: roleFor({}),
-    });
-    return loginResponse(user);
+    return loginResponse(
+      {
+        provider: 'phone',
+        providerId: phone,
+        phone: `+${phone}`,
+        name: body.name || `Foydalanuvchi (${phone.slice(-4)})`,
+        label: `+${phone}`,
+      },
+      body.connect
+    );
   }
 
   return NextResponse.json({ success: false, error: 'Noto‘g‘ri amal' }, { status: 400 });

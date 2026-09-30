@@ -1,6 +1,6 @@
 import crypto from 'crypto';
-import { db, type UserRecord } from '@/lib/db';
-import { roleFor } from '@/lib/auth';
+import type { UserRecord } from '@/lib/db';
+import { signIn, type LoginProfile } from '@/lib/accounts';
 
 const MAX_AUTH_AGE_SECONDS = 60 * 60 * 24;
 
@@ -36,16 +36,22 @@ export function pickTelegramFields(source: Record<string, unknown>): Record<stri
   return out;
 }
 
-export function upsertTelegramUser(data: Record<string, string>): Promise<UserRecord> {
-  const name =
-    [data.first_name, data.last_name].filter(Boolean).join(' ') ||
-    (data.username ? `@${data.username}` : 'Telegram foydalanuvchisi');
-
-  return db.upsertUser({
+/** A verified Telegram login (widget, or a message to the bot) as a login method. */
+export function telegramProfile(data: Record<string, string>): LoginProfile {
+  const fullName = [data.first_name, data.last_name].filter(Boolean).join(' ');
+  const name = fullName || (data.username ? `@${data.username}` : 'Telegram foydalanuvchisi');
+  return {
     provider: 'telegram',
     providerId: data.id,
     name,
+    label: data.username ? `${fullName || name} (@${data.username})` : name,
     avatarUrl: data.photo_url,
-    role: roleFor({ telegramId: data.id }),
-  });
+  };
+}
+
+/** The account for a Telegram user, created on first use. */
+export async function upsertTelegramUser(data: Record<string, string>): Promise<UserRecord> {
+  const result = await signIn(telegramProfile(data));
+  if (!result.ok) throw new Error(result.error);
+  return result.user;
 }

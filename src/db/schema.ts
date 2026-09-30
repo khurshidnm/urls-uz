@@ -49,7 +49,27 @@ export const users = pgTable(
     created_at: createdAt(),
     last_login_at: timestamp('last_login_at', { withTimezone: true }),
   },
-  (t) => [uniqueIndex('users_provider_identity').on(t.provider, t.provider_id)]
+  // Logins are looked up in user_identities; this only records the first login method
+  (t) => [index('users_provider_identity').on(t.provider, t.provider_id)]
+);
+
+/**
+ * The ways a user can log in. One person can connect Google, Telegram and a
+ * phone number to the same account; each login method belongs to one user.
+ * (users.provider / provider_id record how the account was first created.)
+ */
+export const userIdentities = pgTable(
+  'user_identities',
+  {
+    provider: authProvider('provider').notNull(),
+    provider_id: text('provider_id').notNull(),
+    user_id: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    /** What to show in settings: the Google email, the Telegram name or @username, the phone number. */
+    label: text('label'),
+    created_at: createdAt(),
+    last_login_at: timestamp('last_login_at', { withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.provider, t.provider_id] }), index('user_identities_user').on(t.user_id)]
 );
 
 export const sessions = pgTable(

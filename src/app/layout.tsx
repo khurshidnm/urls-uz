@@ -3,6 +3,7 @@ import './globals.css';
 import { LanguageProvider } from '@/lib/language-context';
 import { AuthProvider } from '@/lib/auth-context';
 import AuthModal from '@/components/auth/auth-modal';
+import { phoneLoginAvailable } from '@/lib/login-flow';
 import { ToastProvider } from '@/components/ui/toast';
 
 export const metadata: Metadata = {
@@ -35,7 +36,7 @@ export default function RootLayout({
           <AuthProvider>
             <ToastProvider>
               {children}
-              <AuthModal />
+              <AuthModal phoneLoginAvailable={phoneLoginAvailable()} />
             </ToastProvider>
           </AuthProvider>
         </LanguageProvider>

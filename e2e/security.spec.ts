@@ -93,10 +93,10 @@ test('security and validation checks', async () => {
   const b = await loginTelegram(900000002, 'Bob');
   check('valid Telegram login creates a session', a.res.status === 200 && !!a.session, `status ${a.res.status}`);
   check('session cookie is httpOnly', /HttpOnly/i.test(a.session?.raw || ''), a.session?.raw?.split(';').slice(1).join(';'));
-  check('user object comes from the server', a.res.json?.user?.id === 'usr_tg_900000001', a.res.json?.user?.id);
+  check('user object comes from the server', a.res.json?.user?.name === 'Alice' && !!a.res.json?.user?.id, a.res.json?.user?.id);
 
   r = await req('/api/auth/me', { cookie: a.session.cookie });
-  check('/api/auth/me returns the session user', r.json?.user?.id === 'usr_tg_900000001');
+  check('/api/auth/me returns the session user', !!r.json?.user?.id && r.json?.user?.id === a.res.json?.user?.id);
   check('regular user is not superadmin', r.json?.user?.role === 'user');
   const aliceWs = r.json?.workspace?.id;
   check('Alice gets a personal workspace as owner', aliceWs?.startsWith('ws_') && r.json?.workspace?.role === 'owner' && !r.json?.workspace?.is_demo, aliceWs);

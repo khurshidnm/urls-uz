@@ -6,7 +6,7 @@ import { useLanguage } from '@/lib/language-context';
 import { User, Shield, Globe, Save, Check, RotateCcw } from 'lucide-react';
 import { Locale } from '@/lib/translations';
 
-export default function SettingsClient() {
+export default function SettingsClient({ loginMethods }: { loginMethods?: React.ReactNode }) {
   const {
     user,
     isSuperAdmin,
@@ -43,6 +43,8 @@ export default function SettingsClient() {
           Profilingiz, til va shaxsiy domen sozlamalari
         </p>
       </div>
+
+      {loginMethods}
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* Profile Details */}

@@ -766,48 +766,6 @@ export const db = {
    * Creates the user on first login (with a personal workspace) and refreshes
    * profile fields on later logins.
    */
-  async upsertUser(data: {
-    provider: AuthProvider;
-    providerId: string;
-    name: string;
-    email?: string | null;
-    phone?: string | null;
-    avatarUrl?: string | null;
-    role: UserRole;
-  }): Promise<UserRecord> {
-    const prefix = { google: 'usr_g_', telegram: 'usr_tg_', phone: 'usr_ph_' }[data.provider];
-    const id = prefix + data.providerId;
-
-    const [user] = await pg
-      .insert(users)
-      .values({
-        id,
-        provider: data.provider,
-        provider_id: data.providerId,
-        email: data.email ?? null,
-        phone: data.phone ?? null,
-        name: data.name,
-        avatar_url: data.avatarUrl ?? null,
-        role: data.role,
-        last_login_at: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: [users.provider, users.provider_id],
-        set: {
-          email: sql`coalesce(excluded.email, ${users.email})`,
-          phone: sql`coalesce(excluded.phone, ${users.phone})`,
-          name: sql`excluded.name`,
-          avatar_url: sql`coalesce(excluded.avatar_url, ${users.avatar_url})`,
-          role: sql`excluded.role`,
-          last_login_at: new Date(),
-        },
-      })
-      .returning();
-
-    await this.ensurePersonalWorkspace(user);
-    return user;
-  },
-
   async getUserById(id: string): Promise<UserRecord | undefined> {
     const [row] = await pg.select().from(users).where(eq(users.id, id));
     return row;

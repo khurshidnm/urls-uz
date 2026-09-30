@@ -36,6 +36,20 @@
       "when": 1790765039515,
       "tag": "0004_saved_qr_codes",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790766153326,
+      "tag": "0005_user_identities",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790766180127,
+      "tag": "0006_identities_not_unique",
+      "breakpoints": true
     }
   ]
 }
