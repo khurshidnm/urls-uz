@@ -414,6 +414,13 @@ async function sendStatsMessage(chatId: number, slug: string) {
       .join('\n');
   }
 
+  let devicesText = '—';
+  if (analytics?.devices && analytics.devices.length > 0) {
+    devicesText = analytics.devices
+      .map((d) => `• ${d.device_type}: <b>${d.count}</b>`)
+      .join('\n');
+  }
+
   let referrersText = '—';
   if (analytics?.referrers && analytics.referrers.length > 0) {
     referrersText = analytics.referrers
@@ -429,6 +436,7 @@ async function sendStatsMessage(chatId: number, slug: string) {
     `👁 <b>Jami bosishlar:</b> <b>${formatNumber(totalClicks)}</b> ta\n` +
     `📅 <b>Yaratilgan sana:</b> ${link.created_at}\n\n` +
     `🇺🇿 <b>Viloyatlar kesimida:</b>\n${regionsText}\n\n` +
+    `📱 <b>Qurilmalar turi:</b>\n${devicesText}\n\n` +
     `🌐 <b>Trafik manbalari (Referrers):</b>\n${referrersText}`;
 
   const keyboard: TelegramInlineButton[][] = [
@@ -437,7 +445,7 @@ async function sendStatsMessage(chatId: number, slug: string) {
       { text: '🖼 QR Kod', callback_data: `qr:${link.slug}` },
     ],
     [
-      { text: '📈 Veb Dashboardda ko‘rish', url: `${APP_URL}/dashboard/analytics` },
+      { text: '📈 Veb Dashboardda ko‘rish', url: `${APP_URL}/dashboard/analytics?link_id=${link.id}` },
     ],
   ];
 

@@ -637,20 +637,72 @@ export const db = {
     const clicks = clicksStmt.all(linkId) as ClickRecord[];
 
     const regionsStmt = getDatabase().prepare(`
-      SELECT region, COUNT(*) as count FROM clicks WHERE link_id = ? GROUP BY region ORDER BY count DESC
+      SELECT region, COUNT(*) as count 
+      FROM clicks 
+      WHERE link_id = ? 
+      GROUP BY region 
+      ORDER BY count DESC
     `);
     const regions = regionsStmt.all(linkId) as { region: string; count: number }[];
 
+    const countriesStmt = getDatabase().prepare(`
+      SELECT country, COUNT(*) as count 
+      FROM clicks 
+      WHERE link_id = ? 
+      GROUP BY country 
+      ORDER BY count DESC 
+      LIMIT 12
+    `);
+    const countries = countriesStmt.all(linkId) as { country: string; count: number }[];
+
     const referrersStmt = getDatabase().prepare(`
-      SELECT referer, COUNT(*) as count FROM clicks WHERE link_id = ? GROUP BY referer ORDER BY count DESC
+      SELECT referer, COUNT(*) as count 
+      FROM clicks 
+      WHERE link_id = ? 
+      GROUP BY referer 
+      ORDER BY count DESC 
+      LIMIT 10
     `);
     const referrers = referrersStmt.all(linkId) as { referer: string; count: number }[];
 
+    const devicesStmt = getDatabase().prepare(`
+      SELECT device_type, COUNT(*) as count 
+      FROM clicks 
+      WHERE link_id = ? 
+      GROUP BY device_type 
+      ORDER BY count DESC
+    `);
+    const devices = devicesStmt.all(linkId) as { device_type: string; count: number }[];
+
+    const osStmt = getDatabase().prepare(`
+      SELECT os, COUNT(*) as count 
+      FROM clicks 
+      WHERE link_id = ? 
+      GROUP BY os 
+      ORDER BY count DESC
+    `);
+    const os = osStmt.all(linkId) as { os: string; count: number }[];
+
+    const timelineStmt = getDatabase().prepare(`
+      SELECT date(created_at) as date, COUNT(*) as count 
+      FROM clicks 
+      WHERE link_id = ? 
+      GROUP BY date(created_at) 
+      ORDER BY date ASC 
+      LIMIT 14
+    `);
+    const timeline = timelineStmt.all(linkId) as { date: string; count: number }[];
+
     return {
       link,
+      totalClicks: link.click_count || 0,
       clicks,
       regions,
+      countries,
       referrers,
+      devices,
+      os,
+      timeline,
     };
   },
 

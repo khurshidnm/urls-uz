@@ -26,6 +26,7 @@ import {
   Save,
   Loader2,
   Plus,
+  BarChart3,
 } from 'lucide-react';
 import { formatNumber, formatDate } from '@/lib/utils';
 
@@ -718,9 +719,14 @@ export default function LinksManagerClient({ initialLinks }: Props) {
                     <div className="flex items-center gap-4 text-[11px] text-zinc-500 mt-2">
                       <span className="font-mono">{formatDate(link.created_at)}</span>
                       <span className="text-zinc-700">•</span>
-                      <span className="text-zinc-200 font-medium font-mono tabular-nums">
-                        {formatNumber(link.click_count)} clicks
-                      </span>
+                      <a
+                        href={`/dashboard/analytics?link_id=${link.id}`}
+                        className="text-zinc-200 hover:text-indigo-400 font-medium font-mono tabular-nums transition-colors flex items-center gap-1 group/clicks"
+                        title="Ushbu havola bo‘yicha batafsil analitika"
+                      >
+                        <span>{formatNumber(link.click_count)} clicks</span>
+                        <BarChart3 className="w-3 h-3 text-indigo-400 opacity-60 group-hover/clicks:opacity-100 transition-opacity" />
+                      </a>
                     </div>
                   </div>
 
@@ -742,6 +748,15 @@ export default function LinksManagerClient({ initialLinks }: Props) {
                       )}
                       <span className="hidden sm:inline font-mono">{isCopied ? 'Copied' : 'Copy'}</span>
                     </button>
+
+                    {/* Analytics Direct Button */}
+                    <a
+                      href={`/dashboard/analytics?link_id=${link.id}`}
+                      className="p-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-indigo-300 border border-zinc-800 transition-colors"
+                      title="Havola bo‘yicha batafsil analitika"
+                    >
+                      <BarChart3 className="w-3.5 h-3.5" />
+                    </a>
 
                     {/* QR Button */}
                     <button
