@@ -11,6 +11,7 @@ import SocialTab from './social-tab';
 import ThemesTab from './themes-tab';
 import DevicePreview from './device-preview';
 import BioModals from './bio-modals';
+import { SITE_HOST } from '@/lib/site';
 
 interface Props {
   initialBio: ClientBioPage | undefined;
@@ -52,7 +53,7 @@ export default function BioBuilderClient({ initialBio, owner }: Props) {
             title="Havoladan nusxa olish"
           >
             {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
-            <span className="text-[11px]">{copiedLink ? 'Nusxalandi!' : `urls.uz/b/${handle}`}</span>
+            <span className="text-[11px]">{copiedLink ? 'Nusxalandi!' : `${SITE_HOST}/b/${handle}`}</span>
           </button>
 
           {/* QR Code button */}

@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/toast';
 import { copyToClipboard } from '@/lib/utils';
 import type { ClientBioPage } from '@/lib/client-types';
 import { AVATAR_PRESETS, THEMES, renderBioIcon, toBuilderButton, type BioLinkItem } from './bio-builder-constants';
+import { SITE_URL } from '@/lib/site';
 
 /** All state and actions of the bio builder; the tab components read what they need from it. */
 export function useBioBuilder(initialBio: ClientBioPage | undefined, owner: { name: string; avatar: string }) {
@@ -116,7 +117,7 @@ export function useBioBuilder(initialBio: ClientBioPage | undefined, owner: { na
     return THEMES.find((t) => t.id === theme) || THEMES[0];
   }, [theme]);
 
-  const fullBioUrl = `https://urls.uz/b/${handle}`;
+  const fullBioUrl = `${SITE_URL}/b/${handle}`;
 
   // Link Handlers
   const addLink = () => {

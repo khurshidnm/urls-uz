@@ -21,6 +21,7 @@ import {
   Plus,
   Shield,
 } from 'lucide-react';
+import { SITE_HOST, BRAND_PARTS } from '@/lib/site';
 
 interface SidebarProps {
   onCreateLink?: () => void;
@@ -94,7 +95,7 @@ export default function Sidebar({ onCreateLink, bioHandle }: SidebarProps) {
           </div>
           {!collapsed && (
             <span className="font-semibold text-sm tracking-tight text-white font-mono flex items-center gap-1.5">
-              urls<span className="text-zinc-500">.uz</span>
+              {BRAND_PARTS.name}<span className="text-zinc-500">{BRAND_PARTS.tld}</span>
               <span
                 className={`px-1.5 py-0.5 rounded text-[10px] font-mono uppercase font-bold ${
                   !user
@@ -153,7 +154,7 @@ export default function Sidebar({ onCreateLink, bioHandle }: SidebarProps) {
           </div>
           {bioHandle ? (
             <>
-              <p className="text-[10px] text-zinc-500 mb-1.5 truncate font-mono">urls.uz/b/{bioHandle}</p>
+              <p className="text-[10px] text-zinc-500 mb-1.5 truncate font-mono">{SITE_HOST}/b/{bioHandle}</p>
               <Link
                 href={`/b/${bioHandle}`}
                 target="_blank"

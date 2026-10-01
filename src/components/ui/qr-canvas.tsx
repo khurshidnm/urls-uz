@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { Download, Share2, Check, ZoomIn } from 'lucide-react';
 import { copyToClipboard } from '@/lib/utils';
+import { SITE_URL, SITE_NAME } from '@/lib/site';
 
 export type BodyShape = 'square' | 'dots' | 'rounded' | 'diamond' | 'mosaic';
 export type EyeFrameShape = 'square' | 'rounded' | 'circle' | 'leaf';
@@ -245,7 +246,7 @@ export function QrCanvas({
   showControls = true,
   errorLevel = 'Q',
 }: QrCanvasProps) {
-  const finalValue = value || url || 'https://urls.uz';
+  const finalValue = value || url || SITE_URL;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -677,7 +678,7 @@ export function QrCanvas({
           <!DOCTYPE html>
           <html>
             <head>
-              <title>urls.uz QR Code Print</title>
+              <title>${SITE_NAME} QR Code Print</title>
               <style>
                 body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #09090b; }
                 .card { background: white; border-radius: 12px; padding: 32px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
@@ -687,7 +688,7 @@ export function QrCanvas({
             </head>
             <body>
               <div class="card">
-                <img src="${dataUrl}" alt="urls.uz QR Code" />
+                <img src="${dataUrl}" alt="${SITE_NAME} QR Code" />
               </div>
               <script>window.onload = function() { window.print(); }</script>
             </body>

@@ -6,6 +6,7 @@ import { cleanHandle, handleProblem, HANDLE_MAX_LENGTH, HANDLE_MIN_LENGTH } from
 import { Check, Upload, Crop } from 'lucide-react';
 import { AVATAR_PRESETS } from './bio-builder-constants';
 import type { BioBuilder } from './use-bio-builder';
+import { SITE_HOST } from '@/lib/site';
 
 /** Handle, title, bio text and avatar. */
 export default function ProfileTab({ b }: { b: BioBuilder }) {
@@ -34,7 +35,7 @@ export default function ProfileTab({ b }: { b: BioBuilder }) {
               Shaxsiy Handle / Slug
             </label>
             <div className="flex items-center bg-zinc-950 border border-zinc-800 focus-within:border-zinc-600 rounded-xl px-3 py-2 text-xs font-mono transition-colors">
-              <span className="text-zinc-500 select-none">urls.uz/b/</span>
+              <span className="text-zinc-500 select-none">{SITE_HOST}/b/</span>
               <input
                 type="text"
                 value={handle}

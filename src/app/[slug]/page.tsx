@@ -19,6 +19,7 @@ import DeepLinkRedirector from './deep-link-redirector';
 import HostedQrPage from './hosted-qr-page';
 import { qrRepo } from '@/lib/qr/qr-repo';
 import { isHostedType } from '@/lib/qr/content';
+import { SITE_NAME } from '@/lib/site';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -61,7 +62,7 @@ export default async function SlugRedirectPage({ params }: Props) {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-medium transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>urls.uz Bosh sahifasi</span>
+            <span>{SITE_NAME} bosh sahifasi</span>
           </Link>
         </div>
       </div>
@@ -210,7 +211,7 @@ function ClickLimitReached() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-medium transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>urls.uz Bosh sahifasi</span>
+            <span>{SITE_NAME} bosh sahifasi</span>
           </Link>
         </div>
       </div>

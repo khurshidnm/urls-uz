@@ -7,6 +7,7 @@ import { QrCanvas } from '@/components/ui/qr-canvas';
 import { Modal } from '@/components/ui/modal';
 import { ImageCropModal } from '@/components/ui/image-crop-modal';
 import type { BioBuilder } from './use-bio-builder';
+import { SITE_HOST } from '@/lib/site';
 
 /** QR code, Pro upsell and avatar crop dialogs. */
 export default function BioModals({ b }: { b: BioBuilder }) {
@@ -35,7 +36,7 @@ export default function BioModals({ b }: { b: BioBuilder }) {
 
           <div>
             <h4 className="text-base font-bold text-white mb-1">
-              urls.uz/b/{handle}
+              {SITE_HOST}/b/{handle}
             </h4>
             <p className="text-xs text-zinc-400 max-w-xs mx-auto">
               Smartfon kamerasi orqali skanerlab, sahifani bevosita ochish yoki chop etish uchun QR kod

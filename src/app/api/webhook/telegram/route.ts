@@ -8,10 +8,11 @@ import { formatNumber } from '@/lib/utils';
 import { detectAndBuildDeepLink } from '@/lib/deep-link';
 import { pickTelegramFields, upsertTelegramUser } from '@/lib/telegram-auth';
 import { getSessionUser } from '@/lib/auth';
+import { SITE_URL, SITE_NAME } from '@/lib/site';
 
 export const dynamic = 'force-dynamic';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://urls.uz';
+const APP_URL = SITE_URL;
 
 type TelegramFrom = { id?: number; first_name?: string; last_name?: string; username?: string };
 
@@ -67,7 +68,7 @@ export async function GET() {
     return NextResponse.json({
       status: 'online',
       version: 'v3.0.0',
-      service: 'urls.uz Telegram Bot Webhook Engine',
+      service: `${SITE_NAME} Telegram Bot Webhook Engine`,
       app_url: APP_URL,
       webhook_endpoint: `${APP_URL}/api/webhook/telegram`,
       bot_configured: isBotConfigured,
@@ -135,7 +136,7 @@ export async function POST(req: NextRequest) {
 
         const welcomeText =
           `👋 <b>Assalomu alaykum, ${from.first_name || 'Hurmatli foydalanuvchi'}!</b>\n\n` +
-          `<b>urls.uz</b> — Oʻzbekistonning zamonaviy havola infratuzilmasi rasmiy Telegram botiga xush kelibsiz.\n\n` +
+          `<b>${SITE_NAME}</b> — Oʻzbekistonning zamonaviy havola infratuzilmasi rasmiy Telegram botiga xush kelibsiz.\n\n` +
           `⚡ <b>Imkoniyatlar:</b>\n` +
           `• Menga istalgan <b>uzun havolani</b> yuboring — bir zumda qisqartirib beraman\n` +
           `• Har bir havola uchun <b>Dinamik QR-kod</b> va <b>Smart Deep Link</b>\n` +
@@ -144,7 +145,7 @@ export async function POST(req: NextRequest) {
 
         const keyboard: TelegramInlineButton[][] = [
           [
-            { text: '🌐 urls.uz Sayti', url: APP_URL },
+            { text: `🌐 ${SITE_NAME} sayti`, url: APP_URL },
             { text: '📊 Dashboard', url: `${APP_URL}/dashboard` },
           ],
           [
@@ -537,7 +538,7 @@ async function sendUserLinksMessage(chatId: number, from: TelegramFrom) {
  */
 async function sendHelpMessage(chatId: number) {
   const helpText =
-    `📖 <b>urls.uz Telegram Bot — Qo‘llanma</b>\n\n` +
+    `📖 <b>${SITE_NAME} Telegram Bot — Qo‘llanma</b>\n\n` +
     `🤖 <b>Asosiy buyruqlar:</b>\n` +
     `• <code>/start</code> — Botni qayta ishga tushirish\n` +
     `• <code>/shorten [url] [slug]</code> — Maxsus nom bilan havola yaratish\n` +
@@ -550,7 +551,7 @@ async function sendHelpMessage(chatId: number) {
     `Istalgan chatda <code>@urls_uz_bot https://...</code> deb yozing va havolani joyida qisqartirib ulashing!`;
 
   const keyboard: TelegramInlineButton[][] = [
-    [{ text: '🌐 urls.uz Dashboard', url: `${APP_URL}/dashboard` }],
+    [{ text: `🌐 ${SITE_NAME} Dashboard`, url: `${APP_URL}/dashboard` }],
   ];
 
   await TelegramBot.sendMessage(chatId, helpText, {

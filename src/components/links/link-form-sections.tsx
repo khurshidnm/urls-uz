@@ -21,6 +21,7 @@ import { isReservedSlug, isValidSlug } from '@/lib/utils';
 import type { ClientFolder, WorkspaceUsage } from '@/lib/client-types';
 import type { LinkFormValues } from './link-form-model';
 import { quotaState } from './use-workspace-data';
+import { SITE_HOST } from '@/lib/site';
 
 /*
  * Sections of the link form, shared by the create drawer and the link
@@ -186,7 +187,7 @@ export function SlugField({ values, set, currentSlug }: SectionProps & { current
               : 'border-zinc-800 focus-within:border-zinc-600'
         }`}
       >
-        <span className="text-zinc-500 shrink-0 select-none">urls.uz/</span>
+        <span className="text-zinc-500 shrink-0 select-none">{SITE_HOST}/</span>
         <input
           type="text"
           value={values.slug}
@@ -207,7 +208,7 @@ export function SlugField({ values, set, currentSlug }: SectionProps & { current
       )}
       {currentSlug && edited && (
         <span className="text-[10px] text-amber-300/80 mt-1 block font-mono">
-          Diqqat: eski havola (urls.uz/{currentSlug}) ishlamay qoladi.
+          Diqqat: eski havola ({SITE_HOST}/{currentSlug}) ishlamay qoladi.
         </span>
       )}
     </div>

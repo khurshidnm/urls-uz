@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TelegramBot } from '@/lib/telegram-bot';
 import { getCurrentUser } from '@/lib/auth';
+import { SITE_URL } from '@/lib/site';
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -11,7 +12,7 @@ async function requireAdmin() {
 
 export const dynamic = 'force-dynamic';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://urls.uz';
+const APP_URL = SITE_URL;
 
 export async function GET() {
   const denied = await requireAdmin();

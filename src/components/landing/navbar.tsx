@@ -7,6 +7,7 @@ import LanguageMenu from '@/components/ui/language-menu';
 import { useAuth } from '@/lib/auth-context';
 import { ArrowRight, Menu, X, Link2, Terminal, Eye } from 'lucide-react';
 import { Locale } from '@/lib/translations';
+import { BRAND_PARTS } from '@/lib/site';
 
 export default function Navbar() {
   const { locale, setLocale, t } = useLanguage();
@@ -42,7 +43,7 @@ export default function Navbar() {
               <Link2 className="w-3 h-3 text-zinc-300" />
             </div>
             <span className="font-semibold text-sm tracking-tight text-white font-mono">
-              urls<span className="text-zinc-500">.uz</span>
+              {BRAND_PARTS.name}<span className="text-zinc-500">{BRAND_PARTS.tld}</span>
             </span>
           </Link>
 

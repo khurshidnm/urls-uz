@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { TimelineChart } from '@/components/analytics/analytics-panels';
 import { copyToClipboard, formatNumber, shortUrl } from '@/lib/utils';
 import type { AnalyticsOverview, ClientBioPage, ClientLink } from '@/lib/client-types';
+import { SITE_HOST } from '@/lib/site';
 
 interface OverviewClientProps {
   analytics: AnalyticsOverview;
@@ -75,7 +76,7 @@ export default function DashboardOverviewClient({ analytics, links, bioPage }: O
     {
       title: t.bioViews,
       value: bioPage ? formatNumber(analytics.totalBioViews) : '—',
-      note: bioPage ? `urls.uz/b/${bioPage.handle}` : o.noBioPage,
+      note: bioPage ? `${SITE_HOST}/b/${bioPage.handle}` : o.noBioPage,
       icon: Layers,
       tone: 'text-purple-400 bg-purple-500/10 border-purple-500/15',
     },

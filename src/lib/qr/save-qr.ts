@@ -10,6 +10,7 @@ import { isUniqueViolation } from '@/lib/pg-errors';
 import { canBeDynamic, QR_CONTENT_SCHEMAS, redirectTarget } from '@/lib/qr/content';
 import { qrRepo } from '@/lib/qr/qr-repo';
 import type { QrDataType } from '@/lib/qr-payloads';
+import { SITE_URL } from '@/lib/site';
 
 /**
  * Saving QR codes from the studio. A dynamic QR code gets a short link
@@ -68,7 +69,7 @@ function parseContent(type: QrDataType, raw: unknown): { ok: true; content: Reco
  * link's destination is the downloadable file, which also works on its own.
  */
 function linkDestination(qrId: string, type: QrDataType, content: Record<string, unknown>): string {
-  return redirectTarget(type, content) || `${process.env.NEXT_PUBLIC_APP_URL || 'https://urls.uz'}/api/qr-codes/${qrId}/file`;
+  return redirectTarget(type, content) || `${SITE_URL}/api/qr-codes/${qrId}/file`;
 }
 
 export async function createQrCode(ctx: QrContext, raw: unknown): Promise<QrResult> {

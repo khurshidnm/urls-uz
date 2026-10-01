@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Briefcase, Calendar, Download, Globe, Mail, MapPin, Phone, Printer, Smartphone, UserPlus } from 'lucide-react';
 import type { QrCodeRecord } from '@/lib/qr/qr-repo';
 import type { EventPayload, VCardPayload } from '@/lib/qr-payloads';
+import { SITE_NAME } from '@/lib/site';
 
 /**
  * What a dynamic vCard, event or text QR code opens: a page with the current
@@ -17,7 +18,7 @@ export default function HostedQrPage({ qr }: { qr: QrCodeRecord }) {
         {qr.type === 'event' && <EventCard event={qr.content as unknown as EventPayload} fileUrl={fileUrl} />}
         {qr.type === 'text' && <TextCard text={String(qr.content.text ?? '')} />}
         <p className="mt-6 text-center text-[11px] text-zinc-600">
-          <Link href="/" className="hover:text-zinc-400">urls.uz</Link> dinamik QR kod
+          <Link href="/" className="hover:text-zinc-400">{SITE_NAME}</Link> dinamik QR kod
         </p>
       </div>
     </div>

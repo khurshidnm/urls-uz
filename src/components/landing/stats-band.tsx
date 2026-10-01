@@ -1,6 +1,7 @@
 import { ArrowUpRight, Radio } from 'lucide-react';
 import { getCountryInfo } from '@/lib/geo';
 import { formatNumber } from '@/lib/utils';
+import { SITE_HOST } from '@/lib/site';
 
 export interface PublicStats {
   totalRedirects: number;
@@ -41,7 +42,7 @@ export default function StatsBand({ stats }: { stats: PublicStats }) {
     {
       label: 'BIO PAGES',
       value: formatNumber(stats.totalBioPages),
-      change: 'urls.uz/b/@handle',
+      change: `${SITE_HOST}/b/@handle`,
     },
   ];
 

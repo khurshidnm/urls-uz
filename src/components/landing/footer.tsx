@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/language-context';
 import { Link2, Terminal } from 'lucide-react';
+import { SITE_NAME, BRAND_PARTS } from '@/lib/site';
 
 export default function Footer() {
   const { locale, setLocale, t } = useLanguage();
@@ -21,7 +22,7 @@ export default function Footer() {
               <div className="w-5 h-5 rounded-md bg-zinc-800 border border-zinc-700/80 flex items-center justify-center text-zinc-100">
                 <Link2 className="w-3 h-3 text-zinc-300" />
               </div>
-              <span className="font-semibold text-sm tracking-tight text-white">urls<span className="text-zinc-500">.uz</span></span>
+              <span className="font-semibold text-sm tracking-tight text-white">{BRAND_PARTS.name}<span className="text-zinc-500">{BRAND_PARTS.tld}</span></span>
             </Link>
             <p className="text-zinc-400 text-xs leading-relaxed font-sans">
               O‘zbekiston va xalqaro bozor uchun yuqori tezlikdagi URL yo‘naltirish va dinamik QR infratuzilmasi.
@@ -103,7 +104,7 @@ export default function Footer() {
         {/* Bottom Bar: System Telemetry & Copyright */}
         <div className="pt-6 border-t border-zinc-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-zinc-500">
           <div>
-            © {new Date().getFullYear()} urls.uz. Barcha huquqlar himoyalangan.
+            © {new Date().getFullYear()} {SITE_NAME}. Barcha huquqlar himoyalangan.
           </div>
         </div>
 

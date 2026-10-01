@@ -1,3 +1,4 @@
+import { OWN_HOSTS, SITE_NAME } from '@/lib/site';
 /**
  * Anti-Phishing and Security Filter for urls.uz
  * Blocks malicious, phishing, and scam domains from abusing the shortening service.
@@ -71,10 +72,12 @@ export function checkUrlSafety(rawUrl: string): SecurityCheckResult {
     }
 
     // 4. Disallow self-referencing loops
-    if (hostname === 'urls.uz' || hostname === 'localhost' || hostname === '127.0.0.1') {
+    // (every domain the site runs on: the configured one, urls.uz and the urlss.uz test site)
+    const ownHost = OWN_HOSTS.some((h) => hostname === h || hostname.endsWith(`.${h}`));
+    if (ownHost || hostname === 'localhost' || hostname === '127.0.0.1') {
       return {
         isSafe: false,
-        reason: 'urls.uz havolalarini qayta-qisqartirish (loop) mumkin emas.',
+        reason: `${SITE_NAME} havolalarini qayta-qisqartirish (loop) mumkin emas.`,
       };
     }
 

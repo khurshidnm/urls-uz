@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { Plus, Command, Menu } from 'lucide-react';
 import { TelegramIcon } from '@/components/ui/icons';
 import LanguageMenu from '@/components/ui/language-menu';
+import { SITE_NAME } from '@/lib/site';
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'urlsuzbot';
 
@@ -45,7 +46,7 @@ export default function Topbar({ onCreateLink, onToggleMobileSidebar }: TopbarPr
         <div className="hidden sm:flex items-center gap-2 px-2 py-1 rounded bg-zinc-900/60 border border-zinc-800 text-xs font-mono">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
           <span className="text-zinc-500">SCOPE:</span>
-          <span className="text-zinc-200 font-medium">urls.uz</span>
+          <span className="text-zinc-200 font-medium">{SITE_NAME}</span>
         </div>
       </div>
 
