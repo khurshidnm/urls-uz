@@ -2,7 +2,7 @@
 
 <div align="center">
   <p><strong>Zamonaviy havola ekotizimi · Smart Deep Links · Dinamik QR Studio · Link-in-Bio · O‘zbekiston Analitikasi</strong></p>
-  <p>Built with Next.js 16 (App Router), TypeScript, Tailwind CSS v4, and Embedded SQLite.</p>
+  <p>Built with Next.js 16 (App Router), TypeScript, Tailwind CSS v4, PostgreSQL and Drizzle ORM.</p>
 </div>
 
 ---
@@ -60,7 +60,8 @@
 ## 🚀 Ishga Tushirish (Quick Start)
 
 ### 1. Talablar:
-- Node.js 18+ yoki 20+
+- Node.js 20+
+- PostgreSQL 14+
 
 ### 2. O‘rnatish:
 ```bash
@@ -69,13 +70,23 @@ cd urls-uz
 npm install
 ```
 
-### 3. Serverni ishga tushirish:
+### 3. Ma'lumotlar bazasi:
+```bash
+cp .env.example .env          # DATABASE_URL va boshqa kalitlarni to'ldiring
+createdb urls_uz
+npm run db:migrate            # sxemani yaratish
+npm run db:seed               # demo workspace (ApexTech)
+```
+Eski SQLite bazasidan ko'chirish: `npm run db:import-sqlite data/urls.db`.
+Sxemani o'zgartirgandan keyin: `npm run db:generate` (yangi migratsiya fayli yaratadi).
+
+### 4. Serverni ishga tushirish:
 ```bash
 npm run dev
 ```
 Brauzerda [http://localhost:3000](http://localhost:3000) (yoki bo‘sh port) manzilini oching.
 
-### 4. Loyihani yig‘ish (Production Build):
+### 5. Loyihani yig‘ish (Production Build):
 ```bash
 npm run build
 npm start
@@ -87,7 +98,8 @@ npm start
 
 ```
 urls-uz/
-├── data/                      # Mahalliy SQLite maʼlumotlar bazasi (WAL rejimida)
+├── drizzle/                   # SQL migratsiyalar (drizzle-kit generate)
+├── scripts/                   # db:migrate, db:seed, db:import-sqlite
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx         # Global til va autentifikatsiya provayderlari
@@ -110,7 +122,8 @@ urls-uz/
 │   │   ├── landing/           # Navbar, Hero, ShortenCard, Features, Pricing, Footer
 │   │   └── dashboard/         # Sidebar, Topbar, CreateLinkModal
 │   └── lib/
-│       ├── db.ts              # SQLite maʼlumotlar qatlami va sxema initsializatsiyasi
+│       ├── db.ts              # Repozitoriy: workspace bo'yicha ajratilgan so'rovlar
+│       ├── auth.ts            # Sessiyalar va requireWorkspace()
 │       ├── deep-link.ts       # Telegram/Instagram/YouTube deep link aniqlovchi
 │       ├── geo.ts             # O‘zbekiston 14 ta hududini aniqlovchi
 │       ├── translations.ts    # O‘zbekcha, Ruscha, Inglizcha lug‘at

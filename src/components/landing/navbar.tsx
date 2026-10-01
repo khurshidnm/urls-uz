@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/language-context';
+import LanguageMenu from '@/components/ui/language-menu';
 import { useAuth } from '@/lib/auth-context';
-import { ArrowRight, Menu, X, Link2, Terminal } from 'lucide-react';
+import { ArrowRight, Menu, X, Link2, Terminal, Eye } from 'lucide-react';
 import { Locale } from '@/lib/translations';
 
 export default function Navbar() {
@@ -45,11 +46,6 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Real-time System Status Pill (Linear / Stripe style) */}
-          <div className="hidden lg:flex items-center gap-2 px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Edge Engine: 11.4ms</span>
-          </div>
         </div>
 
         {/* Desktop Navigation Links */}
@@ -75,28 +71,7 @@ export default function Navbar() {
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-2">
           {/* Language Switcher */}
-          <div className="relative group">
-            <button className="flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-900/60 hover:bg-zinc-900 text-[11px] font-mono text-zinc-400 border border-zinc-800 transition-colors">
-              <span className="text-zinc-500">LOCALE:</span>
-              <span className="text-zinc-200 uppercase font-semibold">{locale}</span>
-            </button>
-            <div className="absolute right-0 mt-1 w-28 py-1 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-150 z-50">
-              {locales.map((l) => (
-                <button
-                  key={l.code}
-                  onClick={() => setLocale(l.code)}
-                  className={`w-full flex items-center justify-between px-2.5 py-1 text-xs text-left transition-colors font-mono ${
-                    locale === l.code
-                      ? 'bg-zinc-800 text-white font-medium'
-                      : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
-                  }`}
-                >
-                  <span>{l.label}</span>
-                  <span className="text-[10px] text-zinc-500">{l.flag}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <LanguageMenu prefix="LOCALE:" />
 
           {user ? (
             <div className="flex items-center gap-2">
@@ -119,6 +94,13 @@ export default function Navbar() {
             </div>
           ) : (
             <div className="flex items-center gap-1.5">
+              <Link
+                href="/dashboard?demo=true"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 rounded-md border border-amber-500/30 transition-all"
+              >
+                <Eye className="w-3 h-3 text-amber-400" />
+                <span>{locale === 'uz' ? 'Demo ko‘rish' : locale === 'ru' ? 'Демо' : 'Live Demo'}</span>
+              </Link>
               <button
                 onClick={() => openAuthModal()}
                 className="px-2.5 py-1.5 text-xs font-medium text-zinc-300 hover:text-white bg-zinc-900/60 hover:bg-zinc-900 rounded-md border border-zinc-800 transition-colors"
@@ -138,6 +120,14 @@ export default function Navbar() {
 
         {/* Mobile Menu Button */}
         <div className="md:hidden flex items-center gap-2">
+          {!user && (
+            <Link
+              href="/dashboard?demo=true"
+              className="px-2.5 py-1 text-xs font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-md"
+            >
+              Demo
+            </Link>
+          )}
           {!user && (
             <button
               onClick={() => openAuthModal()}

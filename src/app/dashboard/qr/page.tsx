@@ -1,9 +1,23 @@
+import type { Metadata } from 'next';
 import React from 'react';
-import { db } from '@/lib/db';
-import QrStudioClient from './qr-studio-client';
+import { redirect } from 'next/navigation';
+import { requireWorkspace } from '@/lib/auth';
+import { toClientJson } from '@/lib/serialize';
+import { qrRepo } from '@/lib/qr/qr-repo';
+import QrLibrary from './qr-library';
 
-export default function QrStudioPage() {
-  const links = db.getAllLinks();
+export const metadata: Metadata = { title: 'QR kodlar' };
 
-  return <QrStudioClient links={links} />;
+interface Props {
+  searchParams: Promise<{ link?: string }>;
+}
+
+export default async function QrCodesPage({ searchParams }: Props) {
+  // Older links into the studio (/dashboard/qr?link=...)
+  const { link } = await searchParams;
+  if (link) redirect(`/dashboard/qr/new?link=${encodeURIComponent(link)}`);
+
+  const ctx = await requireWorkspace();
+  const qrCodes = await qrRepo.list(ctx.workspace.id);
+  return <QrLibrary qrCodes={toClientJson(qrCodes)} canWrite={ctx.canWrite} />;
 }

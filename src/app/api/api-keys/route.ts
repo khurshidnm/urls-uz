@@ -1,41 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, toPublicApiKey } from '@/lib/db';
+import { routeError } from '@/lib/route-error';
+import { requireWorkspace } from '@/lib/auth';
+import { limitsFor } from '@/lib/plans';
+import { createApiKeySchema, parseJson } from '@/lib/validation';
+
+const demoRestricted = () =>
+  NextResponse.json(
+    { success: false, error: 'API kalitlarni boshqarish uchun tizimga kiring.', code: 'DEMO_RESTRICTED' },
+    { status: 403 }
+  );
 
 export async function GET() {
   try {
-    const keys = db.getApiKeys('demo_user');
+    const ctx = await requireWorkspace();
+    const keys = (await db.getApiKeys(ctx.workspace.id)).map(toPublicApiKey);
     return NextResponse.json({ success: true, keys });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    return routeError(error, 'GET /api/api-keys');
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { name } = body;
-    if (!name?.trim()) {
-      return NextResponse.json({ success: false, error: 'Key name is required' }, { status: 400 });
+    const ctx = await requireWorkspace();
+    // Keys authenticate as their owner, so they are never issued for the shared demo workspace
+    if (!ctx.canWrite || ctx.workspace.is_demo || !ctx.user) return demoRestricted();
+    if (!limitsFor(ctx.workspace, ctx.isAdmin).apiAccess) {
+      return NextResponse.json(
+        { success: false, error: 'REST API kalitlari faqat Pro va Biznes tariflarida mavjud.', code: 'PLAN_REQUIRED' },
+        { status: 403 }
+      );
     }
 
-    const newKey = db.createApiKey('demo_user', name.trim());
+    const parsed = await parseJson(request, createApiKeySchema);
+    if (!parsed.ok) return parsed.response;
+
+    const newKey = await db.createApiKey(ctx.workspace.id, ctx.user.id, parsed.data.name);
     return NextResponse.json({ success: true, ...newKey }, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    return routeError(error, 'POST /api/api-keys');
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    const ctx = await requireWorkspace();
+    if (!ctx.canWrite) return demoRestricted();
+
+    const id = new URL(request.url).searchParams.get('id');
     if (!id) {
       return NextResponse.json({ success: false, error: 'Key id is required' }, { status: 400 });
     }
 
-    db.deleteApiKey(id, 'demo_user');
+    if (!await db.deleteApiKey(id, ctx.workspace.id)) {
+      return NextResponse.json({ success: false, error: 'Key not found' }, { status: 404 });
+    }
     return NextResponse.json({ success: true, message: 'API key revoked' });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    return routeError(error, 'DELETE /api/api-keys');
   }
 }

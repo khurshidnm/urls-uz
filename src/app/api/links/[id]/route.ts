@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, toPublicLink } from '@/lib/db';
+import { routeError } from '@/lib/route-error';
+import { requireWorkspace } from '@/lib/auth';
+import { updateLink } from '@/lib/links/update-link';
+
+const notFound = () => NextResponse.json({ success: false, error: 'Link not found' }, { status: 404 });
 
 export async function GET(
   request: NextRequest,
@@ -7,13 +12,13 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const analytics = db.getLinkAnalytics(id);
-    if (!analytics) {
-      return NextResponse.json({ success: false, error: 'Link not found' }, { status: 404 });
-    }
-    return NextResponse.json({ success: true, ...analytics });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const ctx = await requireWorkspace({ apiKey: true });
+    if (!await db.getOwnedLink(id, ctx.workspace.id)) return notFound();
+
+    const analytics = (await db.getLinkAnalytics(id))!;
+    return NextResponse.json({ success: true, ...analytics, link: toPublicLink(analytics.link) });
+  } catch (error) {
+    return routeError(error, 'GET /api/links/[id]');
   }
 }
 
@@ -22,17 +27,33 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const body = await request.json();
-
-    const updated = db.updateLink(id, body);
-    if (!updated) {
-      return NextResponse.json({ success: false, error: 'Link not found' }, { status: 404 });
+    const ctx = await requireWorkspace({ apiKey: true });
+    if (!ctx.canWrite) {
+      return NextResponse.json({ success: false, error: 'Demo rejimida havolani o‘zgartirish cheklangan.', code: 'DEMO_RESTRICTED' }, { status: 403 });
     }
 
-    return NextResponse.json({ success: true, link: updated });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const { id } = await params;
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ success: false, error: 'So‘rov JSON formatida bo‘lishi kerak', code: 'INVALID_JSON' }, { status: 400 });
+    }
+
+    // Owner, counters and timestamps are server-managed; the service applies the same rules as creation
+    const result = await updateLink(
+      { workspace: ctx.workspace, userId: ctx.user?.id ?? null, isAdmin: ctx.isAdmin },
+      id,
+      body
+    );
+    if (!result.ok) {
+      return NextResponse.json({ success: false, error: result.error, code: result.code, ...result.details }, { status: result.status });
+    }
+    const updated = result.link;
+
+    return NextResponse.json({ success: true, link: toPublicLink(updated) });
+  } catch (error) {
+    return routeError(error, 'PATCH /api/links/[id]');
   }
 }
 
@@ -41,14 +62,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const deleted = db.deleteLink(id);
-    if (!deleted) {
-      return NextResponse.json({ success: false, error: 'Link not found' }, { status: 404 });
+    const ctx = await requireWorkspace({ apiKey: true });
+    if (!ctx.canWrite) {
+      return NextResponse.json({ success: false, error: 'Demo rejimida havolani o‘chirish cheklangan.', code: 'DEMO_RESTRICTED' }, { status: 403 });
     }
 
+    const { id } = await params;
+    if (!await db.deleteLink(id, ctx.workspace.id)) return notFound();
+
     return NextResponse.json({ success: true, message: 'Link deleted' });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    return routeError(error, 'DELETE /api/links/[id]');
   }
 }

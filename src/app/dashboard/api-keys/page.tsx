@@ -1,9 +1,22 @@
+import type { Metadata } from 'next';
 import React from 'react';
-import { db } from '@/lib/db';
+import { db, toPublicApiKey } from '@/lib/db';
+import { requireWorkspace } from '@/lib/auth';
+import { toClientJson } from '@/lib/serialize';
+import { limitsFor } from '@/lib/plans';
 import ApiKeysClient from './api-keys-client';
 
-export default function ApiKeysPage() {
-  const keys = db.getApiKeys('demo_user');
+export const metadata: Metadata = { title: 'API kalitlar' };
 
-  return <ApiKeysClient initialKeys={keys} />;
+export default async function ApiKeysPage() {
+  const { workspace, isAdmin } = await requireWorkspace();
+  const keys = (await db.getApiKeys(workspace.id)).map(toPublicApiKey);
+
+  return (
+    <ApiKeysClient
+      initialKeys={toClientJson(keys)}
+      apiAccess={limitsFor(workspace, isAdmin).apiAccess}
+      isAdmin={isAdmin}
+    />
+  );
 }

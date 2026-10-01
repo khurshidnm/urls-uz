@@ -27,7 +27,7 @@ export default function Features() {
         ? 'Telegram kanallar, guruhlar, Instagram profillari va YouTube videolari brauzerda qotib qolmasdan to‘g‘ridan-to‘g‘ri mobil ilovada ochiladi.'
         : locale === 'ru'
         ? 'Ссылки на Telegram, Instagram и YouTube открываются сразу в мобильных приложениях без зависания во встроенных браузерах.'
-        : 'Bypass internal in-app webview sandboxes. Directly launch native iOS and Android apps via intent schemes with sub-12ms execution.',
+        : 'Telegram, Instagram and YouTube links open straight in the mobile apps instead of getting stuck in in-app browsers.',
       spec: 'Intent Filters: tg:// · instagram:// · youtube://',
     },
     {
@@ -72,7 +72,7 @@ export default function Features() {
         : locale === 'ru'
         ? 'Автоматическое создание ссылок, API ключи и готовые эндпоинты для быстрой интеграции с вашим CRM и Telegram-ботами.'
         : 'Integrate link operations into backend services, bots, and CI/CD pipelines via standard REST endpoints with bearer token auth.',
-      spec: 'Bearer Auth · Rate Limiting: 1,000 req/min · JSON Specs',
+      spec: 'Bearer Auth · 300 req/min har bir kalit · JSON · Pro tarifda',
     },
     {
       id: '06',
@@ -105,10 +105,10 @@ export default function Features() {
           </h2>
           <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed max-w-2xl">
             {locale === 'uz'
-              ? 'Oddiy havolani to‘laqonli marketing kanaliga aylantiring. Oliy darajadagi xavfsizlik, sub-15ms kechikish va chuqur analitika.'
+              ? 'Oddiy havolani to‘laqonli marketing kanaliga aylantiring: fishingdan himoya, ikki bosqichli kirish va chuqur analitika.'
               : locale === 'ru'
               ? 'Превратите обычные ссылки в мощные каналы конверсий с защитой корпоративного уровня и детальной аналитикой.'
-              : 'Built for high reliability, minimal redirect latency, and zero dependency on bloated third-party trackers.'}
+              : 'Phishing protection, two-step login and detailed analytics, without third-party trackers.'}
           </p>
         </div>
 

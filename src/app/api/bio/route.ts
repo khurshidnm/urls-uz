@@ -1,36 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { routeError } from '@/lib/route-error';
+import { requireWorkspace } from '@/lib/auth';
+import { saveBio } from '@/lib/bio/save-bio';
+import { limitsFor } from '@/lib/plans';
 
 export async function GET() {
   try {
-    const bioPage = db.getBioPageByUserId('demo_user');
+    const ctx = await requireWorkspace();
+    const bioPage = await db.getBioPageByWorkspace(ctx.workspace.id);
     return NextResponse.json({ success: true, bioPage });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    return routeError(error, 'GET /api/bio');
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { handle, title, bio, avatar_url, theme, social_links, links } = body;
-
-    if (!handle || !title) {
-      return NextResponse.json({ success: false, error: 'Handle and title are required' }, { status: 400 });
+    const ctx = await requireWorkspace();
+    if (!ctx.canWrite) {
+      return NextResponse.json({
+        success: false,
+        error: 'Demo rejimida bio sahifani saqlash cheklangan. Bepul versiyadan foydalanish uchun ro‘yxatdan o‘ting.',
+        code: 'DEMO_RESTRICTED',
+      }, { status: 403 });
     }
 
-    const saved = db.saveBioPage('demo_user', {
-      handle,
-      title,
-      bio: bio || '',
-      avatar_url: avatar_url || '',
-      theme: theme || 'midnight',
-      social_links: social_links || {},
-      links: links || [],
-    });
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ success: false, error: 'So‘rov JSON formatida bo‘lishi kerak', code: 'INVALID_JSON' }, { status: 400 });
+    }
 
-    return NextResponse.json({ success: true, bioPage: saved });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const result = await saveBio({ workspace: ctx.workspace, userId: ctx.user?.id ?? null, isAdmin: ctx.isAdmin }, body);
+    if (!result.ok) {
+      return NextResponse.json({ success: false, error: result.error, code: result.code, ...result.details }, { status: result.status });
+    }
+
+    const limit = limitsFor(ctx.workspace, ctx.isAdmin).bioLinks;
+    return NextResponse.json({
+      success: true,
+      bioPage: result.bioPage,
+      limitNotice: result.truncated ? `Tarifingizda faqat ${limit} ta tugma saqlandi.` : undefined,
+    });
+  } catch (error) {
+    return routeError(error, 'POST /api/bio');
   }
 }

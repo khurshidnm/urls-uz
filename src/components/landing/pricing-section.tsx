@@ -1,77 +1,64 @@
 'use client';
 
-import React, { useState } from 'react';
+import { PLAN_FEATURES, PLANNED_FEATURES } from '@/lib/plan-features';
+import React from 'react';
 import { useLanguage } from '@/lib/language-context';
-import { Check, ShieldCheck, Zap } from 'lucide-react';
+import { Check, Sparkles, Zap, Lock } from 'lucide-react';
 import Link from 'next/link';
 
 export default function PricingSection() {
-  const { locale, t } = useLanguage();
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
+  const { locale } = useLanguage();
 
   const plans = [
     {
       name: locale === 'uz' ? 'Free (Hobby)' : locale === 'ru' ? 'Базовый (Free)' : 'Free (Hobby)',
-      badge: null,
-      priceMonth: '0',
-      period: 'UZS / abadiy',
+      badge: 'HOZIR FAOL',
+      badgeColor: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
+      price: '0 UZS',
+      period: '/ abadiy',
+      comingSoon: false,
       description: locale === 'uz'
-        ? 'Shaxsiy foydalanish va oddiy havolalar uchun'
+        ? 'Shaxsiy foydalanish, loyihalar va qisqa havolalar uchun to‘liq funksiyalar'
         : locale === 'ru'
-        ? 'Для личных нужд и тестирования'
-        : 'For individuals and basic link shortening',
-      specs: [
-        '50 ta faol qisqa havola',
-        '1,000 ta oylik qayta yo‘naltirish',
-        'Standart QR kod generatsiyasi',
-        '7 kunlik analitika jurnali',
-        'HTTP/3 Anycast yo‘naltirish',
-      ],
+        ? 'Для личных нужд, проектов и тестирования'
+        : 'For individuals, projects, and link shortening',
+      specs: PLAN_FEATURES.free,
       cta: locale === 'uz' ? 'Bepul boshlash' : locale === 'ru' ? 'Начать бесплатно' : 'Start Free',
+      ctaHref: '/dashboard',
       popular: false,
     },
     {
       name: 'Pro (Growth)',
-      badge: 'POPULAR CHOICE',
-      priceMonth: billingPeriod === 'monthly' ? '49,000' : '39,000',
-      period: `UZS / ${t.month}`,
+      badge: 'TEZ KUNDA',
+      badgeColor: 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30',
+      price: 'Tez kunda',
+      period: '/ pullik tarif',
+      comingSoon: true,
       description: locale === 'uz'
-        ? 'Blogerlar, brendlar va marketing kampaniyalari uchun'
+        ? 'Katta auditoriya, blogerlar va marketing kampaniyalari uchun kengaytirilgan imkoniyatlar'
         : locale === 'ru'
-        ? 'Для блогеров, маркетологов и онлайн-бизнеса'
-        : 'For content creators, marketers, and brands',
-      specs: [
-        'Cheksiz qisqa havolalar & bosishlar',
-        'Smart Deep Links (Telegram, Instagram, YT)',
-        'Dinamik QR Studio (Vektor SVG & Logotiplar)',
-        'Link-in-Bio shaxsiy mikro-portali (@handle)',
-        '14 ta viloyat bo‘yicha batafsil analitika',
-        'Parol va amal qilish muddati siyosati',
-        'CSV/Excel formatida eksport',
-      ],
-      cta: locale === 'uz' ? 'Pro-ga ulanish' : locale === 'ru' ? 'Выбрать Pro' : 'Upgrade to Pro',
+        ? 'Для блогеров, маркетологов и масштабных рекламных кампаний'
+        : 'For content creators, marketers, and high-scale campaigns',
+      specs: PLAN_FEATURES.pro,
+      cta: locale === 'uz' ? 'Tez kunda ishga tushadi' : locale === 'ru' ? 'Скоро появится' : 'Coming Soon',
+      ctaHref: '#',
       popular: true,
     },
     {
-      name: locale === 'uz' ? 'Enterprise (SLA)' : locale === 'ru' ? 'Enterprise (Корпоративный)' : 'Enterprise',
-      badge: null,
-      priceMonth: billingPeriod === 'monthly' ? '149,000' : '119,000',
-      period: `UZS / ${t.month}`,
+      name: locale === 'uz' ? 'Biznes' : locale === 'ru' ? 'Бизнес' : 'Business',
+      badge: 'TEZ KUNDA',
+      badgeColor: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
+      price: 'Tez kunda',
+      period: '/ korporativ',
+      comingSoon: true,
       description: locale === 'uz'
-        ? 'Katta jamoalar, fintech va yuqori yuklamali tizimlar uchun'
+        ? 'Tashkilotlar uchun: Pro imkoniyatlari, uzoqroq tashriflar jurnali va alohida shartlar'
         : locale === 'ru'
-        ? 'Для корпоративных клиентов и интеграций'
+        ? 'Для корпоративных клиентов, финтех и интеграций'
         : 'For high-scale workloads and tech integrations',
-      specs: [
-        'Barcha Pro imkoniyatlari kiritilgan',
-        'REST API kalitlar (1,000 req/min)',
-        'Shaxsiy domen (custom domain CNAME)',
-        '5 tagacha jamoa a’zolari',
-        '< 12ms Edge Anycast prioritet kanali',
-        '99.99% kafolatlangan SLA shartnomasi',
-        '24/7 shaxsiy Telegram qo‘llab-quvvatlash',
-      ],
-      cta: locale === 'uz' ? 'Biznesni tanlash' : locale === 'ru' ? 'Выбрать Бизнес' : 'Choose Enterprise',
+      specs: PLAN_FEATURES.enterprise,
+      cta: locale === 'uz' ? 'Tez kunda ishga tushadi' : locale === 'ru' ? 'Скоро появится' : 'Coming Soon',
+      ctaHref: '#',
       popular: false,
     },
   ];
@@ -80,7 +67,7 @@ export default function PricingSection() {
     <section id="pricing" className="py-20 md:py-28 bg-zinc-950 border-b border-zinc-800/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Header & Billing Period Switcher */}
+        {/* Header & Status Indicator */}
         <div className="max-w-3xl mb-12 text-left">
           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 text-[11px] font-mono mb-3">
             <span>TRANSPARENT SPECIFICATIONS</span>
@@ -95,44 +82,28 @@ export default function PricingSection() {
                   : 'Transparent & Localized Pricing'}
               </h2>
               <p className="text-xs sm:text-sm text-zinc-400">
-                O‘zbekiston so‘mida (UZS) qulay to‘lov: Payme, Click, Uzum yoki xalqaro kartalar orqali.
+                {locale === 'uz'
+                  ? 'Hozirda bepul tarif barcha uchun 10 ta havola bilan to‘liq faol. Kengaytirilgan pulli tariflar tez kunda ishga tushadi.'
+                  : locale === 'ru'
+                  ? 'Сейчас бесплатная версия полностью доступна с 10 ссылками. Платные тарифы запустятся в скором времени.'
+                  : 'Free tier is currently fully available with 10 links limit. Paid tiers will launch soon.'}
               </p>
             </div>
 
-            {/* Toggle Switch */}
-            <div className="flex items-center gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-mono shrink-0">
-              <button
-                type="button"
-                onClick={() => setBillingPeriod('monthly')}
-                className={`px-3 py-1 rounded-md transition-colors ${
-                  billingPeriod === 'monthly'
-                    ? 'bg-zinc-800 text-white font-medium shadow-sm'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                Oylik to‘lov
-              </button>
-              <button
-                type="button"
-                onClick={() => setBillingPeriod('yearly')}
-                className={`px-3 py-1 rounded-md transition-colors flex items-center gap-1.5 ${
-                  billingPeriod === 'yearly'
-                    ? 'bg-zinc-800 text-white font-medium shadow-sm'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <span>Yillik (-20%)</span>
-              </button>
+            {/* Launch Status Pill */}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-mono shrink-0">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Hozirda Bepul versiya faol</span>
             </div>
           </div>
         </div>
 
         {/* 3-Column Plan Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
           {plans.map((p, idx) => (
             <div
               key={idx}
-              className={`p-6 rounded-xl border flex flex-col justify-between transition-all ${
+              className={`p-6 rounded-2xl border flex flex-col justify-between transition-all ${
                 p.popular
                   ? 'bg-zinc-900/60 border-zinc-600 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_8px_24px_rgba(0,0,0,0.5)]'
                   : 'bg-zinc-900/30 border-zinc-800 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.03)]'
@@ -143,21 +114,35 @@ export default function PricingSection() {
                 <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80 mb-4 text-[11px] font-mono">
                   <span className="font-semibold text-zinc-100">{p.name}</span>
                   {p.badge && (
-                    <span className="px-1.5 py-0.5 rounded bg-white text-zinc-950 font-bold text-[10px]">
+                    <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${p.badgeColor}`}>
                       {p.badge}
                     </span>
                   )}
                 </div>
 
-                {/* Price */}
+                {/* Price or Coming Soon */}
                 <div className="mb-4">
-                  <div className="flex items-baseline gap-1.5 font-mono">
-                    <span className="text-3xl sm:text-4xl font-semibold tracking-tight text-white tabular-nums">
-                      {p.priceMonth}
-                    </span>
-                    <span className="text-xs text-zinc-500 font-mono">{p.period}</span>
-                  </div>
-                  <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                  {p.comingSoon ? (
+                    <div className="space-y-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white font-mono">
+                          {p.price}
+                        </span>
+                        <span className="text-xs text-zinc-500 font-mono">{p.period}</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-500 font-mono">
+                        To‘lov tizimlari orqali tez kunda ulanadi
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex items-baseline gap-1.5 font-mono">
+                      <span className="text-3xl sm:text-4xl font-semibold tracking-tight text-white tabular-nums">
+                        {p.price}
+                      </span>
+                      <span className="text-xs text-zinc-500 font-mono">{p.period}</span>
+                    </div>
+                  )}
+                  <p className="text-xs text-zinc-400 mt-2.5 leading-relaxed">
                     {p.description}
                   </p>
                 </div>
@@ -166,8 +151,14 @@ export default function PricingSection() {
                 <div className="py-4 border-t border-zinc-800/80 space-y-2.5 text-xs font-mono">
                   {p.specs.map((spec, sIdx) => (
                     <div key={sIdx} className="flex items-start gap-2 text-zinc-300">
-                      <Check className="w-3.5 h-3.5 text-emerald-400 mt-0.5 shrink-0" />
-                      <span className="text-[11px]">{spec}</span>
+                      {p.comingSoon ? (
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-400 mt-0.5 shrink-0" />
+                      ) : (
+                        <Check className="w-3.5 h-3.5 text-emerald-400 mt-0.5 shrink-0" />
+                      )}
+                      <span className={`text-[11px] ${sIdx === 0 && !p.comingSoon ? 'text-white font-semibold' : ''}`}>
+                        {spec}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -175,21 +166,29 @@ export default function PricingSection() {
 
               {/* Action Button */}
               <div className="pt-4 border-t border-zinc-800/80 mt-6">
-                <Link
-                  href="/dashboard/billing"
-                  className={`w-full py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center transition-all ${
-                    p.popular
-                      ? 'bg-white text-zinc-950 hover:bg-zinc-200'
-                      : 'bg-zinc-950 hover:bg-zinc-800 border border-zinc-700 text-zinc-200'
-                  }`}
-                >
-                  {p.cta}
-                </Link>
+                {p.comingSoon ? (
+                  <div className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 bg-zinc-950 border border-zinc-800 text-zinc-500 cursor-not-allowed select-none">
+                    <Lock className="w-3.5 h-3.5 text-zinc-500" />
+                    <span>{p.cta}</span>
+                  </div>
+                ) : (
+                  <Link
+                    href={p.ctaHref}
+                    className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 bg-white text-zinc-950 hover:bg-zinc-200 transition-all shadow-md active:scale-98"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-zinc-950" />
+                    <span>{p.cta}</span>
+                  </Link>
+                )}
               </div>
             </div>
           ))}
         </div>
 
+        {/* Not built yet: listed as planned, never as included in a plan */}
+        <p className="mt-6 text-[11px] font-mono text-zinc-500">
+          Rejada (hali mavjud emas): {PLANNED_FEATURES.join(' · ')}
+        </p>
       </div>
     </section>
   );

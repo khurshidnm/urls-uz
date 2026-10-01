@@ -1,32 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, type WorkspaceRecord } from '@/lib/db';
+import { createLink } from '@/lib/links/create-link';
+import { fail } from '@/lib/links/rules';
+import { checkCreationLimit } from '@/lib/rate-limit';
 import { TelegramBot, TelegramInlineButton } from '@/lib/telegram-bot';
-import { isValidSlug, isReservedSlug, generateRandomSlug, formatNumber } from '@/lib/utils';
+import { formatNumber } from '@/lib/utils';
 import { detectAndBuildDeepLink } from '@/lib/deep-link';
+import { pickTelegramFields, upsertTelegramUser } from '@/lib/telegram-auth';
+import { getSessionUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://urls.uz';
 
+type TelegramFrom = { id?: number; first_name?: string; last_name?: string; username?: string };
+
 /**
- * Helper to generate unique 5-char slug
+ * Telegram guarantees who sent a webhook update, so bot users get a real
+ * account and personal workspace; their links then show up in the dashboard.
  */
-function getUniqueSlug(): string {
-  for (let i = 0; i < 10; i++) {
-    const candidate = generateRandomSlug(5);
-    if (!isReservedSlug(candidate) && !db.getLinkBySlug(candidate)) {
-      return candidate;
-    }
+async function workspaceFor(from: TelegramFrom): Promise<{ userId: string; workspace: WorkspaceRecord } | null> {
+  if (!from?.id) return null;
+  const user = await upsertTelegramUser(pickTelegramFields(from));
+  const [membership] = await db.listWorkspacesForUser(user.id);
+  return membership ? { userId: user.id, workspace: membership.workspace } : null;
+}
+
+/**
+ * Creates a link through the shared service. Telegram/Instagram URLs open in
+ * the app when the plan still allows a deep link; otherwise a regular link.
+ */
+async function createBotLink(owner: { userId: string; workspace: WorkspaceRecord }, destinationUrl: string, slug?: string, title?: string) {
+  // Inline mode sends a query per message; this also stops spam through the bot
+  const limit = await checkCreationLimit(owner.userId);
+  if (!limit.ok) return fail(429, 'RATE_LIMITED', `Juda ko‘p havola. ${limit.retryAfterSec} soniyadan keyin qayta urinib ko‘ring.`);
+  const ctx = { workspace: owner.workspace, userId: owner.userId };
+  const input = { destination_url: destinationUrl, slug, title };
+  const wantsApp = detectAndBuildDeepLink(destinationUrl).isDeepLinkable;
+
+  const result = await createLink(ctx, { ...input, open_in_app: wantsApp }, 'telegram');
+  if (!result.ok && result.code === 'DEEP_LINK_LIMIT_REACHED') {
+    return createLink(ctx, input, 'telegram');
   }
-  return 'u_' + Math.random().toString(36).substring(2, 6);
+  return result;
+}
+
+/** User-supplied text is interpolated into HTML-formatted bot messages. */
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /**
  * GET /api/webhook/telegram
  * Health check & Webhook Diagnostic telemetry
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
+    // Webhook diagnostics (Telegram's last errors, pending updates, ...) are for platform admins only
+    const viewer = await getSessionUser();
+    if (viewer?.role !== 'superadmin') return NextResponse.json({ status: 'online' });
+
     const isBotConfigured = TelegramBot.isConfigured;
     const botInfo = isBotConfigured ? await TelegramBot.getMe() : null;
     const webhookInfo = isBotConfigured ? await TelegramBot.getWebhookInfo() : null;
@@ -56,8 +89,9 @@ export async function GET(req: NextRequest) {
         { command: '/help', description: 'Yordam va qo‘llanma' },
       ],
     });
-  } catch (err: any) {
-    return NextResponse.json({ status: 'error', message: err.message }, { status: 500 });
+  } catch (err) {
+    console.error('GET /api/webhook/telegram failed:', err);
+    return NextResponse.json({ status: 'error', message: 'Server xatosi' }, { status: 500 });
   }
 }
 
@@ -82,8 +116,7 @@ export async function POST(req: NextRequest) {
       const msg = update.message;
       const chatId = msg.chat?.id;
       const text = (msg.text || '').trim();
-      const from = msg.from || {};
-      const userId = `tg_${from.id}`;
+      const from: TelegramFrom = msg.from || {};
 
       if (!chatId) {
         return NextResponse.json({ ok: true });
@@ -96,7 +129,7 @@ export async function POST(req: NextRequest) {
         // Agar /start link_xyz shaklida havolaga bog'langan bo'lsa
         if (payload && payload.startsWith('stats_')) {
           const targetSlug = payload.replace('stats_', '');
-          await sendStatsMessage(chatId, targetSlug);
+          await sendStatsMessage(chatId, from, targetSlug);
           return NextResponse.json({ ok: true });
         }
 
@@ -143,7 +176,7 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ ok: true });
         }
 
-        await sendStatsMessage(chatId, slug);
+        await sendStatsMessage(chatId, from, slug);
         return NextResponse.json({ ok: true });
       }
 
@@ -164,7 +197,7 @@ export async function POST(req: NextRequest) {
 
       // 5. /mylinks
       if (text.startsWith('/mylinks')) {
-        await sendUserLinksMessage(chatId, userId);
+        await sendUserLinksMessage(chatId, from);
         return NextResponse.json({ ok: true });
       }
 
@@ -182,7 +215,7 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ ok: true });
         }
 
-        await processAndCreateShortLink(chatId, userId, targetUrl, customSlug);
+        await processAndCreateShortLink(chatId, from, targetUrl, customSlug);
         return NextResponse.json({ ok: true });
       }
 
@@ -199,7 +232,7 @@ export async function POST(req: NextRequest) {
           extractedUrl = 'https://' + extractedUrl;
         }
 
-        await processAndCreateShortLink(chatId, userId, extractedUrl);
+        await processAndCreateShortLink(chatId, from, extractedUrl);
         return NextResponse.json({ ok: true });
       }
 
@@ -218,7 +251,7 @@ export async function POST(req: NextRequest) {
       const cb = update.callback_query;
       const chatId = cb.message?.chat?.id;
       const data = (cb.data || '').trim();
-      const userId = `tg_${cb.from?.id}`;
+      const from: TelegramFrom = cb.from || {};
 
       if (!chatId) {
         await TelegramBot.answerCallbackQuery(cb.id);
@@ -227,7 +260,7 @@ export async function POST(req: NextRequest) {
 
       if (data.startsWith('stats:')) {
         const slug = data.replace('stats:', '');
-        await sendStatsMessage(chatId, slug);
+        await sendStatsMessage(chatId, from, slug);
         await TelegramBot.answerCallbackQuery(cb.id, { text: `Statistika yangilandi` });
         return NextResponse.json({ ok: true });
       }
@@ -246,7 +279,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (data === 'cmd:mylinks') {
-        await sendUserLinksMessage(chatId, userId);
+        await sendUserLinksMessage(chatId, from);
         await TelegramBot.answerCallbackQuery(cb.id);
         return NextResponse.json({ ok: true });
       }
@@ -262,18 +295,15 @@ export async function POST(req: NextRequest) {
       const iq = update.inline_query;
       const query = (iq.query || '').trim();
 
-      if (query && (query.startsWith('http://') || query.startsWith('https://'))) {
-        const slug = getUniqueSlug();
-        const shortUrl = `${APP_URL}/${slug}`;
+      const owner = await workspaceFor(iq.from || {});
+      const created =
+        owner && (query.startsWith('http://') || query.startsWith('https://'))
+          ? await createBotLink(owner, query, undefined, 'Inline Telegram Link')
+          : null;
 
-        // Create link on the fly for inline usage
-        db.createLink({
-          title: `Inline Telegram Link`,
-          destination_url: query,
-          slug,
-          userId: `tg_${iq.from?.id}`,
-          open_in_app: detectAndBuildDeepLink(query).isDeepLinkable,
-        });
+      if (created?.ok) {
+        const slug = created.link.slug;
+        const shortUrl = `${APP_URL}/${slug}`;
 
         const results = [
           {
@@ -282,7 +312,7 @@ export async function POST(req: NextRequest) {
             title: `🔗 Qisqa havola: ${shortUrl}`,
             description: `Asl manzil: ${query}`,
             input_message_content: {
-              message_text: `🔗 <b>Qisqa havola:</b> ${shortUrl}\n🎯 <b>Manzil:</b> ${query}`,
+              message_text: `🔗 <b>Qisqa havola:</b> ${shortUrl}\n🎯 <b>Manzil:</b> ${escapeHtml(query)}`,
               parse_mode: 'HTML',
             },
             reply_markup: {
@@ -316,60 +346,38 @@ export async function POST(req: NextRequest) {
  */
 async function processAndCreateShortLink(
   chatId: number,
-  userId: string,
+  from: TelegramFrom,
   destinationUrl: string,
   customSlug?: string
 ) {
-  let finalSlug = customSlug;
+  const owner = await workspaceFor(from);
+  if (!owner) return;
 
-  if (finalSlug) {
-    if (!isValidSlug(finalSlug)) {
-      await TelegramBot.sendMessage(
-        chatId,
-        `❌ <b>Yaroqsiz slug:</b> <code>${finalSlug}</code>\n` +
-          `Slug kamida 3 ta belgidan iborat bo‘lishi va faqat harf, raqam yoki tire o‘z ichiga olishi kerak.`
-      );
-      return;
-    }
-
-    if (isReservedSlug(finalSlug)) {
-      await TelegramBot.sendMessage(
-        chatId,
-        `⚠️ <code>${finalSlug}</code> tizim tomonidan band qilingan. Boshqa nom tanlang.`
-      );
-      return;
-    }
-
-    const existing = db.getLinkBySlug(finalSlug);
-    if (existing) {
-      await TelegramBot.sendMessage(
-        chatId,
-        `⚠️ <code>${finalSlug}</code> slugi allaqachon band qilingan. Boshqa nom tanlang.`
-      );
-      return;
-    }
-  } else {
-    finalSlug = getUniqueSlug();
+  const result = await createBotLink(owner, destinationUrl, customSlug);
+  if (!result.ok) {
+    const messages: Record<string, string> = {
+      INVALID_SLUG: `❌ <b>Yaroqsiz slug:</b> <code>${escapeHtml(customSlug ?? '')}</code>\nSlug kamida 3 ta belgidan iborat bo‘lishi va faqat harf, raqam yoki tire o‘z ichiga olishi kerak.`,
+      RESERVED_SLUG: `⚠️ <code>${escapeHtml(customSlug ?? '')}</code> tizim tomonidan band qilingan. Boshqa nom tanlang.`,
+      SLUG_TAKEN: `⚠️ <code>${escapeHtml(customSlug ?? '')}</code> slugi allaqachon band qilingan. Boshqa nom tanlang.`,
+      FREE_LIMIT_REACHED:
+        `⚠️ <b>Tarif limiti to‘lgan.</b>\n\n` +
+        `Yangi havola yaratish uchun keraksiz havolalarni dashboard orqali arxivlang yoki o‘chiring.\n\n` +
+        `🚀 <i>Cheksiz havolalarga ega Pro tarif tez kunda ishga tushadi!</i>`,
+    };
+    await TelegramBot.sendMessage(chatId, messages[result.code] ?? `⛔️ ${escapeHtml(result.error)}`);
+    return;
   }
 
-  // Deep Link aniqlash
+  const newLink = result.link;
+  const isOpenInApp = newLink.open_in_app;
   const deepLinkInfo = detectAndBuildDeepLink(destinationUrl);
-  const isOpenInApp = deepLinkInfo.isDeepLinkable;
-
-  const newLink = db.createLink({
-    title: `Telegram (${finalSlug})`,
-    destination_url: destinationUrl,
-    slug: finalSlug,
-    userId,
-    open_in_app: isOpenInApp,
-  });
 
   const shortUrl = `${APP_URL}/${newLink.slug}`;
 
   const messageText =
     `✅ <b>Havolangiz muvaffaqiyatli qisqartirildi!</b>\n\n` +
     `🔗 <b>Qisqa havola:</b> <code>${shortUrl}</code>\n` +
-    `🎯 <b>Asl manzil:</b> <code>${destinationUrl}</code>\n` +
+    `🎯 <b>Asl manzil:</b> <code>${escapeHtml(destinationUrl)}</code>\n` +
     (isOpenInApp ? `📱 <b>Smart Deep Link:</b> Yoqilgan (${deepLinkInfo.appName})\n` : '') +
     `\n<i>Quyidagi tugmalar orqali havolani ulashing, statistika yoki QR-kodini oling:</i>`;
 
@@ -392,17 +400,19 @@ async function processAndCreateShortLink(
 /**
  * Havola bo'yicha real vaqt statistikasini yuborish
  */
-async function sendStatsMessage(chatId: number, slug: string) {
-  const link = db.getLinkBySlug(slug);
-  if (!link) {
+async function sendStatsMessage(chatId: number, from: TelegramFrom, slug: string) {
+  const owner = await workspaceFor(from);
+  const link = await db.getLinkBySlug(slug);
+  // Statistics are private: only links in the sender's own workspace
+  if (!owner || !link || link.workspace_id !== owner.workspace.id) {
     await TelegramBot.sendMessage(
       chatId,
-      `❌ <code>${slug}</code> nomli havola topilmadi yoki u o‘chirilgan.`
+      `❌ <code>${escapeHtml(slug)}</code> nomli havola sizning havolalaringiz orasida topilmadi.`
     );
     return;
   }
 
-  const analytics = db.getLinkAnalytics(link.id);
+  const analytics = await db.getLinkAnalytics(link.id);
   const shortUrl = `${APP_URL}/${link.slug}`;
   const totalClicks = link.click_count || 0;
 
@@ -432,9 +442,9 @@ async function sendStatsMessage(chatId: number, slug: string) {
   const statsMessage =
     `📊 <b>Havola Tahlili & Telemetriyasi</b>\n\n` +
     `🔗 <b>Qisqa havola:</b> <code>${shortUrl}</code>\n` +
-    `🎯 <b>Asl manzil:</b> <code>${link.destination_url}</code>\n` +
+    `🎯 <b>Asl manzil:</b> <code>${escapeHtml(link.destination_url)}</code>\n` +
     `👁 <b>Jami bosishlar:</b> <b>${formatNumber(totalClicks)}</b> ta\n` +
-    `📅 <b>Yaratilgan sana:</b> ${link.created_at}\n\n` +
+    `📅 <b>Yaratilgan sana:</b> ${link.created_at.toISOString().slice(0, 10)}\n\n` +
     `🇺🇿 <b>Viloyatlar kesimida:</b>\n${regionsText}\n\n` +
     `📱 <b>Qurilmalar turi:</b>\n${devicesText}\n\n` +
     `🌐 <b>Trafik manbalari (Referrers):</b>\n${referrersText}`;
@@ -490,8 +500,9 @@ async function sendQrCodeMessage(chatId: number, target: string) {
 /**
  * Foydalanuvchining so'nggi havolalari
  */
-async function sendUserLinksMessage(chatId: number, userId: string) {
-  const links = db.getAllLinks(userId);
+async function sendUserLinksMessage(chatId: number, from: TelegramFrom) {
+  const owner = await workspaceFor(from);
+  const links = owner ? await db.getAllLinks(owner.workspace.id) : [];
 
   if (!links || links.length === 0) {
     await TelegramBot.sendMessage(

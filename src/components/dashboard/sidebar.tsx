@@ -19,21 +19,24 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  Shield,
 } from 'lucide-react';
 
 interface SidebarProps {
   onCreateLink?: () => void;
+  /** The workspace's bio page, if it has one. */
+  bioHandle: string | null;
 }
 
-export default function Sidebar({ onCreateLink }: SidebarProps) {
+export default function Sidebar({ onCreateLink, bioHandle }: SidebarProps) {
   const pathname = usePathname();
-  const { t, locale } = useLanguage();
-  const { user, logout } = useAuth();
+  const { t } = useLanguage();
+  const { user, logout, openAuthModal, isSuperAdmin, demoEditMode, setDemoEditMode } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
   const navigation = [
     {
-      name: locale === 'uz' ? "Umumiy ko'rinish" : locale === 'ru' ? 'Обзор' : 'Overview',
+      name: t.shell.overview,
       href: '/dashboard',
       icon: LayoutDashboard,
       matchExact: true,
@@ -59,12 +62,12 @@ export default function Sidebar({ onCreateLink }: SidebarProps) {
       icon: BarChart3,
     },
     {
-      name: 'API Kalitlar',
+      name: t.shell.apiKeys,
       href: '/dashboard/api-keys',
       icon: KeyRound,
     },
     {
-      name: "Tarif & To'lov",
+      name: t.shell.billing,
       href: '/dashboard/billing',
       icon: CreditCard,
     },
@@ -73,6 +76,8 @@ export default function Sidebar({ onCreateLink }: SidebarProps) {
       href: '/dashboard/settings',
       icon: Settings,
     },
+    // Platform admin panel (users, activity, payments); the page itself checks the role too
+    ...(isSuperAdmin ? [{ name: 'Admin', href: '/dashboard/admin', icon: Shield }] : []),
   ];
 
   return (
@@ -90,8 +95,14 @@ export default function Sidebar({ onCreateLink }: SidebarProps) {
           {!collapsed && (
             <span className="font-semibold text-sm tracking-tight text-white font-mono flex items-center gap-1.5">
               urls<span className="text-zinc-500">.uz</span>
-              <span className="px-1.5 py-0.2 rounded bg-zinc-800 text-[10px] text-zinc-400 font-mono uppercase">
-                {user?.plan || 'pro'}
+              <span
+                className={`px-1.5 py-0.5 rounded text-[10px] font-mono uppercase font-bold ${
+                  !user
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    : 'bg-zinc-800 text-zinc-400'
+                }`}
+              >
+                {!user ? 'demo' : (user.plan || 'free')}
               </span>
             </span>
           )}
@@ -102,20 +113,6 @@ export default function Sidebar({ onCreateLink }: SidebarProps) {
           title={collapsed ? 'Kengaytirish' : "Yig'ish"}
         >
           {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
-        </button>
-      </div>
-
-      {/* Quick Create Link CTA */}
-      <div className={`${collapsed ? 'px-2' : 'px-3'} pt-3 pb-2`}>
-        <button
-          onClick={onCreateLink}
-          className={`w-full flex items-center ${
-            collapsed ? 'justify-center' : 'justify-center gap-1.5'
-          } px-3 py-1.5 bg-white text-zinc-950 hover:bg-zinc-200 text-xs font-semibold rounded-lg shadow-sm transition-all active:scale-[0.98]`}
-          title="Yangi havola yaratish (⌘K)"
-        >
-          <Plus className="w-3.5 h-3.5 shrink-0" />
-          {!collapsed && <span>{t.createNewLink}</span>}
         </button>
       </div>
 
@@ -147,52 +144,117 @@ export default function Sidebar({ onCreateLink }: SidebarProps) {
         })}
       </nav>
 
-      {/* Quick Bio Link Footnote */}
+      {/* The workspace's own bio page */}
       {!collapsed && (
         <div className="p-2.5 mx-2.5 mb-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800">
           <div className="flex items-center justify-between mb-1 text-[11px] font-mono text-zinc-400">
-            <span>Bio Portal</span>
+            <span>{t.shell.bioPage}</span>
             <ExternalLink className="w-2.5 h-2.5 text-zinc-500" />
           </div>
-          <p className="text-[10px] text-zinc-500 mb-1.5 truncate font-mono">urls.uz/b/urls</p>
-          <Link
-            href="/b/urls"
-            target="_blank"
-            className="block w-full py-1 text-center text-[10px] font-mono font-medium text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded transition-colors"
+          {bioHandle ? (
+            <>
+              <p className="text-[10px] text-zinc-500 mb-1.5 truncate font-mono">urls.uz/b/{bioHandle}</p>
+              <Link
+                href={`/b/${bioHandle}`}
+                target="_blank"
+                className="block w-full py-1 text-center text-[10px] font-mono font-medium text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded transition-colors"
+              >
+                {t.shell.open} →
+              </Link>
+            </>
+          ) : (
+            <Link
+              href="/dashboard/bio"
+              className="block w-full mt-1.5 py-1 text-center text-[10px] font-mono font-medium text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded transition-colors"
+            >
+              {t.shell.createBio} →
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* Super Admin Demo Switcher */}
+      {!collapsed && isSuperAdmin && (
+        <div className="px-3 pb-2">
+          <button
+            onClick={() => setDemoEditMode(!demoEditMode)}
+            className={`w-full py-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-between border transition-all cursor-pointer ${
+              demoEditMode
+                ? 'bg-purple-900/40 border-purple-500/60 text-purple-200 shadow-sm'
+                : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
+            }`}
           >
-            Ochish →
-          </Link>
+            <span className="flex items-center gap-1.5">
+              <Shield className="w-3.5 h-3.5 text-purple-400" />
+              <span>Demo Tahrirlash</span>
+            </span>
+            <span
+              className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${
+                demoEditMode ? 'bg-purple-500 text-white' : 'bg-zinc-800 text-zinc-500'
+              }`}
+            >
+              {demoEditMode ? 'FAOL' : 'O‘CHIK'}
+            </span>
+          </button>
         </div>
       )}
 
       {/* User Info Bar */}
       <div className={`${collapsed ? 'px-2' : 'px-3'} py-2.5 border-t border-zinc-800/80 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
         {collapsed ? (
-          <img
-            src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-            alt="Avatar"
-            className="w-7 h-7 rounded-full object-cover bg-zinc-800"
-          />
-        ) : (
+          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-500 to-indigo-500 text-white flex items-center justify-center font-bold text-xs">
+            {user?.name?.[0]?.toUpperCase() || 'A'}
+          </div>
+        ) : user ? (
           <>
             <div className="flex items-center gap-2 min-w-0">
-              <img
-                src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                alt="Avatar"
-                className="w-6 h-6 rounded-full object-cover bg-zinc-800 shrink-0"
-              />
+              {user.avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element -- avatars come from Google/Telegram
+                <img src={user.avatar} alt="" className="w-6 h-6 rounded-full object-cover bg-zinc-800 shrink-0" />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-500 to-cyan-500 text-white flex items-center justify-center font-bold text-[10px] shrink-0" aria-hidden>
+                  {user.name?.[0]?.toUpperCase() || '?'}
+                </div>
+              )}
               <div className="min-w-0">
-                <p className="text-xs font-medium text-zinc-200 truncate">{user?.name || 'Khurshid'}</p>
-                <p className="text-[10px] text-zinc-500 truncate font-mono">{user?.email || 'admin@urls.uz'}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-medium text-zinc-200 truncate">{user?.name || 'Foydalanuvchi'}</p>
+                  {isSuperAdmin && (
+                    <span className="text-[9px] font-bold px-1 bg-purple-500/20 text-purple-300 rounded border border-purple-500/30">
+                      ADMIN
+                    </span>
+                  )}
+                </div>
+                {(user.email || user.phone) && <p className="text-[10px] text-zinc-500 truncate font-mono">{user.email || user.phone}</p>}
               </div>
             </div>
 
             <button
               onClick={logout}
-              title="Chiqish"
+              title={t.shell.signOut}
+              aria-label={t.shell.signOut}
               className="p-1 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors shrink-0"
             >
               <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-amber-500 to-indigo-500 text-white flex items-center justify-center font-bold text-[10px] shrink-0">
+                A
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-zinc-200 truncate">ApexTech Solutions</p>
+                <p className="text-[10px] text-amber-400 truncate font-mono">{t.shell.demoMode}</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => openAuthModal()}
+              className="px-2 py-1 text-[11px] font-bold text-zinc-950 bg-white hover:bg-zinc-200 rounded transition-colors shrink-0 cursor-pointer"
+            >
+              {t.shell.signIn}
             </button>
           </>
         )}

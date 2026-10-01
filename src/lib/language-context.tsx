@@ -1,7 +1,30 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useSyncExternalStore } from 'react';
 import { Locale, translations } from './translations';
+
+const STORAGE_KEY = 'urls_locale';
+const DEFAULT_LOCALE: Locale = 'uz';
+const listeners = new Set<() => void>();
+
+function readStoredLocale(): Locale {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved === 'uz' || saved === 'ru' || saved === 'en' ? saved : DEFAULT_LOCALE;
+  } catch {
+    return DEFAULT_LOCALE;
+  }
+}
+
+function subscribe(onChange: () => void) {
+  listeners.add(onChange);
+  // Keep other tabs in sync too
+  window.addEventListener('storage', onChange);
+  return () => {
+    listeners.delete(onChange);
+    window.removeEventListener('storage', onChange);
+  };
+}
 
 interface LanguageContextType {
   locale: Locale;
@@ -12,18 +35,14 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('uz');
-
-  useEffect(() => {
-    const saved = localStorage.getItem('urls_locale') as Locale;
-    if (saved && (saved === 'uz' || saved === 'ru' || saved === 'en')) {
-      setLocaleState(saved);
-    }
-  }, []);
+  // The server always renders the default locale; the browser then switches to the saved one
+  const locale = useSyncExternalStore(subscribe, readStoredLocale, () => DEFAULT_LOCALE);
 
   const setLocale = (newLocale: Locale) => {
-    setLocaleState(newLocale);
-    localStorage.setItem('urls_locale', newLocale);
+    try {
+      localStorage.setItem(STORAGE_KEY, newLocale);
+    } catch {}
+    listeners.forEach((notify) => notify());
   };
 
   const t = translations[locale] || translations.uz;

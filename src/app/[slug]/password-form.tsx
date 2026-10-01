@@ -3,13 +3,7 @@
 import React, { useState } from 'react';
 import { ArrowRight, KeyRound, Loader2 } from 'lucide-react';
 
-export default function PasswordUnlockForm({
-  slug,
-  destinationUrl,
-}: {
-  slug: string;
-  destinationUrl: string;
-}) {
+export default function PasswordUnlockForm({ slug }: { slug: string }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,8 +21,9 @@ export default function PasswordUnlockForm({
         body: JSON.stringify({ slug, password }),
       });
       const data = await res.json();
-      if (data.success && data.targetUrl) {
-        window.location.href = data.targetUrl;
+      if (data.success) {
+        // The server set an unlock cookie; reloading runs the normal redirect
+        window.location.reload();
       } else {
         setError(data.error || 'Parol noto‘g‘ri. Qayta urinib ko‘ring.');
       }

@@ -36,9 +36,13 @@ export function detectDeviceFromUserAgent(userAgent: string, osName = ''): {
   const osLower = (osName || '').toLowerCase();
 
   // 1. Check Huawei / HarmonyOS / Honor first (since Huawei Android UA also contains 'android')
-  const isHuawei = /huawei|honor|harmonyos|hms/i.test(ua);
+  const isHuawei =
+    /huawei|honor|harmonyos|openharmony|hmscore|hmsclient|appgallery|huaweibrowser/i.test(ua) ||
+    osLower.includes('harmony') ||
+    osLower.includes('huawei') ||
+    osLower.includes('honor');
   if (isHuawei) {
-    return { deviceType: 'huawei', os: 'HarmonyOS / EMUI', isMobile: true };
+    return { deviceType: 'huawei', os: 'HarmonyOS / Huawei', isMobile: true };
   }
 
   // 2. Check Apple iOS
@@ -138,8 +142,8 @@ export function detectAndBuildDeepLink(originalUrl: string): DeepLinkResult {
   }
 
   // 3. Huawei AppGallery
-  // https://appgallery.huawei.com/app/C101438781
-  const appGalleryMatch = url.match(/appgallery\.huawei\.com\/(?:#\/)?app\/(C[0-9]+)/i);
+  // https://appgallery.huawei.com/app/C101438781 or https://appgallery.cloud.huawei.com/... or appmarket://details?id=...
+  const appGalleryMatch = url.match(/(?:appgallery\.(?:cloud\.)?huawei\.com\/(?:#\/)?(?:marketshare\/)?app\/|(?:appmarket:\/\/details\?id=))(C[0-9]+|[a-zA-Z0-9._]+)/i);
   if (appGalleryMatch) {
     const appId = appGalleryMatch[1];
     return {

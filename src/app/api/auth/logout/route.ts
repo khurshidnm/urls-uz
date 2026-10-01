@@ -1,0 +1,12 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { clearSessionCookie, SESSION_COOKIE } from '@/lib/auth';
+
+export async function POST(request: NextRequest) {
+  const token = request.cookies.get(SESSION_COOKIE)?.value;
+  if (token) await db.deleteSession(token);
+
+  const response = NextResponse.json({ success: true });
+  clearSessionCookie(response);
+  return response;
+}

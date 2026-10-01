@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   Link2,
   ArrowRight,
@@ -22,12 +22,13 @@ import {
 import { useLanguage } from '@/lib/language-context';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/components/ui/toast';
+import { shortUrl as toShortUrl } from '@/lib/utils';
+import { createPayload, EMPTY_LINK_FORM } from '@/components/links/link-form-model';
 import { QrCanvas } from '@/components/ui/qr-canvas';
 
 export default function ShortenCard() {
-  const router = useRouter();
   const { t, locale } = useLanguage();
-  const { user, openAuthModal, pendingUrl, setPendingUrl } = useAuth();
+  const { user, openAuthModal } = useAuth();
   const { showToast } = useToast();
 
   const [url, setUrl] = useState('');
@@ -43,11 +44,28 @@ export default function ShortenCard() {
   const [utmCampaign, setUtmCampaign] = useState('');
 
   const [shortenedResult, setShortenedResult] = useState<{
+    id: string;
     slug: string;
     shortUrl: string;
-    originalUrl: string;
   } | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Back from a redirect login (Google, Telegram): the server created the link; show it here
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('shortened');
+    if (!id) return;
+    // Clean address, so a reload doesn't show the result again
+    window.history.replaceState(null, '', window.location.pathname);
+    // Only the owner gets the link back, so the parameter can't show someone else's
+    fetch(`/api/links/${encodeURIComponent(id)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data?.link) return;
+        setShortenedResult({ id: data.link.id, slug: data.link.slug, shortUrl: toShortUrl(data.link.slug) });
+        document.getElementById('shorten')?.scrollIntoView({ block: 'center' });
+      })
+      .catch(() => {});
+  }, []);
   const [showQrModal, setShowQrModal] = useState(false);
 
   const handlePaste = async () => {
@@ -55,26 +73,10 @@ export default function ShortenCard() {
       const text = await navigator.clipboard.readText();
       if (text) {
         setUrl(text.trim());
-        showToast('info', 'URL vafurli xotiradan joylashtirildi');
+        showToast('info', 'URL xotiradan joylashtirildi');
       }
     } catch {
       showToast('error', 'Clipboard ruxsati berilmagan');
-    }
-  };
-
-  const buildTargetUrl = (rawUrl: string) => {
-    let finalUrl = rawUrl.trim();
-    if (!/^https?:\/\//i.test(finalUrl)) {
-      finalUrl = 'https://' + finalUrl;
-    }
-    try {
-      const urlObj = new URL(finalUrl);
-      if (utmSource.trim()) urlObj.searchParams.set('utm_source', utmSource.trim());
-      if (utmMedium.trim()) urlObj.searchParams.set('utm_medium', utmMedium.trim());
-      if (utmCampaign.trim()) urlObj.searchParams.set('utm_campaign', utmCampaign.trim());
-      return urlObj.toString();
-    } catch {
-      return finalUrl;
     }
   };
 
@@ -84,31 +86,30 @@ export default function ShortenCard() {
     setLoading(true);
     setError('');
 
-    const processedUrl = buildTargetUrl(targetUrl);
-
     try {
+      // Same payload builder as the dashboard; UTM stays in its own fields so it can be edited later
+      const payload = createPayload(
+        {
+          ...EMPTY_LINK_FORM,
+          destination_url: targetUrl,
+          password,
+          expires_at: expiresAt,
+          utm_source: utmSource,
+          utm_medium: utmMedium,
+          utm_campaign: utmCampaign,
+        },
+        'landing'
+      );
       const res = await fetch('/api/links', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(user ? { 'x-user-id': user.id } : {}),
-        },
-        body: JSON.stringify({
-          destination_url: processedUrl,
-          user_id: user?.id,
-          password: password.trim() || undefined,
-          expires_at: expiresAt || undefined,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
       if (data.success && data.link) {
-        const fullShortUrl = `${window.location.origin}/${data.link.slug}`;
-        setShortenedResult({
-          slug: data.link.slug,
-          shortUrl: fullShortUrl,
-          originalUrl: data.link.destination_url,
-        });
+        const fullShortUrl = toShortUrl(data.link.slug);
+        setShortenedResult({ id: data.link.id, slug: data.link.slug, shortUrl: fullShortUrl });
 
         try {
           await navigator.clipboard.writeText(fullShortUrl);
@@ -119,11 +120,8 @@ export default function ShortenCard() {
           showToast('success', 'Havola muvaffaqiyatli yaratildi!');
         }
 
-        setTimeout(() => {
-          router.push('/dashboard/links');
-        }, 1200);
       } else if (data.code === 'AUTH_REQUIRED') {
-        openAuthModal(targetUrl.trim());
+        openAuthModal(targetUrl.trim(), () => performShorten(targetUrl.trim()));
       } else {
         setError(data.error || "Xatolik yuz berdi. Qayta urinib ko'ring.");
       }
@@ -134,21 +132,12 @@ export default function ShortenCard() {
     }
   };
 
-  useEffect(() => {
-    if (user && pendingUrl) {
-      const urlToProcess = pendingUrl;
-      setPendingUrl('');
-      setUrl(urlToProcess);
-      performShorten(urlToProcess);
-    }
-  }, [user, pendingUrl]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) return;
 
     if (!user) {
-      openAuthModal(url.trim());
+      openAuthModal(url.trim(), () => performShorten(url.trim()));
       return;
     }
 
@@ -172,7 +161,7 @@ export default function ShortenCard() {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-3">
+    <div id="shorten" className="w-full max-w-2xl mx-auto space-y-3 scroll-mt-24">
       {/* Omni-Shortener Command Bar (Linear/Vercel standard) */}
       <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06),0_8px_24px_rgba(0,0,0,0.5)] p-1.5 transition-all duration-150 focus-within:border-zinc-700">
         <form onSubmit={handleSubmit} className="space-y-1.5">
@@ -201,12 +190,6 @@ export default function ShortenCard() {
                 <span>Paste</span>
               </button>
             )}
-
-            {/* Domain Suffix Indicator */}
-            <div className="hidden md:flex items-center gap-1 px-2 py-1 bg-zinc-950 rounded border border-zinc-800 text-[11px] font-mono text-zinc-400 shrink-0">
-              <span className="text-zinc-300">urls.uz/</span>
-              <span className="text-zinc-500">···</span>
-            </div>
 
             {/* Solid High-Contrast CTA Button */}
             <button
@@ -238,7 +221,7 @@ export default function ShortenCard() {
             </button>
 
             <span className="text-zinc-500 hidden sm:inline">
-              Avtomatik 5-belgili ID · &lt; 15ms Edge
+              Avtomatik 5-belgili ID
             </span>
           </div>
 
@@ -349,6 +332,12 @@ export default function ShortenCard() {
                 >
                   <QrCode className="w-3.5 h-3.5" />
                 </button>
+                <Link
+                  href={`/dashboard/links/${shortenedResult.id}`}
+                  className="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 rounded text-[11px] font-mono flex items-center gap-1 transition-colors"
+                >
+                  Boshqarish <ArrowRight className="w-3 h-3" />
+                </Link>
               </div>
             </div>
           </div>
@@ -365,7 +354,7 @@ export default function ShortenCard() {
         ) : (
           <span>Qisqartirilgan havolalar avtomatik hisobingizga biriktiriladi</span>
         )}
-        <span>SLA 99.99% · DNS Anycast</span>
+        <span>HTTPS · Fishingdan himoya</span>
       </div>
 
       {/* Quick QR Code Modal */}

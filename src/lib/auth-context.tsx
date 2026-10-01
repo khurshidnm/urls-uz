@@ -1,28 +1,52 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export interface User {
   id: string;
   name: string;
   email: string;
   phone?: string;
-  provider?: 'telegram' | 'google' | 'email';
+  provider?: 'telegram' | 'google' | 'phone';
   plan: 'free' | 'pro' | 'enterprise';
+  role?: 'superadmin' | 'user';
   avatar?: string;
+}
+
+export interface TelegramWidgetData {
+  id: number | string;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  photo_url?: string;
+  auth_date: number | string;
+  hash: string;
 }
 
 interface AuthContextType {
   user: User | null;
+  /** True until the first /api/auth/me response arrives. */
+  isLoading: boolean;
   isAuthenticated: boolean;
+  isSuperAdmin: boolean;
+  demoEditMode: boolean;
+  setDemoEditMode: (active: boolean) => Promise<void>;
+  resetDemoData: () => Promise<boolean>;
   loginWithTelegram: (phone: string, code: string, name?: string) => Promise<boolean>;
-  loginWithTelegramWidget: (widgetData: any) => Promise<boolean>;
-  loginWithTelegramOneClick: (userData?: any) => Promise<boolean>;
-  loginWithGoogle: (email?: string, name?: string, avatar?: string) => Promise<boolean>;
-  logout: () => void;
-  updatePlan: (plan: 'free' | 'pro' | 'enterprise') => void;
+  loginWithTelegramWidget: (widgetData: TelegramWidgetData) => Promise<boolean>;
+  /** Login + password sign-in; resolves with an error message when it fails. */
+  loginWithPassword: (login: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  logout: () => Promise<void>;
+  /** Re-reads the logged-in user (after a profile change). */
+  reloadUser: () => Promise<void>;
   isAuthModalOpen: boolean;
-  openAuthModal: (pendingUrlToShorten?: string) => void;
+  /**
+   * Opens the login modal. `afterLogin` runs once the user logs in inside the
+   * modal (Telegram phone code); redirect logins (Google, Telegram widget)
+   * reload the page and create the pending link on the server instead.
+   */
+  openAuthModal: (pendingUrlToShorten?: string, afterLogin?: () => void) => void;
   closeAuthModal: () => void;
   pendingUrl: string;
   setPendingUrl: (url: string) => void;
@@ -30,47 +54,89 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/** Leftovers from the old client-side "session" (localStorage user + readable cookies). */
+function clearLegacyClientSession() {
+  for (const key of ['urls_user', 'urls_token', 'urls_is_superadmin', 'urls_demo_edit_mode']) {
+    localStorage.removeItem(key);
+  }
+  for (const name of ['urls_session', 'urls_user_id', 'urls_role']) {
+    document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [pendingUrl, setPendingUrl] = useState('');
+  const [demoEditMode, setDemoEditModeState] = useState(false);
+  const afterLoginRef = useRef<(() => void) | null>(null);
+
+  const isSuperAdmin = user?.role === 'superadmin';
 
   useEffect(() => {
-    const saved = localStorage.getItem('urls_user');
-    if (saved) {
-      try {
-        setUser(JSON.parse(saved));
-      } catch {
-        setUser(null);
-      }
-    }
+    clearLegacyClientSession();
+
+    let cancelled = false;
+    fetch('/api/auth/me', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        setUser(data.user ?? null);
+        setDemoEditModeState(Boolean(data.demoEditMode));
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const openAuthModal = (pendingUrlToShorten?: string) => {
+  /** Server components read the session cookie, so re-render them after it changes. */
+  const onLoggedIn = (loggedInUser: User) => {
+    // The link was created client-side, so the redirect-login fallback isn't needed
+    document.cookie = 'urls_pending_url=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    setUser(loggedInUser);
+    setIsAuthModalOpen(false);
+    setPendingUrl('');
+    router.refresh();
+    const afterLogin = afterLoginRef.current;
+    afterLoginRef.current = null;
+    afterLogin?.();
+  };
+
+  const openAuthModal = (pendingUrlToShorten?: string, afterLogin?: () => void) => {
     if (pendingUrlToShorten) {
       setPendingUrl(pendingUrlToShorten);
     }
+    afterLoginRef.current = afterLogin ?? null;
     setIsAuthModalOpen(true);
   };
 
   const closeAuthModal = () => {
     setIsAuthModalOpen(false);
     setPendingUrl('');
+    afterLoginRef.current = null;
   };
 
-  const loginWithTelegram = async (phone: string, code: string, name?: string): Promise<boolean> => {
+  const postLogin = async (payload: Record<string, unknown>): Promise<boolean> => {
     try {
       const res = await fetch('/api/auth/telegram', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'verify-otp', phone, code, name }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
+      // Two-step login: the authenticator code is asked on its own page
+      if (data.success && data.twoFactorRequired) {
+        window.location.assign(data.redirect);
+        return true;
+      }
       if (data.success && data.user) {
-        setUser(data.user);
-        localStorage.setItem('urls_user', JSON.stringify(data.user));
-        localStorage.setItem('urls_token', data.token);
-        setIsAuthModalOpen(false);
+        onLoggedIn(data.user);
         return true;
       }
       return false;
@@ -79,46 +145,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const loginWithTelegramWidget = async (widgetData: any): Promise<boolean> => {
+  const loginWithTelegram = (phone: string, code: string, name?: string) =>
+    postLogin({ action: 'verify-otp', phone, code, name });
+
+  const loginWithTelegramWidget = (widgetData: TelegramWidgetData) =>
+    postLogin({ action: 'verify-widget', widgetData });
+
+  const loginWithPassword = async (login: string, password: string) => {
     try {
-      const res = await fetch('/api/auth/telegram', {
+      const res = await fetch('/api/auth/password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'verify-widget', widgetData }),
+        body: JSON.stringify({ login, password }),
       });
       const data = await res.json();
-      if (data.success && data.user) {
-        setUser(data.user);
-        localStorage.setItem('urls_user', JSON.stringify(data.user));
-        localStorage.setItem('urls_token', data.token);
-        setIsAuthModalOpen(false);
-        return true;
+      if (data.success && data.twoFactorRequired) {
+        window.location.assign(data.redirect);
+        return { ok: true };
       }
-      return false;
+      if (data.success && data.user) {
+        onLoggedIn(data.user);
+        return { ok: true };
+      }
+      return { ok: false, error: data.error || 'Login yoki parol noto‘g‘ri' };
     } catch {
-      return false;
+      return { ok: false, error: 'Tarmoq xatosi yuz berdi' };
     }
   };
 
-  const loginWithTelegramOneClick = async (userData?: any): Promise<boolean> => {
+  const setDemoEditMode = async (active: boolean) => {
+    const res = await fetch('/api/auth/demo-edit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ active }),
+    });
+    if (res.ok) {
+      setDemoEditModeState(active);
+      router.refresh();
+    }
+  };
+
+  const resetDemoData = async (): Promise<boolean> => {
     try {
-      const res = await fetch('/api/auth/telegram', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'one-click',
-          user: userData || {
-            username: 'khurshid_nm',
-            first_name: 'Khurshid Nurmukhamedov',
-          },
-        }),
-      });
+      const res = await fetch('/api/demo/reset', { method: 'POST' });
       const data = await res.json();
-      if (data.success && data.user) {
-        setUser(data.user);
-        localStorage.setItem('urls_user', JSON.stringify(data.user));
-        localStorage.setItem('urls_token', data.token);
-        setIsAuthModalOpen(false);
+      if (data.success) {
+        window.location.reload();
         return true;
       }
       return false;
@@ -127,52 +199,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const loginWithGoogle = async (email?: string, name?: string, avatar?: string): Promise<boolean> => {
-    try {
-      const res = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name, avatar }),
-      });
-      const data = await res.json();
-      if (data.success && data.user) {
-        setUser(data.user);
-        localStorage.setItem('urls_user', JSON.stringify(data.user));
-        localStorage.setItem('urls_token', data.token);
-        setIsAuthModalOpen(false);
-        return true;
-      }
-      return false;
-    } catch {
-      return false;
-    }
+  const reloadUser = async () => {
+    const data = await fetch('/api/auth/me', { cache: 'no-store' }).then((res) => res.json()).catch(() => null);
+    if (data) setUser(data.user ?? null);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     setUser(null);
-    localStorage.removeItem('urls_user');
-    localStorage.removeItem('urls_token');
-  };
-
-  const updatePlan = (plan: 'free' | 'pro' | 'enterprise') => {
-    if (user) {
-      const updated = { ...user, plan };
-      setUser(updated);
-      localStorage.setItem('urls_user', JSON.stringify(updated));
-    }
+    setDemoEditModeState(false);
+    // To the landing page with a full load: refreshing a dashboard page would
+    // show the read-only demo that anonymous visitors see there. A full load also
+    // drops cached dashboard pages, so Back can't show the signed-in data.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign('/');
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        isLoading,
         isAuthenticated: !!user,
+        isSuperAdmin,
+        demoEditMode,
+        setDemoEditMode,
+        resetDemoData,
         loginWithTelegram,
         loginWithTelegramWidget,
-        loginWithTelegramOneClick,
-        loginWithGoogle,
+        loginWithPassword,
         logout,
-        updatePlan,
+        reloadUser,
         isAuthModalOpen,
         openAuthModal,
         closeAuthModal,

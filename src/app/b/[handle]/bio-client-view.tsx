@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { BioAvatar } from '@/components/ui/bio-avatar';
+import Link from 'next/link';
 import {
   CheckCircle2,
   Share2,
@@ -10,7 +12,7 @@ import {
   X,
   Check,
 } from 'lucide-react';
-import { TelegramIcon, InstagramIcon, YouTubeIcon, LinkedInIcon, GitHubIcon } from '@/components/ui/icons';
+import { TelegramIcon, InstagramIcon, YouTubeIcon, LinkedInIcon, GitHubIcon, TikTokIcon, TwitterXIcon } from '@/components/ui/icons';
 import { QrCanvas } from '@/components/ui/qr-canvas';
 
 interface BioClientViewProps {
@@ -21,7 +23,7 @@ interface BioClientViewProps {
     bio: string;
     avatar_url: string;
     theme: string;
-    verified: number;
+    verified: boolean;
     social_links_parsed: Record<string, string>;
     links: Array<{
       id: string;
@@ -31,6 +33,8 @@ interface BioClientViewProps {
       style: string;
       animation: string;
       click_count: number;
+      /** Short link behind the button; null for tel:/mailto:/tg: buttons. */
+      short_slug: string | null;
     }>;
   };
 }
@@ -83,6 +87,20 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
       subtext: 'text-slate-600',
       button: 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 shadow-sm',
     },
+    ocean: {
+      bg: 'bg-gradient-to-b from-[#0a192f] via-slate-950 to-[#020c1b]',
+      card: 'bg-sky-950/40 border-sky-800/40 text-sky-100',
+      text: 'text-sky-100',
+      subtext: 'text-sky-300/70',
+      button: 'bg-sky-900/40 hover:bg-sky-800/40 text-sky-100 border-sky-600/40 shadow-sky-950/50',
+    },
+    ruby: {
+      bg: 'bg-gradient-to-b from-[#2a0812] via-slate-950 to-zinc-950',
+      card: 'bg-rose-950/40 border-rose-800/40 text-rose-100',
+      text: 'text-rose-100',
+      subtext: 'text-rose-300/70',
+      button: 'bg-gradient-to-r from-rose-700/40 to-pink-700/40 hover:from-rose-700/60 hover:to-pink-700/60 text-white border-rose-500/40 shadow-rose-950/50',
+    },
   };
 
   const currentTheme = themeClasses[bioPage.theme] || themeClasses.midnight;
@@ -106,14 +124,18 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
     }
   };
 
-  const handleLinkClick = (linkId: string, url: string) => {
+  const handleLinkClick = (link: BioClientViewProps['bioPage']['links'][number]) => {
+    // Buttons backed by a short link are counted by the redirect itself (with geo, device and referrer)
+    if (link.short_slug) {
+      window.open(`/${link.short_slug}`, '_blank', 'noopener,noreferrer');
+      return;
+    }
     fetch(`/api/bio/click`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ linkId }),
+      body: JSON.stringify({ linkId: link.id }),
     }).catch(() => {});
-
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.open(link.url, '_blank', 'noopener,noreferrer');
   };
 
   const renderSocialIcon = (network: string, value: string) => {
@@ -135,6 +157,12 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
     } else if (network === 'linkedin') {
       href = value.startsWith('http') ? value : `https://linkedin.com/in/${value}`;
       icon = <LinkedInIcon className="w-5 h-5 text-[#0077B5]" />;
+    } else if (network === 'tiktok') {
+      href = value.startsWith('http') ? value : `https://tiktok.com/@${value.replace(/^@/, '')}`;
+      icon = <TikTokIcon className="w-5 h-5 text-white" />;
+    } else if (network === 'twitter' || network === 'x') {
+      href = value.startsWith('http') ? value : `https://x.com/${value.replace(/^@/, '')}`;
+      icon = <TwitterXIcon className="w-5 h-5 text-white" />;
     }
 
     return (
@@ -154,12 +182,12 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
     <div className={`min-h-screen ${currentTheme.bg} transition-colors duration-300 flex flex-col items-center py-12 px-4`}>
       {/* Top Floating Controls */}
       <div className="w-full max-w-md flex items-center justify-between mb-8">
-        <a
+        <Link
           href="/"
           className="text-xs font-semibold tracking-wider text-slate-400 hover:text-white transition-colors bg-white/5 px-3 py-1.5 rounded-full border border-white/10"
         >
           urls.uz
-        </a>
+        </Link>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowQr(true)}
@@ -183,18 +211,14 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
         {/* Avatar */}
         <div className="relative mb-4 group">
           <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 shadow-xl">
-            <img
-              src={bioPage.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'}
-              alt={bioPage.title}
-              className="w-full h-full rounded-full object-cover bg-slate-800"
-            />
+            <BioAvatar src={bioPage.avatar_url} name={bioPage.title} className="w-full h-full rounded-full object-cover bg-slate-800" />
           </div>
         </div>
 
         {/* Title & Verified Badge */}
         <div className="flex items-center gap-1.5 mb-1.5">
           <h1 className={`text-xl font-bold tracking-tight ${currentTheme.text}`}>{bioPage.title}</h1>
-          {bioPage.verified === 1 && (
+          {bioPage.verified && (
             <CheckCircle2 className="w-5 h-5 text-indigo-400 fill-indigo-500/20" />
           )}
         </div>
@@ -228,7 +252,7 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
               return (
                 <button
                   key={link.id}
-                  onClick={() => handleLinkClick(link.id, link.url)}
+                  onClick={() => handleLinkClick(link)}
                   className={`w-full relative group flex items-center justify-between p-4 rounded-2xl border transition-all duration-200 active:scale-[0.98] ${
                     isGradient
                       ? 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 text-white border-indigo-400/30 shadow-lg shadow-indigo-600/25 hover:shadow-indigo-600/40'
@@ -251,13 +275,13 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
 
         {/* Footer Brand */}
         <div className="mt-auto pt-6 pb-4">
-          <a
+          <Link
             href="/"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-slate-300 transition-colors shadow-sm"
           >
             <span>O‘zingizning bepul bio sahifangizni yarating —</span>
             <span className="font-bold text-indigo-400">urls.uz</span>
-          </a>
+          </Link>
         </div>
       </div>
 

@@ -1,19 +1,32 @@
-import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
+import { NextRequest } from 'next/server';
+import { getSessionUser } from '@/lib/auth';
+import { signIn } from '@/lib/accounts';
+import { appOrigin, completeRedirectLogin, connectRedirect, CONNECT_STATE_SUFFIX, loginErrorRedirect, OAUTH_STATE_COOKIE } from '@/lib/login-flow';
+
+function statesMatch(a: string | undefined | null, b: string | undefined | null): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
+  const { searchParams } = request.nextUrl;
   const code = searchParams.get('code');
   const error = searchParams.get('error');
 
-  const origin = request.nextUrl.origin || 'https://urls.uz';
-
   if (error || !code) {
-    return NextResponse.redirect(`${origin}/?auth_error=${encodeURIComponent(error || 'Kirish bekor qilindi')}`);
+    return loginErrorRedirect(request, error || 'Kirish bekor qilindi');
   }
 
-  const clientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  if (!statesMatch(searchParams.get('state'), request.cookies.get(OAUTH_STATE_COOKIE)?.value)) {
+    return loginErrorRedirect(request, 'Xavfsizlik tekshiruvi muvaffaqiyatsiz (state). Qayta urinib ko‘ring.');
+  }
+
+  const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = `${origin}/api/auth/google/callback`;
+  if (!clientId || !clientSecret) {
+    return loginErrorRedirect(request, 'Google OAuth sozlanmagan');
+  }
 
   try {
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -21,92 +34,54 @@ export async function GET(request: NextRequest) {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         code,
-        client_id: clientId || '',
-        client_secret: clientSecret || '',
-        redirect_uri: redirectUri,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: `${appOrigin(request)}/api/auth/google/callback`,
         grant_type: 'authorization_code',
       }),
     });
-
     const tokenData = await tokenRes.json();
-
     if (!tokenData.access_token) {
-      return NextResponse.redirect(`${origin}/?auth_error=${encodeURIComponent(tokenData.error_description || 'Token olishda xatolik')}`);
+      return loginErrorRedirect(request, tokenData.error_description || 'Token olishda xatolik');
     }
 
-    const userinfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    const userinfoRes = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
-    const userInfo = await userinfoRes.json();
+    const info = await userinfoRes.json();
+    if (!info.sub || !info.email || info.email_verified !== true) {
+      return loginErrorRedirect(request, 'Google hisobingiz email manzili tasdiqlanmagan');
+    }
 
-    const user = {
-      id: `usr_g_${userInfo.sub ? userInfo.sub.slice(-8) : Math.random().toString(36).substring(2, 10)}`,
-      name: userInfo.name || 'Google Foydalanuvchisi',
-      email: userInfo.email,
-      avatar: userInfo.picture,
-      provider: 'google',
-      plan: 'pro',
+    const profile = {
+      provider: 'google' as const,
+      providerId: String(info.sub),
+      email: info.email,
+      name: info.name || info.email.split('@')[0],
+      label: info.email,
+      avatarUrl: info.picture,
     };
 
-    const token = `session_g_${Date.now()}_${user.id}`;
-    
-    // Check if there was a pending URL waiting for authorization
-    const pendingUrlCookie = request.cookies.get('urls_pending_url')?.value;
-    let redirectPath = '/dashboard';
-
-    if (pendingUrlCookie) {
-      try {
-        const decodedUrl = decodeURIComponent(pendingUrlCookie).trim();
-        let formattedUrl = decodedUrl;
-        if (!/^https?:\/\//i.test(formattedUrl)) {
-          formattedUrl = 'https://' + formattedUrl;
-        }
-
-        // Generate 5-character random slug
-        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        let finalSlug = '';
-        let attempts = 0;
-        const { db } = await import('@/lib/db');
-        do {
-          finalSlug = Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-          attempts++;
-        } while (db.getLinkBySlug(finalSlug) && attempts < 15);
-
-        db.createLink({
-          userId: user.id,
-          title: finalSlug,
-          destination_url: formattedUrl,
-          slug: finalSlug,
-          open_in_app: false,
-        });
-
-        redirectPath = '/dashboard/links';
-      } catch (e) {
-        console.error('Failed to create pending link on Google callback:', e);
-      }
+    // Connecting Google to the logged-in account (from settings)
+    const state = searchParams.get('state')!;
+    const current = state.endsWith(CONNECT_STATE_SUFFIX) ? await getSessionUser() : null;
+    if (current) {
+      const result = await signIn(profile, { connectTo: current.id });
+      const response = result.ok
+        ? connectRedirect(request, { connected: 'google', outcome: result.outcome })
+        : connectRedirect(request, { connect_error: result.error });
+      response.cookies.delete(OAUTH_STATE_COOKIE);
+      return response;
     }
 
-    const redirectResponse = NextResponse.redirect(`${origin}${redirectPath}`);
-
-    redirectResponse.cookies.set('urls_session', token, {
-      path: '/',
-      httpOnly: false,
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30,
-    });
-    redirectResponse.cookies.set('urls_user_id', user.id, {
-      path: '/',
-      httpOnly: false,
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30,
-    });
-
-    if (pendingUrlCookie) {
-      redirectResponse.cookies.delete('urls_pending_url');
-    }
-
-    return redirectResponse;
-  } catch (err: any) {
-    return NextResponse.redirect(`${origin}/?auth_error=${encodeURIComponent(err.message)}`);
+    const result = await signIn(profile);
+    if (!result.ok) return loginErrorRedirect(request, result.error);
+    const user = result.user;
+    const response = await completeRedirectLogin(request, user.id);
+    response.cookies.delete(OAUTH_STATE_COOKIE);
+    return response;
+  } catch (err) {
+    console.error('Google OAuth callback failed:', err);
+    return loginErrorRedirect(request, 'Google orqali kirishda xatolik yuz berdi');
   }
 }

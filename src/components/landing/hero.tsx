@@ -1,29 +1,42 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useLanguage } from '@/lib/language-context';
 import ShortenCard from './shorten-card';
-import { Zap, Smartphone, MapPin, Shield, Terminal } from 'lucide-react';
+import { Zap, Smartphone, MapPin, Shield, Terminal, Sparkles } from 'lucide-react';
+import { formatNumber } from '@/lib/utils';
 
-export default function Hero() {
+export default function Hero({ totalRedirects }: { totalRedirects: number }) {
   const { t, locale } = useLanguage();
 
   const highlights = [
-    { icon: Zap, label: 'P99 LATENCY', value: '< 14ms Global Edge' },
-    { icon: Smartphone, label: 'DEEP LINKING', value: 'Zero-Webview Bypass' },
-    { icon: MapPin, label: 'GEO-TELEMETRY', value: '14 Viloyat Real-time' },
-    { icon: Shield, label: 'LINK ARMOR', value: 'SHA-256 & Rate Limiting' },
+    { icon: Zap, label: 'SMART ROUTING', value: 'iOS · Android · Huawei' },
+    { icon: Smartphone, label: 'DEEP LINKING', value: 'Telegram · Instagram ilovada' },
+    { icon: MapPin, label: 'GEO-TELEMETRY', value: '14 viloyat analitikasi' },
+    { icon: Shield, label: 'LINK ARMOR', value: 'Parol & Rate Limiting' },
   ];
 
   return (
     <section className="relative pt-16 pb-20 md:pt-24 md:pb-28 overflow-hidden bg-mesh border-b border-zinc-800/60">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        {/* Engineering Release Pill */}
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 text-[11px] font-mono mb-6">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-zinc-300 font-semibold">INFRASTRUCTURE V3.4</span>
-          <span className="text-zinc-600">·</span>
-          <span>40M+ Redirects Processed</span>
+        {/* Engineering Release Pill & Live Demo Button */}
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 text-[11px] font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-zinc-300 font-semibold">urls.uz</span>
+            <span className="text-zinc-600">·</span>
+            <span>{formatNumber(totalRedirects)} Redirects Processed</span>
+          </div>
+
+          <Link
+            href="/dashboard?demo=true"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-mono transition-all group"
+          >
+            <Sparkles className="w-3 h-3 text-amber-400" />
+            <span>Jonli Demo Versiya (Faqat ko‘rish)</span>
+            <span className="text-amber-400/80 group-hover:translate-x-0.5 transition-transform">→</span>
+          </Link>
         </div>
 
         {/* Hero Title (Confident, tight, weight 600, no blobby bold) */}
@@ -49,10 +62,10 @@ export default function Hero() {
         {/* Subtitle */}
         <p className="text-xs sm:text-sm text-zinc-400 max-w-xl mx-auto mb-9 leading-relaxed">
           {locale === 'uz'
-            ? 'Oddiy havolalarni <14ms kechikishdagi smart deep linklarga, brendlangan QR kodlarga va shaxsiy Link-in-Bio sahifalariga aylantiring.'
+            ? 'Oddiy havolalarni ilovada ochiladigan smart linklarga, tahrirlanadigan QR kodlarga va shaxsiy Link-in-Bio sahifalariga aylantiring.'
             : locale === 'ru'
-            ? 'Создавайте быстрые диплинки с задержкой <14мс, векторные QR-коды и визитки Link-in-Bio с подробной аналитикой.'
-            : 'Turn destination URLs into sub-14ms smart deep links, vector QR codes, and bio portals with regional telemetry.'}
+            ? 'Создавайте ссылки, открывающиеся прямо в приложениях, редактируемые QR-коды и страницы Link-in-Bio с подробной аналитикой.'
+            : 'Turn links into smart links that open in apps, editable QR codes and link-in-bio pages, with regional analytics.'}
         </p>
 
         {/* Omni-Shortener Command Bar */}

@@ -7,17 +7,16 @@ export async function GET(
 ) {
   try {
     const { handle } = await params;
-    const bioPage = db.getBioPageByHandle(handle);
+    const bioPage = await db.getBioPageByHandle(handle);
 
     if (!bioPage) {
       return NextResponse.json({ success: false, error: 'Bio page not found' }, { status: 404 });
     }
 
-    // Increment view count
-    db.recordBioPageView(bioPage.id);
-
+    // Reading the data isn't a page view: only /b/<handle> counts views (and not for bots)
     return NextResponse.json({ success: true, bioPage });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    console.error('GET /api/bio/[handle] failed:', error);
+    return NextResponse.json({ success: false, error: 'Server xatosi' }, { status: 500 });
   }
 }

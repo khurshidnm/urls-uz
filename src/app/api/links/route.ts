@@ -1,79 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { generateRandomSlug, isValidSlug, isReservedSlug } from '@/lib/utils';
-import { checkUrlSafety } from '@/lib/anti-phishing';
+import { db, toPublicLink } from '@/lib/db';
+import { routeError } from '@/lib/route-error';
+import { checkCreationLimit, tooManyRequests } from '@/lib/rate-limit';
+import { requireWorkspace } from '@/lib/auth';
+import { createLink } from '@/lib/links/create-link';
+import { parseLinkFilter } from '@/lib/links/list-filter';
 
+/**
+ * Lists the workspace's links. Filters: q, status (all|active|archived, default all),
+ * tag, folder (id or "none"), sort (newest|oldest|clicks), page, limit (max 100).
+ */
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const q = searchParams.get('q')?.toLowerCase();
+    const ctx = await requireWorkspace({ apiKey: true });
+    const filter = parseLinkFilter(request.nextUrl.searchParams, { status: 'all', limit: 100 });
+    const { links, total } = await db.queryLinks(ctx.workspace.id, filter);
 
-    let links = db.getAllLinks();
-
-    if (q) {
-      links = links.filter(l => 
-        l.title.toLowerCase().includes(q) || 
-        l.slug.toLowerCase().includes(q) || 
-        l.destination_url.toLowerCase().includes(q)
-      );
-    }
-
-    return NextResponse.json({ success: true, links });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      links: links.map(toPublicLink),
+      total,
+      page: filter.page,
+      pageSize: filter.limit,
+    });
+  } catch (error) {
+    return routeError(error, 'GET /api/links');
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const {
-      destination_url,
-      title,
-      password,
-      expires_at,
-      click_limit,
-      utm_source,
-      utm_medium,
-      utm_campaign,
-      utm_term,
-      utm_content,
-      ios_url,
-      android_url,
-      huawei_url,
-      desktop_url,
-      open_in_app,
-      user_id: bodyUserId,
-    } = body;
-
-    // 1. Mandatory Authorization Check (Anti-Phishing / Identity enforcement)
-    const authHeader = request.headers.get('authorization') || '';
-    const headerUserId = request.headers.get('x-user-id');
-    const cookieSession = request.cookies.get('urls_session')?.value;
-    const cookieUserId = request.cookies.get('urls_user_id')?.value;
-
-    let authenticatedUserId: string | null = null;
-
-    // Check API Key
-    if (authHeader.startsWith('Bearer urls_live_')) {
-      const apiKey = authHeader.replace(/^Bearer\s+/, '').trim();
-      const isValidKey = db.verifyApiKey(apiKey);
-      if (!isValidKey) {
-        return NextResponse.json({
-          success: false,
-          error: 'Yaroqsiz API kalit (Invalid API Key)',
-          code: 'INVALID_API_KEY',
-        }, { status: 401 });
-      }
-      authenticatedUserId = 'api_user';
-    } else if (authHeader.startsWith('Bearer session_') || authHeader.startsWith('Bearer usr_')) {
-      authenticatedUserId = headerUserId || cookieUserId || bodyUserId || 'verified_user';
-    } else if (cookieSession || headerUserId || cookieUserId || bodyUserId) {
-      authenticatedUserId = headerUserId || cookieUserId || bodyUserId || 'verified_user';
-    }
-
-    // Mandatory Authorization: links must belong to authenticated user
-    if (!authenticatedUserId) {
+    // Identity comes from the session cookie or an API key, never from the request body
+    const ctx = await requireWorkspace({ apiKey: true });
+    if (!ctx.canWrite) {
       return NextResponse.json({
         success: false,
         error: 'Havolani qisqartirish uchun tizimga kiring.',
@@ -81,83 +40,36 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
 
-    if (!destination_url) {
-      return NextResponse.json({ success: false, error: 'Destination URL is required' }, { status: 400 });
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ success: false, error: 'So‘rov JSON formatida bo‘lishi kerak', code: 'INVALID_JSON' }, { status: 400 });
     }
 
-    // Auto-prepend https:// if missing
-    let formattedUrl = destination_url.trim();
-    if (!/^https?:\/\//i.test(formattedUrl)) {
-      formattedUrl = 'https://' + formattedUrl;
+    const limit = await checkCreationLimit(ctx.user?.id ?? ctx.workspace.id);
+    if (!limit.ok) {
+      const { body: tooMany, init } = tooManyRequests(limit.retryAfterSec);
+      return NextResponse.json(tooMany, init);
     }
 
-    // Anti-Phishing Safety Filter
-    const safetyCheck = checkUrlSafety(formattedUrl);
-    if (!safetyCheck.isSafe) {
-      return NextResponse.json({
-        success: false,
-        error: safetyCheck.reason || 'Fishing xavfi: Ushbu havola xavfsizlik filtri tomonidan bloklandi.',
-        code: 'PHISHING_SUSPECTED',
-      }, { status: 400 });
+    // `source` only labels where the link came from (for analytics); API keys are always "api"
+    const source = ctx.viaApiKey ? 'api' : body?.source === 'landing' ? 'landing' : 'dashboard';
+
+    const result = await createLink(
+      { workspace: ctx.workspace, userId: ctx.user?.id ?? null, isAdmin: ctx.isAdmin },
+      body,
+      source
+    );
+    if (!result.ok) {
+      return NextResponse.json(
+        { success: false, error: result.error, code: result.code, ...result.details },
+        { status: result.status }
+      );
     }
 
-    // Validate custom slug if provided, otherwise generate 5-character random ID
-    const requestedSlug = (body.slug || body.custom_slug)?.trim();
-    let finalSlug = '';
-
-    if (requestedSlug) {
-      if (!isValidSlug(requestedSlug)) {
-        return NextResponse.json({
-          success: false,
-          error: isReservedSlug(requestedSlug)
-            ? 'Ushbu nom tizim tomonidan band qilingan (Reserved system path). Boshqa nom tanlang.'
-            : 'Yaroqsiz slug formati. Kamida 3 ta belgi (harf, raqam, tire) bo‘lishi lozim.',
-          code: isReservedSlug(requestedSlug) ? 'RESERVED_SLUG' : 'INVALID_SLUG',
-        }, { status: 400 });
-      }
-
-      // Check slug collision
-      const existing = db.getLinkBySlug(requestedSlug);
-      if (existing) {
-        return NextResponse.json({
-          success: false,
-          error: 'Ushbu qisqa havola (slug) allaqachon band qilingan. Boshqa nom tanlang.',
-          code: 'SLUG_TAKEN',
-        }, { status: 409 });
-      }
-
-      finalSlug = requestedSlug;
-    } else {
-      let attempts = 0;
-      do {
-        finalSlug = generateRandomSlug(attempts > 8 ? 6 : 5);
-        attempts++;
-      } while ((db.getLinkBySlug(finalSlug) || isReservedSlug(finalSlug)) && attempts < 20);
-    }
-
-    const created = db.createLink({
-      userId: authenticatedUserId,
-      title: title?.trim() || finalSlug,
-      destination_url: formattedUrl,
-      slug: finalSlug,
-      password: password?.trim() || null,
-      expires_at: expires_at || null,
-      click_limit: click_limit ? Number(click_limit) : null,
-      utm_source: utm_source?.trim() || null,
-      utm_medium: utm_medium?.trim() || null,
-      utm_campaign: utm_campaign?.trim() || null,
-      utm_term: utm_term?.trim() || null,
-      utm_content: utm_content?.trim() || null,
-      ios_url: ios_url?.trim() || null,
-      android_url: android_url?.trim() || null,
-      huawei_url: huawei_url?.trim() || null,
-      desktop_url: desktop_url?.trim() || null,
-      open_in_app: !!open_in_app,
-      tags: body.tags?.trim() || '',
-    });
-
-    return NextResponse.json({ success: true, link: created }, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true, link: toPublicLink(result.link) }, { status: 201 });
+  } catch (error) {
+    return routeError(error, 'POST /api/links');
   }
 }
