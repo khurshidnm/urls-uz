@@ -13,9 +13,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Bio page not found' }, { status: 404 });
     }
 
-    // Increment view count
-    await db.recordBioPageView(bioPage.id);
-
+    // Reading the data isn't a page view: only /b/<handle> counts views (and not for bots)
     return NextResponse.json({ success: true, bioPage });
   } catch (error) {
     console.error('GET /api/bio/[handle] failed:', error);

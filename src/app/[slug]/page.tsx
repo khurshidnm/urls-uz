@@ -5,6 +5,7 @@ import { notFound, redirect } from 'next/navigation';
 import { cookies, headers } from 'next/headers';
 import { after } from 'next/server';
 import { db } from '@/lib/db';
+import { isBot } from '@/lib/bots';
 import { enqueueClick, recordLimitedClick, type ClickData } from '@/lib/clicks/recorder';
 import { detectAndBuildDeepLink, resolveDeviceRedirect } from '@/lib/deep-link';
 import { resolveRegionFromHeaders } from '@/lib/geo';
@@ -112,7 +113,7 @@ export default async function SlugRedirectPage({ params }: Props) {
   // 4. Analytics. Link-preview crawlers (Telegram, WhatsApp, ...) are not visitors and are not counted.
   // Recording never delays the redirect, and a tracking failure never breaks it.
   let withinLimit = true;
-  if (!BOT_UA.test(userAgentStr)) {
+  if (!isBot(userAgentStr)) {
     const click: ClickData = {
       link_id: link.id,
       ip_hash: hashIp(getClientIp(headerList)),
@@ -185,11 +186,10 @@ export default async function SlugRedirectPage({ params }: Props) {
     );
   }
 
-  // Direct fast HTTP 307 redirect (sub-15ms)
+  // HTTP 307 redirect
   redirect(targetUrl);
 }
 
-const BOT_UA = /bot|crawl|spider|preview|facebookexternalhit|whatsapp|slack|discord|embedly|vkshare|skypeuripreview|headless/i;
 
 function ClickLimitReached() {
   return (

@@ -1,5 +1,6 @@
 'use client';
 
+import { PLAN_FEATURES, PLANNED_FEATURES } from '@/lib/plan-features';
 import React from 'react';
 import { useLanguage } from '@/lib/language-context';
 import { Check, Sparkles, Zap, Lock } from 'lucide-react';
@@ -21,15 +22,7 @@ export default function PricingSection() {
         : locale === 'ru'
         ? 'Для личных нужд, проектов и тестирования'
         : 'For individuals, projects, and link shortening',
-      specs: [
-        '10 ta faol qisqa havola (Bepul)',
-        'Smart Deep Links (Telegram & Instagram ilovasida ochish)',
-        'Dinamik QR Kod Studio (Vektor SVG & Emodzilar)',
-        'Viloyatlar va qurilmalar bo‘yicha haqiqiy analitika',
-        'Havolalarga parol va amal qilish muddati o‘rnatish',
-        '1,000 ta oylik qayta yo‘naltirish',
-        'HTTP/3 Anycast tezkor serverlar',
-      ],
+      specs: PLAN_FEATURES.free,
       cta: locale === 'uz' ? 'Bepul boshlash' : locale === 'ru' ? 'Начать бесплатно' : 'Start Free',
       ctaHref: '/dashboard',
       popular: false,
@@ -46,39 +39,24 @@ export default function PricingSection() {
         : locale === 'ru'
         ? 'Для блогеров, маркетологов и масштабных рекламных кампаний'
         : 'For content creators, marketers, and high-scale campaigns',
-      specs: [
-        'Cheksiz qisqa havolalar & bosishlar',
-        'Link-in-Bio shaxsiy mikro-portali (@handle)',
-        'CSV / Excel formatida to‘liq ma’lumotlarni eksport qilish',
-        'A/B testing va avtomatlashtirilgan yo‘naltirish qoidalari',
-        'Kengaytirilgan jamoaviy rollar va biriktirish',
-        'Tezkor va ustuvor mijozlar qo‘llab-quvvatlashi',
-      ],
+      specs: PLAN_FEATURES.pro,
       cta: locale === 'uz' ? 'Tez kunda ishga tushadi' : locale === 'ru' ? 'Скоро появится' : 'Coming Soon',
       ctaHref: '#',
       popular: true,
     },
     {
-      name: locale === 'uz' ? 'Enterprise (SLA)' : locale === 'ru' ? 'Enterprise (Корпоративный)' : 'Enterprise',
+      name: locale === 'uz' ? 'Biznes' : locale === 'ru' ? 'Бизнес' : 'Business',
       badge: 'TEZ KUNDA',
       badgeColor: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
       price: 'Tez kunda',
       period: '/ korporativ',
       comingSoon: true,
       description: locale === 'uz'
-        ? 'Katta jamoalar, fintech, banklar va yuqori yuklamali infratuzilmalar uchun maxsus yechim'
+        ? 'Tashkilotlar uchun: Pro imkoniyatlari, uzoqroq tashriflar jurnali va alohida shartlar'
         : locale === 'ru'
         ? 'Для корпоративных клиентов, финтех и интеграций'
         : 'For high-scale workloads and tech integrations',
-      specs: [
-        'Barcha Pro imkoniyatlari kiritilgan',
-        'Shaxsiy domen ulash (custom domain CNAME)',
-        'Cheksiz REST API kalitlar & Webhooklar (1,000 req/min)',
-        'Jamoa a’zolarini cheksiz biriktirish',
-        '< 12ms Edge Anycast prioritet kanali',
-        '99.99% kafolatlangan SLA shartnomasi',
-        '24/7 shaxsiy Telegram & telefon qo‘llab-quvvatlash',
-      ],
+      specs: PLAN_FEATURES.enterprise,
       cta: locale === 'uz' ? 'Tez kunda ishga tushadi' : locale === 'ru' ? 'Скоро появится' : 'Coming Soon',
       ctaHref: '#',
       popular: false,
@@ -207,6 +185,10 @@ export default function PricingSection() {
           ))}
         </div>
 
+        {/* Not built yet: listed as planned, never as included in a plan */}
+        <p className="mt-6 text-[11px] font-mono text-zinc-500">
+          Rejada (hali mavjud emas): {PLANNED_FEATURES.join(' · ')}
+        </p>
       </div>
     </section>
   );

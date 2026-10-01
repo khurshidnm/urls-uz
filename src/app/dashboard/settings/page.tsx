@@ -28,6 +28,7 @@ export default async function SettingsPage({ searchParams }: Props) {
 
   return (
     <SettingsClient
+      profile={user && { name: user.name, email: user.email, phone: user.phone }}
       loginMethods={
         user && (
           <>

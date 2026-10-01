@@ -1,6 +1,8 @@
 import React, { cache } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
+import { isBot } from '@/lib/bots';
 import { db } from '@/lib/db';
 import BioClientView from './bio-client-view';
 import { toClientJson } from '@/lib/serialize';
@@ -39,8 +41,8 @@ export default async function BioPublicPage({ params }: Props) {
     notFound();
   }
 
-  // Increment view count
-  await db.recordBioPageView(bioPage.id);
+  // Count people, not search engines and link-preview bots
+  if (!isBot((await headers()).get('user-agent'))) await db.recordBioPageView(bioPage.id);
 
   return (
     <BioClientView

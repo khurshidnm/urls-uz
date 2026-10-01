@@ -12,8 +12,8 @@ export default function Hero({ totalRedirects }: { totalRedirects: number }) {
 
   const highlights = [
     { icon: Zap, label: 'SMART ROUTING', value: 'iOS · Android · Huawei' },
-    { icon: Smartphone, label: 'DEEP LINKING', value: 'Zero-Webview Bypass' },
-    { icon: MapPin, label: 'GEO-TELEMETRY', value: '14 Viloyat Real-time' },
+    { icon: Smartphone, label: 'DEEP LINKING', value: 'Telegram · Instagram ilovada' },
+    { icon: MapPin, label: 'GEO-TELEMETRY', value: '14 viloyat analitikasi' },
     { icon: Shield, label: 'LINK ARMOR', value: 'Parol & Rate Limiting' },
   ];
 
@@ -62,10 +62,10 @@ export default function Hero({ totalRedirects }: { totalRedirects: number }) {
         {/* Subtitle */}
         <p className="text-xs sm:text-sm text-zinc-400 max-w-xl mx-auto mb-9 leading-relaxed">
           {locale === 'uz'
-            ? 'Oddiy havolalarni <14ms kechikishdagi smart deep linklarga, brendlangan QR kodlarga va shaxsiy Link-in-Bio sahifalariga aylantiring.'
+            ? 'Oddiy havolalarni ilovada ochiladigan smart linklarga, tahrirlanadigan QR kodlarga va shaxsiy Link-in-Bio sahifalariga aylantiring.'
             : locale === 'ru'
-            ? 'Создавайте быстрые диплинки с задержкой <14мс, векторные QR-коды и визитки Link-in-Bio с подробной аналитикой.'
-            : 'Turn destination URLs into sub-14ms smart deep links, vector QR codes, and bio portals with regional telemetry.'}
+            ? 'Создавайте ссылки, открывающиеся прямо в приложениях, редактируемые QR-коды и страницы Link-in-Bio с подробной аналитикой.'
+            : 'Turn links into smart links that open in apps, editable QR codes and link-in-bio pages, with regional analytics.'}
         </p>
 
         {/* Omni-Shortener Command Bar */}

@@ -36,6 +36,8 @@ interface AuthContextType {
   loginWithTelegram: (phone: string, code: string, name?: string) => Promise<boolean>;
   loginWithTelegramWidget: (widgetData: TelegramWidgetData) => Promise<boolean>;
   logout: () => Promise<void>;
+  /** Re-reads the logged-in user (after a profile change). */
+  reloadUser: () => Promise<void>;
   isAuthModalOpen: boolean;
   /**
    * Opens the login modal. `afterLogin` runs once the user logs in inside the
@@ -173,6 +175,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const reloadUser = async () => {
+    const data = await fetch('/api/auth/me', { cache: 'no-store' }).then((res) => res.json()).catch(() => null);
+    if (data) setUser(data.user ?? null);
+  };
+
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     setUser(null);
@@ -197,6 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loginWithTelegram,
         loginWithTelegramWidget,
         logout,
+        reloadUser,
         isAuthModalOpen,
         openAuthModal,
         closeAuthModal,

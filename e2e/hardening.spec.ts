@@ -45,7 +45,9 @@ test('every top-level route name is reserved, so no link can hide behind a page'
   const names = fs
     .readdirSync(path.join(__dirname, '../src/app'))
     .map((f) => f.replace(/\.(tsx?|svg|css|ico)$/, ''))
-    .filter((f) => /^[a-z0-9-]{3,}$/.test(f) && !['page', 'layout', 'globals'].includes(f));
+    .filter((f) => /^[a-z0-9-]{3,}$/.test(f))
+    // Next.js special files, not routes
+    .filter((f) => !['page', 'layout', 'globals', 'not-found', 'error', 'global-error', 'loading', 'template', 'default'].includes(f));
   expect(names).toEqual(expect.arrayContaining(['apple-icon', 'opengraph-image', 'demo', 'dashboard']));
   for (const slug of names) {
     const res = await page.request.post('/api/links', { data: { destination_url: 'https://example.com', slug } });

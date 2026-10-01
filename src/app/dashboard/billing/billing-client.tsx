@@ -1,5 +1,6 @@
 'use client';
 
+import { PLAN_FEATURES, PLANNED_FEATURES } from '@/lib/plan-features';
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
@@ -35,15 +36,7 @@ export default function BillingClient() {
       description: locale === 'uz'
         ? 'Shaxsiy foydalanish va qisqa havolalar uchun asosiy imkoniyatlar'
         : 'Для личных нужд и сокращения ссылок',
-      features: [
-        '10 ta faol qisqa havola (Bepul)',
-        'Smart Deep Links (Telegram & Instagram ilovasida ochish)',
-        'Dinamik QR Kod Studio (Vektor SVG & Emodzilar)',
-        'Viloyatlar va qurilmalar bo‘yicha haqiqiy analitika',
-        'Havolalarga parol va amal qilish muddati o‘rnatish',
-        '1,000 ta oylik qayta yo‘naltirish',
-        'HTTP/3 Anycast tezkor serverlar',
-      ],
+      features: PLAN_FEATURES.free,
     },
     {
       id: 'pro',
@@ -57,18 +50,11 @@ export default function BillingClient() {
       description: locale === 'uz'
         ? 'Katta auditoriya, blogerlar va marketing kampaniyalari uchun'
         : 'Для блогеров и масштабных кампаний',
-      features: [
-        'Cheksiz qisqa havolalar & bosishlar',
-        'Link-in-Bio shaxsiy mikro-portali (@handle)',
-        'CSV / Excel formatida to‘liq eksport qilish',
-        'A/B testing va avtomatlashtirilgan yo‘naltirish qoidalari',
-        'Kengaytirilgan jamoaviy rollar va biriktirish',
-        'Tezkor va ustuvor mijozlar qo‘llab-quvvatlashi',
-      ],
+      features: PLAN_FEATURES.pro,
     },
     {
       id: 'enterprise',
-      name: 'Enterprise (SLA)',
+      name: locale === 'uz' ? 'Biznes' : 'Business',
       badge: 'TEZ KUNDA',
       badgeColor: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
       price: 'Tez kunda',
@@ -76,17 +62,9 @@ export default function BillingClient() {
       comingSoon: true,
       popular: false,
       description: locale === 'uz'
-        ? 'Katta jamoalar, fintech, banklar va yuqori yuklamali infratuzilmalar uchun'
+        ? 'Tashkilotlar uchun: Pro imkoniyatlari va alohida shartlar'
         : 'Для корпоративных клиентов и интеграций',
-      features: [
-        'Barcha Pro imkoniyatlari kiritilgan',
-        'Shaxsiy domen ulash (custom domain CNAME)',
-        'Cheksiz REST API kalitlar & Webhooklar (1,000 req/min)',
-        'Jamoa a’zolarini cheksiz biriktirish',
-        '< 12ms Edge Anycast prioritet kanali',
-        '99.99% kafolatlangan SLA shartnomasi',
-        '24/7 shaxsiy Telegram & telefon qo‘llab-quvvatlash',
-      ],
+      features: PLAN_FEATURES.enterprise,
     },
   ];
 
@@ -216,6 +194,9 @@ export default function BillingClient() {
         })}
       </div>
 
+      {/* Not built yet: listed as planned, never as included in a plan */}
+      <p className="text-[11px] font-mono text-zinc-500">Rejada (hali mavjud emas): {PLANNED_FEATURES.join(' · ')}</p>
+
       {/* Info Modal for Coming Soon Plans */}
       <Modal
         isOpen={infoModalOpen}
@@ -240,14 +221,13 @@ export default function BillingClient() {
           <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-left text-xs space-y-1.5 text-zinc-300">
             <div className="font-semibold text-white flex items-center gap-1.5">
               <Zap className="w-3.5 h-3.5 text-amber-400" />
-              <span>Pullik versiyada kutilayotgan imkoniyatlar:</span>
+              <span>Pro tarif imkoniyatlari:</span>
             </div>
-            <p className="text-[11px] text-zinc-400">
-              • Cheksiz qisqa havolalar va bosishlar<br />
-              • Shaxsiy domen ulash (custom domain)<br />
-              • Kengaytirilgan jamoaviy rollar va CSV eksport<br />
-              • Ustuvor 24/7 mijozlar qo‘llab-quvvatlashi
-            </p>
+            <ul className="text-[11px] text-zinc-400 list-disc list-inside">
+              {PLAN_FEATURES.pro.map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ul>
           </div>
 
           <button

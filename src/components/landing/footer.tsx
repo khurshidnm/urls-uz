@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/language-context';
-import { Link2, Radio, Terminal } from 'lucide-react';
+import { Link2, Terminal } from 'lucide-react';
 
 export default function Footer() {
   const { locale, setLocale, t } = useLanguage();
@@ -39,7 +39,7 @@ export default function Footer() {
               <li><a href="#features" className="hover:text-white transition-colors">Smart Deep Links</a></li>
               <li><a href="#qr-studio" className="hover:text-white transition-colors">Dinamik QR Studio</a></li>
               <li><a href="#bio-builder" className="hover:text-white transition-colors">Link-in-Bio Platformasi</a></li>
-              <li><a href="#pricing" className="hover:text-white transition-colors">Tariflar & SLA</a></li>
+              <li><a href="#pricing" className="hover:text-white transition-colors">Tariflar</a></li>
               <li><Link href="/dashboard" className="hover:text-white transition-colors">Boshqaruv Paneli</Link></li>
             </ul>
           </div>
@@ -51,10 +51,14 @@ export default function Footer() {
               <li><Link href="/dashboard/api-keys" className="hover:text-white transition-colors">REST API Docs</Link></li>
               <li><Link href="/dashboard/api-keys" className="hover:text-white transition-colors">API Playground</Link></li>
               <li>
-                <Link href="/dashboard/api-keys#telegram-webhook" className="hover:text-white transition-colors flex items-center gap-1.5">
-                  <span>Telegram Bot Webhook</span>
-                  <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">v3</span>
-                </Link>
+                <a
+                  href={`https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'urlsuzbot'}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  Telegram bot
+                </a>
               </li>
             </ul>
           </div>
@@ -98,10 +102,6 @@ export default function Footer() {
 
         {/* Bottom Bar: System Telemetry & Copyright */}
         <div className="pt-6 border-t border-zinc-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-zinc-500">
-          <div className="flex items-center gap-2">
-            <Radio className="w-3 h-3 text-emerald-400" />
-            <span>Operational · Sub-15ms Anycast Edge · v3.4.1</span>
-          </div>
           <div>
             © {new Date().getFullYear()} urls.uz. Barcha huquqlar himoyalangan.
           </div>
