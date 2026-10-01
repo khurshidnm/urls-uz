@@ -3,7 +3,6 @@ import './globals.css';
 import { LanguageProvider } from '@/lib/language-context';
 import { AuthProvider } from '@/lib/auth-context';
 import AuthModal from '@/components/auth/auth-modal';
-import { phoneLoginAvailable } from '@/lib/login-flow';
 import { ToastProvider } from '@/components/ui/toast';
 import { BRAND, SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_TITLE, SITE_URL } from '@/lib/site';
 
@@ -73,7 +72,7 @@ export default function RootLayout({
           <AuthProvider>
             <ToastProvider>
               {children}
-              <AuthModal phoneLoginAvailable={phoneLoginAvailable()} />
+              <AuthModal />
             </ToastProvider>
           </AuthProvider>
         </LanguageProvider>

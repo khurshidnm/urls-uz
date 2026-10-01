@@ -15,5 +15,5 @@ export function timeAgo(value: Date | string | null): string {
 export const som = (amount: number) => `${formatNumber(amount)} so‘m`;
 
 export const PLAN_LABELS: Record<string, string> = { free: 'Bepul', pro: 'Pro', enterprise: 'Biznes' };
-export const PROVIDER_LABELS: Record<string, string> = { google: 'Google', telegram: 'Telegram', phone: 'Telefon', password: 'Login' };
+export const PROVIDER_LABELS: Record<string, string> = { google: 'Google', telegram: 'Telegram', phone: 'Telefon', password: 'Login', email: 'Email' };
 export const METHOD_LABELS: Record<string, string> = { manual: 'Qo‘lda', payme: 'Payme', click: 'Click', uzum: 'Uzum' };

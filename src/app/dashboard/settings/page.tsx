@@ -3,6 +3,7 @@ import React from 'react';
 import { getSessionUser } from '@/lib/auth';
 import { listIdentities } from '@/lib/accounts';
 import { phoneLoginAvailable } from '@/lib/login-flow';
+import { emailLoginAvailable } from '@/lib/mail';
 import SettingsClient from './settings-client';
 import LoginMethods from './login-methods';
 import { connectMessage } from './connect-message';
@@ -36,6 +37,7 @@ export default async function SettingsPage({ searchParams }: Props) {
               methods={methods.map((m) => ({ provider: m.provider, providerId: m.provider_id, label: m.label }))}
               notice={notice}
               phoneLoginAvailable={phoneLoginAvailable()}
+              emailLoginAvailable={emailLoginAvailable()}
             />
             <TwoFactorSettings
               enabled={isTwoFactorEnabled(user)}

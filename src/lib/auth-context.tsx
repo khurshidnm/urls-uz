@@ -26,6 +26,8 @@ export interface TelegramWidgetData {
 
 interface AuthContextType {
   user: User | null;
+  /** Which code-based login methods the server can deliver (from /api/auth/me). */
+  loginMethods: { phone: boolean; email: boolean };
   /** True until the first /api/auth/me response arrives. */
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -37,6 +39,10 @@ interface AuthContextType {
   loginWithTelegramWidget: (widgetData: TelegramWidgetData) => Promise<boolean>;
   /** Login + password sign-in; resolves with an error message when it fails. */
   loginWithPassword: (login: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  /** Email + password sign-in. */
+  loginWithEmail: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  /** Finishes email sign-up with the emailed code (logs in). */
+  confirmEmailSignup: (email: string, code: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
   /** Re-reads the logged-in user (after a profile change). */
   reloadUser: () => Promise<void>;
@@ -71,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [pendingUrl, setPendingUrl] = useState('');
   const [demoEditMode, setDemoEditModeState] = useState(false);
+  const [loginMethods, setLoginMethods] = useState({ phone: false, email: false });
   const afterLoginRef = useRef<(() => void) | null>(null);
 
   const isSuperAdmin = user?.role === 'superadmin';
@@ -85,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
         setUser(data.user ?? null);
         setDemoEditModeState(Boolean(data.demoEditMode));
+        if (data.loginMethods) setLoginMethods(data.loginMethods);
       })
       .catch(() => {})
       .finally(() => {
@@ -151,13 +159,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithTelegramWidget = (widgetData: TelegramWidgetData) =>
     postLogin({ action: 'verify-widget', widgetData });
 
-  const loginWithPassword = async (login: string, password: string) => {
+  /**
+   * Posts a login step and finishes it: the session (the modal closes and the
+   * afterLogin callback runs), or the 2FA code page for accounts that have it.
+   */
+  const submitLogin = async (url: string, body: Record<string, unknown>, fallbackError: string) => {
     try {
-      const res = await fetch('/api/auth/password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ login, password }),
-      });
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json();
       if (data.success && data.twoFactorRequired) {
         window.location.assign(data.redirect);
@@ -167,11 +175,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         onLoggedIn(data.user);
         return { ok: true };
       }
-      return { ok: false, error: data.error || 'Login yoki parol noto‘g‘ri' };
+      return { ok: false, error: data.error || fallbackError };
     } catch {
       return { ok: false, error: 'Tarmoq xatosi yuz berdi' };
     }
   };
+
+  const loginWithPassword = (login: string, password: string) =>
+    submitLogin('/api/auth/password', { login, password }, 'Login yoki parol noto‘g‘ri');
+
+  const loginWithEmail = (email: string, password: string) =>
+    submitLogin('/api/auth/email', { action: 'login', email, password }, 'Email yoki parol noto‘g‘ri');
+
+  const confirmEmailSignup = (email: string, code: string) =>
+    submitLogin('/api/auth/email', { action: 'verify', email, code }, 'Kod noto‘g‘ri');
 
   const setDemoEditMode = async (active: boolean) => {
     const res = await fetch('/api/auth/demo-edit', {
@@ -219,6 +236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        loginMethods,
         isLoading,
         isAuthenticated: !!user,
         isSuperAdmin,
@@ -228,6 +246,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loginWithTelegram,
         loginWithTelegramWidget,
         loginWithPassword,
+        loginWithEmail,
+        confirmEmailSignup,
         logout,
         reloadUser,
         isAuthModalOpen,

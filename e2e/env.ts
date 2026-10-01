@@ -1,3 +1,6 @@
+import os from 'os';
+import path from 'path';
+
 /**
  * Environment for the e2e server. The bot token and secret are fake, so tests
  * can sign Telegram logins themselves and the real ones are never used.
@@ -18,4 +21,11 @@ export const E2E_ENV = {
   // Clicks are written in batches after the redirect; keep the wait short in tests
   CLICK_FLUSH_MS: '50',
   CRON_SECRET: 'e2e-cron-secret',
+  // Email goes to a fake ZeptoMail started by global-setup (see MAIL_OUTBOX)
+  ZEPTOMAIL_TOKEN: 'e2e-zepto-token',
+  ZEPTOMAIL_API_URL: 'http://localhost:3199/v1.1/email',
+  MAIL_FROM_ADDRESS: 'no-reply@urls.test',
 };
+
+/** Where the fake ZeptoMail writes the messages it receives (one JSON object per line). */
+export const MAIL_OUTBOX = path.join(os.tmpdir(), 'urls-uz-e2e-mail.jsonl');

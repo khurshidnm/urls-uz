@@ -21,7 +21,7 @@ import {
 
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
 
-export const authProvider = pgEnum('auth_provider', ['google', 'telegram', 'phone', 'password']);
+export const authProvider = pgEnum('auth_provider', ['google', 'telegram', 'phone', 'password', 'email']);
 export const platformRole = pgEnum('platform_role', ['user', 'superadmin']);
 export const memberRole = pgEnum('member_role', ['owner', 'admin', 'member']);
 export const plan = pgEnum('plan', ['free', 'pro', 'enterprise']);
@@ -363,6 +363,36 @@ export const payments = pgTable(
     created_at: createdAt(),
   },
   (t) => [index('payments_workspace').on(t.workspace_id, t.created_at), index('payments_time').on(t.created_at)]
+);
+
+// ---------------------------------------------------------------------------
+// Email codes (sign-up, password reset, connecting an email)
+// ---------------------------------------------------------------------------
+
+export const emailCodePurpose = pgEnum('email_code_purpose', ['signup', 'reset', 'connect']);
+
+/**
+ * A 6-digit code sent by email. Only an HMAC of the code is stored. For sign-up
+ * the chosen name and (hashed) password wait here until the code is confirmed,
+ * so the password never travels twice.
+ */
+export const emailCodes = pgTable(
+  'email_codes',
+  {
+    id: text('id').primaryKey(),
+    email: text('email').notNull(),
+    purpose: emailCodePurpose('purpose').notNull(),
+    code_hash: text('code_hash').notNull(),
+    /** For 'connect': the logged-in account the email is being added to. */
+    user_id: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name'),
+    password_hash: text('password_hash'),
+    attempts: integer('attempts').notNull().default(0),
+    expires_at: timestamp('expires_at', { withTimezone: true }).notNull(),
+    used_at: timestamp('used_at', { withTimezone: true }),
+    created_at: createdAt(),
+  },
+  (t) => [index('email_codes_lookup').on(t.email, t.purpose, t.created_at)]
 );
 
 // ---------------------------------------------------------------------------
