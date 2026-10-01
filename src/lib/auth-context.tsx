@@ -24,6 +24,8 @@ export interface TelegramWidgetData {
   hash: string;
 }
 
+export type AuthView = 'signin' | 'signup';
+
 interface AuthContextType {
   user: User | null;
   /** Which code-based login methods the server can deliver (from /api/auth/me). */
@@ -52,7 +54,10 @@ interface AuthContextType {
    * modal (Telegram phone code); redirect logins (Google, Telegram widget)
    * reload the page and create the pending link on the server instead.
    */
-  openAuthModal: (pendingUrlToShorten?: string, afterLogin?: () => void) => void;
+  openAuthModal: (pendingUrlToShorten?: string, afterLogin?: () => void, view?: AuthView) => void;
+  /** Which screen the login window shows: sign in (default) or sign up. */
+  authView: AuthView;
+  setAuthView: (view: AuthView) => void;
   closeAuthModal: () => void;
   pendingUrl: string;
   setPendingUrl: (url: string) => void;
@@ -75,6 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authView, setAuthView] = useState<AuthView>('signin');
   const [pendingUrl, setPendingUrl] = useState('');
   const [demoEditMode, setDemoEditModeState] = useState(false);
   const [loginMethods, setLoginMethods] = useState({ phone: false, email: false });
@@ -116,10 +122,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     afterLogin?.();
   };
 
-  const openAuthModal = (pendingUrlToShorten?: string, afterLogin?: () => void) => {
+  const openAuthModal = (pendingUrlToShorten?: string, afterLogin?: () => void, view: AuthView = 'signin') => {
     if (pendingUrlToShorten) {
       setPendingUrl(pendingUrlToShorten);
     }
+    setAuthView(view);
     afterLoginRef.current = afterLogin ?? null;
     setIsAuthModalOpen(true);
   };
@@ -252,6 +259,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         reloadUser,
         isAuthModalOpen,
         openAuthModal,
+        authView,
+        setAuthView,
         closeAuthModal,
         pendingUrl,
         setPendingUrl,

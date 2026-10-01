@@ -23,7 +23,6 @@ test('set a login and password in settings, then sign in with them from the logi
   const v = await visitor.newPage();
   await v.goto('/');
   await v.getByRole('button', { name: 'Kirish' }).first().click();
-  await v.getByRole('button', { name: 'Email', exact: true }).click();
   await v.getByLabel('Email yoki login').fill('parol_egasi');
   await v.getByLabel('Parol', { exact: true }).fill('noto‘g‘ri-parol');
   await v.locator('form').filter({ has: v.getByLabel('Email yoki login') }).getByRole('button', { name: 'Kirish' }).click();

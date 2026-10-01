@@ -109,7 +109,7 @@ export default function Navbar() {
                 {locale === 'uz' ? 'Kirish' : locale === 'ru' ? 'Войти' : 'Sign in'}
               </button>
               <button
-                onClick={() => openAuthModal()}
+                onClick={() => openAuthModal(undefined, undefined, 'signup')}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-950 bg-white hover:bg-zinc-200 rounded-md border border-white/20 transition-all active:scale-[0.98]"
               >
                 <span>{locale === 'uz' ? 'Boshlash' : locale === 'ru' ? 'Начать' : 'Get Started'}</span>

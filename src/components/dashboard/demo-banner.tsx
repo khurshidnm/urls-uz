@@ -123,7 +123,7 @@ export function DemoBanner({ onStartFree }: DemoBannerProps) {
     if (onStartFree) {
       onStartFree();
     } else {
-      openAuthModal();
+      openAuthModal(undefined, undefined, 'signup');
     }
   };
 

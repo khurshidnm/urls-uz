@@ -10,14 +10,14 @@ const psql = (q: string) => execSync(`psql "${E2E_ENV.DATABASE_URL}" -Atc "${q}"
 test('sign up with email from the login window, then sign in with email and password', async ({ page, playwright }) => {
   const email = 'yangi.mehmon@example.com';
   await page.goto('/');
-  await page.getByRole('button', { name: 'Kirish' }).first().click();
-  await page.getByRole('button', { name: 'Email', exact: true }).click();
-  await page.getByRole('button', { name: 'Email bilan ro‘yxatdan o‘tish' }).click();
+  // "Boshlash" opens the sign-up screen
+  await page.getByRole('button', { name: /Boshlash/ }).first().click();
+  await expect(page.getByRole('heading', { name: 'Ro‘yxatdan o‘tish' })).toBeVisible();
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Ismingiz').fill('Yangi Mehmon');
   await page.getByLabel('Parol', { exact: true }).fill('mustahkam-parol-1');
   await page.getByLabel('Parolni takrorlang').fill('mustahkam-parol-1');
-  await page.getByRole('button', { name: 'Kod yuborish' }).click();
+  await page.getByRole('button', { name: 'Ro‘yxatdan o‘tish', exact: true }).click();
   await expect(page.getByText(`${email} manziliga 6 xonali kod yuborildi`)).toBeVisible();
 
   // The message went to ZeptoMail's API in its format
@@ -28,7 +28,7 @@ test('sign up with email from the login window, then sign in with email and pass
   expect(mail.body.subject).toContain(lastCodeTo(email));
 
   await page.getByLabel('Tasdiqlash kodi').fill(lastCodeTo(email));
-  await page.getByRole('button', { name: 'Tasdiqlash va ro‘yxatdan o‘tish' }).click();
+  await page.getByRole('button', { name: 'Tasdiqlash', exact: true }).click();
   await expect.poll(async () => (await (await page.request.get('/api/auth/me')).json()).user?.name).toBe('Yangi Mehmon');
   const userId = (await (await page.request.get('/api/auth/me')).json()).user.id;
 
@@ -37,7 +37,6 @@ test('sign up with email from the login window, then sign in with email and pass
   const p2 = await v.newPage();
   await p2.goto('/');
   await p2.getByRole('button', { name: 'Kirish' }).first().click();
-  await p2.getByRole('button', { name: 'Email', exact: true }).click();
   await p2.getByLabel('Email yoki login').fill(email);
   await p2.getByLabel('Parol', { exact: true }).fill('mustahkam-parol-1');
   await p2.locator('form').filter({ has: p2.getByLabel('Email yoki login') }).getByRole('button', { name: 'Kirish' }).click();
@@ -127,4 +126,23 @@ test('sending codes is rate limited per address', async ({ playwright }) => {
   }
   expect(statuses).toEqual([200, 200, 200, 200, 200, 429]);
   await api.dispose();
+});
+
+test('login window: email and password first, then Google and Telegram; switch between sign in and sign up', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Kirish' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Kirish', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Email yoki login')).toBeVisible();
+  await expect(page.getByLabel('Parol', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Parolni unutdingizmi?' })).toBeVisible();
+  await expect(page.getByText('yoki', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Google orqali kirish' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Ro‘yxatdan o‘ting' }).click();
+  await expect(page.getByRole('heading', { name: 'Ro‘yxatdan o‘tish' })).toBeVisible();
+  await expect(page.getByLabel('Ismingiz')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Google orqali ro‘yxatdan o‘tish' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Kiring', exact: true }).click();
+  await expect(page.getByLabel('Email yoki login')).toBeVisible();
 });
