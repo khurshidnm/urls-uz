@@ -291,7 +291,7 @@ export const telegramAuthSchema = z.discriminatedUnion('action', [
 ]);
 
 export const disconnectIdentitySchema = z.object({
-  provider: z.enum(['google', 'telegram', 'phone']),
+  provider: z.enum(['google', 'telegram', 'phone', 'password']),
   providerId: z.string().min(1).max(200),
 });
 

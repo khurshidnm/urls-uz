@@ -14,6 +14,7 @@ import {
 } from '@/db/schema';
 import { db, newId, type AuthProvider, type Executor, type UserRecord } from '@/lib/db';
 import { roleFor } from '@/lib/auth';
+import { dummyPasswordHash, hashPassword, verifyPassword } from '@/lib/passwords';
 
 /**
  * Accounts and their login methods. A person has one account; Google,
@@ -248,4 +249,62 @@ async function mergeAccounts(tx: Tx, fromId: string, intoId: string): Promise<Si
   // Sessions and memberships go with the account
   await tx.delete(users).where(eq(users.id, fromId));
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Login + password
+// ---------------------------------------------------------------------------
+
+export type PasswordResult = { ok: true } | { ok: false; code: string; error: string };
+
+/**
+ * Sets the account's login and password, or changes them (which needs the
+ * current password). Only for a logged-in account: an account is first
+ * created through Telegram, Google or a phone number, so every account
+ * belongs to a verified person.
+ */
+export async function setPasswordLogin(
+  userId: string,
+  input: { login: string; password: string; currentPassword?: string }
+): Promise<PasswordResult> {
+  const own = (await listIdentities(userId)).find((i) => i.provider === 'password');
+  if (own && !(await verifyPassword(input.currentPassword ?? '', own.password_hash))) {
+    return { ok: false, code: 'WRONG_PASSWORD', error: 'Joriy parol noto‘g‘ri' };
+  }
+
+  const [taken] = await pg
+    .select({ user_id: userIdentities.user_id })
+    .from(userIdentities)
+    .where(and(eq(userIdentities.provider, 'password'), eq(userIdentities.provider_id, input.login)));
+  if (taken && taken.user_id !== userId) return { ok: false, code: 'LOGIN_TAKEN', error: 'Bu login band, boshqasini tanlang' };
+
+  const passwordHash = await hashPassword(input.password);
+  await pg.transaction(async (tx) => {
+    if (own) await tx.delete(userIdentities).where(and(eq(userIdentities.provider, 'password'), eq(userIdentities.user_id, userId)));
+    await tx.insert(userIdentities).values({
+      provider: 'password',
+      provider_id: input.login,
+      user_id: userId,
+      label: input.login,
+      password_hash: passwordHash,
+    });
+  });
+  return { ok: true };
+}
+
+/** The account for a login and password, or null. Same work whether or not the login exists. */
+export async function verifyPasswordLogin(login: string, password: string): Promise<UserRecord | null> {
+  const [identity] = await pg
+    .select()
+    .from(userIdentities)
+    .where(and(eq(userIdentities.provider, 'password'), eq(userIdentities.provider_id, login)));
+  const valid = await verifyPassword(password, identity?.password_hash ?? (await dummyPasswordHash()));
+  if (!identity || !valid) return null;
+
+  await pg
+    .update(userIdentities)
+    .set({ last_login_at: new Date() })
+    .where(and(eq(userIdentities.provider, 'password'), eq(userIdentities.provider_id, login)));
+  await pg.update(users).set({ last_login_at: new Date() }).where(eq(users.id, identity.user_id));
+  return (await getUser(pg, identity.user_id)) ?? null;
 }

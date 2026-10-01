@@ -35,6 +35,8 @@ interface AuthContextType {
   resetDemoData: () => Promise<boolean>;
   loginWithTelegram: (phone: string, code: string, name?: string) => Promise<boolean>;
   loginWithTelegramWidget: (widgetData: TelegramWidgetData) => Promise<boolean>;
+  /** Login + password sign-in; resolves with an error message when it fails. */
+  loginWithPassword: (login: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
   /** Re-reads the logged-in user (after a profile change). */
   reloadUser: () => Promise<void>;
@@ -149,6 +151,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithTelegramWidget = (widgetData: TelegramWidgetData) =>
     postLogin({ action: 'verify-widget', widgetData });
 
+  const loginWithPassword = async (login: string, password: string) => {
+    try {
+      const res = await fetch('/api/auth/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login, password }),
+      });
+      const data = await res.json();
+      if (data.success && data.twoFactorRequired) {
+        window.location.assign(data.redirect);
+        return { ok: true };
+      }
+      if (data.success && data.user) {
+        onLoggedIn(data.user);
+        return { ok: true };
+      }
+      return { ok: false, error: data.error || 'Login yoki parol noto‘g‘ri' };
+    } catch {
+      return { ok: false, error: 'Tarmoq xatosi yuz berdi' };
+    }
+  };
+
   const setDemoEditMode = async (active: boolean) => {
     const res = await fetch('/api/auth/demo-edit', {
       method: 'POST',
@@ -203,6 +227,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetDemoData,
         loginWithTelegram,
         loginWithTelegramWidget,
+        loginWithPassword,
         logout,
         reloadUser,
         isAuthModalOpen,

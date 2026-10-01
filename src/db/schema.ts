@@ -21,7 +21,7 @@ import {
 
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
 
-export const authProvider = pgEnum('auth_provider', ['google', 'telegram', 'phone']);
+export const authProvider = pgEnum('auth_provider', ['google', 'telegram', 'phone', 'password']);
 export const platformRole = pgEnum('platform_role', ['user', 'superadmin']);
 export const memberRole = pgEnum('member_role', ['owner', 'admin', 'member']);
 export const plan = pgEnum('plan', ['free', 'pro', 'enterprise']);
@@ -78,6 +78,8 @@ export const userIdentities = pgTable(
     user_id: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
     /** What to show in settings: the Google email, the Telegram name or @username, the phone number. */
     label: text('label'),
+    /** For the 'password' method (provider_id = the login): scrypt hash. Lives here so it moves with the method. */
+    password_hash: text('password_hash'),
     created_at: createdAt(),
     last_login_at: timestamp('last_login_at', { withTimezone: true }),
   },

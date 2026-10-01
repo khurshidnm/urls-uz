@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/toast';
 import { connectMessage } from './connect-message';
 
 export interface LoginMethod {
-  provider: 'google' | 'telegram' | 'phone';
+  provider: 'google' | 'telegram' | 'phone' | 'password';
   providerId: string;
   label: string | null;
 }
@@ -23,6 +23,7 @@ const PROVIDERS = [
   { id: 'google' as const, name: 'Google', hint: 'Google hisobingiz orqali kirish' },
   { id: 'telegram' as const, name: 'Telegram', hint: 'Telegram akkauntingiz orqali bir bosishda kirish' },
   { id: 'phone' as const, name: 'Telefon raqam', hint: 'Telegram’ga keladigan tasdiqlash kodi orqali kirish' },
+  { id: 'password' as const, name: 'Login va parol', hint: 'Har safar Telegram yoki Google so‘ramasdan, login va parol bilan kirish' },
 ];
 
 /**
@@ -94,6 +95,15 @@ export default function LoginMethods({ methods, notice, phoneLoginAvailable }: P
                       <div key={m.providerId} className="flex items-center gap-2 mt-1 text-[11px] text-emerald-300/90">
                         <Check className="w-3 h-3 shrink-0" />
                         <span className="truncate">{m.label || 'Ulangan'}</span>
+                        {m.provider === 'password' && connecting !== 'password' && (
+                          <button
+                            type="button"
+                            onClick={() => setConnecting('password')}
+                            className="ml-1 text-indigo-400 hover:text-indigo-300"
+                          >
+                            Parolni o‘zgartirish
+                          </button>
+                        )}
                         {methods.length > 1 && (
                           <button
                             type="button"
@@ -127,7 +137,7 @@ export default function LoginMethods({ methods, notice, phoneLoginAvailable }: P
                       onClick={() => setConnecting(provider.id)}
                       className="shrink-0 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold border border-slate-700"
                     >
-                      {provider.name}ni ulash
+                      {provider.id === 'password' ? 'Login va parol o‘rnatish' : `${provider.name}ni ulash`}
                     </button>
                   )
                 )}
@@ -136,6 +146,9 @@ export default function LoginMethods({ methods, notice, phoneLoginAvailable }: P
                 <ConnectTelegram onDone={done} onCancel={() => setConnecting(null)} />
               )}
               {connecting === 'phone' && provider.id === 'phone' && <ConnectPhone onDone={done} onCancel={() => setConnecting(null)} />}
+              {connecting === 'password' && provider.id === 'password' && (
+                <PasswordForm currentLogin={connected[0]?.providerId ?? null} onDone={done} onCancel={() => setConnecting(null)} />
+              )}
             </li>
           );
         })}
@@ -271,6 +284,86 @@ function ConnectPhone({ onDone, onCancel }: { onDone: (message: string) => void;
         </button>
       </div>
       {devCode && <p className="text-[11px] text-amber-300/90">Dev rejimi (Telegram Gateway sozlanmagan): kod {devCode}</p>}
+    </form>
+  );
+}
+
+/**
+ * Sets the login and password, or changes them (the current password is
+ * asked for then). The password is typed twice to catch typos.
+ */
+function PasswordForm({ currentLogin, onDone, onCancel }: { currentLogin: string | null; onDone: (message: string) => void; onCancel: () => void }) {
+  const { showToast } = useToast();
+  const [login, setLogin] = useState(currentLogin ?? '');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [password, setPassword] = useState('');
+  const [repeat, setRepeat] = useState('');
+  const [loading, setLoading] = useState(false);
+  const mismatch = repeat.length > 0 && repeat !== password;
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== repeat) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login, password, ...(currentLogin && { currentPassword }) }),
+      });
+      const data = await res.json();
+      if (data.success) onDone(currentLogin ? 'Login va parol yangilandi' : `Endi «${data.login}» login va parolingiz bilan kira olasiz`);
+      else showToast('error', data.error || 'Saqlab bo‘lmadi');
+    } catch {
+      showToast('error', 'Tarmoq xatosi yuz berdi');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const input = 'w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:outline-none focus:border-indigo-500';
+  return (
+    <form onSubmit={submit} className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label className="text-[11px] text-slate-400 space-y-1">
+          <span>Login</span>
+          <input
+            value={login}
+            onChange={(e) => setLogin(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 30))}
+            autoComplete="username"
+            placeholder="masalan: hikmat_99"
+            required
+            minLength={3}
+            className={`${input} font-mono`}
+          />
+        </label>
+        {currentLogin && (
+          <label className="text-[11px] text-slate-400 space-y-1">
+            <span>Joriy parol</span>
+            <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" required className={input} />
+          </label>
+        )}
+        <label className="text-[11px] text-slate-400 space-y-1">
+          <span>{currentLogin ? 'Yangi parol' : 'Parol'}</span>
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={8} required className={input} />
+        </label>
+        <label className="text-[11px] text-slate-400 space-y-1">
+          <span>Parolni takrorlang</span>
+          <input type="password" value={repeat} onChange={(e) => setRepeat(e.target.value)} autoComplete="new-password" required className={input} />
+        </label>
+      </div>
+      <p className={`text-[11px] ${mismatch ? 'text-rose-400' : 'text-slate-500'}`}>
+        {mismatch ? 'Parollar mos emas' : 'Kamida 8 ta belgi. Login: 3–30 ta lotin harfi, raqam yoki _'}
+      </p>
+      <div className="flex items-center gap-2">
+        <button type="submit" disabled={loading || mismatch || password.length < 8 || login.length < 3} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white hover:bg-slate-200 text-slate-900 text-xs font-semibold disabled:opacity-50">
+          {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+          Saqlash
+        </button>
+        <button type="button" onClick={onCancel} className="text-[11px] text-slate-400 hover:text-white px-1">
+          Bekor qilish
+        </button>
+      </div>
     </form>
   );
 }
