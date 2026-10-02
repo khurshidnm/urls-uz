@@ -4,8 +4,12 @@ import { db } from '@/lib/db';
 import { requireWorkspace } from '@/lib/auth';
 import { toClientJson } from '@/lib/serialize';
 import BioBuilderClient from './bio-builder-client';
+import { getTr } from '@/lib/locale';
 
-export const metadata: Metadata = { title: 'Link-in-Bio' };
+export async function generateMetadata(): Promise<Metadata> {
+  const tr = await getTr();
+  return { title: tr('Link-in-Bio', 'Link-in-Bio', 'Link-in-Bio') };
+}
 
 export default async function BioBuilderPage() {
   const { workspace, user } = await requireWorkspace();

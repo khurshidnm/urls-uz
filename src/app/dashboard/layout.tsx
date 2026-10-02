@@ -3,12 +3,16 @@ import { requireWorkspace } from '@/lib/auth';
 import { db } from '@/lib/db';
 import DashboardLayoutClient from './dashboard-layout-client';
 import { SITE_NAME } from '@/lib/site';
+import { getTr } from '@/lib/locale';
 
 // The app itself is private: never in search results
-export const metadata: Metadata = {
-  title: { default: 'Boshqaruv paneli', template: `%s — ${SITE_NAME}` },
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const tr = await getTr();
+  return {
+    title: { default: tr('Boshqaruv paneli', 'Панель управления', 'Dashboard'), template: `%s — ${SITE_NAME}` },
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function DashboardLayout({
   children,

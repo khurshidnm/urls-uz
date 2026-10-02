@@ -34,10 +34,10 @@ export default function OpenGraphImage() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div style={{ fontSize: 60, fontWeight: 700, lineHeight: 1.1, letterSpacing: -1.5, maxWidth: 980 }}>
-            Bitta havola — har bir qurilma o&apos;z do&apos;koniga
+            Bitta havola — har bir qurilma o&apos;z yo&apos;lida
           </div>
           <div style={{ fontSize: 28, color: '#a1a1aa', maxWidth: 980 }}>
-            O&apos;zbekiston uchun qisqa havolalar, QR kodlar va analitika
+            Qisqa havolalar, QR kodlar va analitika
           </div>
         </div>
 

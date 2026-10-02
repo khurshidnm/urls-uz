@@ -1,5 +1,6 @@
 'use client';
 
+import { useLanguage } from '@/lib/language-context';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   ZoomIn,
@@ -30,6 +31,7 @@ export function ImageCropModal({
   onCropComplete,
   maxSizeKb = 100,
 }: ImageCropModalProps) {
+  const { tr } = useLanguage();
   const [zoom, setZoom] = useState<number>(1);
   const [rotation, setRotation] = useState<number>(0);
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -304,7 +306,7 @@ export function ImageCropModal({
             {/* Guide hint */}
             <div className="absolute bottom-2 inset-x-0 text-center pointer-events-none">
               <span className="text-[10px] font-mono text-white/80 bg-black/75 px-2.5 py-1 rounded-full border border-white/10">
-                Surish uchun torting
+                {tr('Surish uchun torting', 'Перетащите, чтобы сдвинуть', 'Drag to move')}
               </span>
             </div>
           </div>
@@ -349,7 +351,7 @@ export function ImageCropModal({
                 className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-300 transition-colors"
               >
                 <RotateCw className="w-3.5 h-3.5 text-indigo-400" />
-                <span>90° Burish</span>
+                <span>{tr('90° Burish', 'Повернуть на 90°', 'Rotate 90°')}</span>
               </button>
 
               <button
@@ -362,7 +364,7 @@ export function ImageCropModal({
                 className="flex items-center justify-center gap-1 py-1.5 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-400 hover:text-white transition-colors"
               >
                 <RefreshCw className="w-3 h-3" />
-                <span>Tiklash</span>
+                <span>{tr('Tiklash', 'Сбросить', 'Reset')}</span>
               </button>
             </div>
           </div>
@@ -372,7 +374,7 @@ export function ImageCropModal({
         <div className="p-4 px-5 border-t border-zinc-800/80 bg-zinc-900/40 flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-400">
             <Check className="w-3.5 h-3.5" />
-            <span>&le; 100 KB avto-siqish</span>
+            <span>&le; 100 KB {tr('avto-siqish', 'автосжатие', 'auto-compress')}</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -381,7 +383,7 @@ export function ImageCropModal({
               onClick={onClose}
               className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
             >
-              Bekor qilish
+              {tr('Bekor qilish', 'Отмена', 'Cancel')}
             </button>
 
             <button
@@ -391,11 +393,11 @@ export function ImageCropModal({
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 text-xs font-semibold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
             >
               {isProcessing ? (
-                <span>Qirqilmoqda...</span>
+                <span>{tr('Qirqilmoqda...', 'Обрезаем...', 'Cropping...')}</span>
               ) : (
                 <>
                   <Check className="w-3.5 h-3.5" />
-                  <span>Qirqish va Saqlash</span>
+                  <span>{tr('Qirqish va Saqlash', 'Обрезать и сохранить', 'Crop and save')}</span>
                 </>
               )}
             </button>

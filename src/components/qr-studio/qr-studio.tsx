@@ -30,12 +30,12 @@ interface Props {
 }
 
 const TYPES = [
-  { id: 'url' as const, label: 'Havola', icon: Link2 },
-  { id: 'text' as const, label: 'Matn', icon: FileText },
-  { id: 'vcard' as const, label: 'vCard', icon: UserCheck },
-  { id: 'location' as const, label: 'Joylashuv', icon: MapPin },
-  { id: 'wifi' as const, label: 'Wi-Fi', icon: Wifi },
-  { id: 'event' as const, label: 'Tadbir', icon: Calendar },
+  { id: 'url' as const, label: ['Havola', 'Ссылка', 'Link'] as const, icon: Link2 },
+  { id: 'text' as const, label: ['Matn', 'Текст', 'Text'] as const, icon: FileText },
+  { id: 'vcard' as const, label: ['vCard', 'vCard', 'vCard'] as const, icon: UserCheck },
+  { id: 'location' as const, label: ['Joylashuv', 'Локация', 'Location'] as const, icon: MapPin },
+  { id: 'wifi' as const, label: ['Wi-Fi', 'Wi-Fi', 'Wi-Fi'] as const, icon: Wifi },
+  { id: 'event' as const, label: ['Tadbir', 'Событие', 'Event'] as const, icon: Calendar },
 ];
 
 /** Suggested logo and frame text for each content type. */
@@ -78,7 +78,7 @@ function formValues(saved: ClientQrCode | null | undefined, samples: boolean) {
 type Pane = 'content' | 'colors' | 'logo' | 'design';
 
 export default function QrStudioClient({ links: initialLinks, initialLinkId, canWrite, saved, guest, initialType = 'url', showHeader = true }: Props) {
-  const { t } = useLanguage();
+  const { t, tr } = useLanguage();
   const { showToast } = useToast();
   const router = useRouter();
 
@@ -147,7 +147,8 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
         ? SITE_URL
         : staticPayload(activeType, content);
 
-  const namePlaceholder = describeContent(activeType, content) || `${TYPES.find((x) => x.id === activeType)?.label} QR`;
+  const typeLabel = TYPES.find((x) => x.id === activeType)?.label;
+  const namePlaceholder = describeContent(activeType, content) || `${typeLabel ? tr(typeLabel[0], typeLabel[1], typeLabel[2]) : ''} QR`;
 
   const selectType = (type: QrDataType) => {
     setActiveType(type);
@@ -162,7 +163,7 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
     if (link) setDesign(designFrom(link.qr_config));
   };
 
-  const demoRestricted = () => window.dispatchEvent(new CustomEvent('open-demo-restriction', { detail: { actionTitle: 'QR kodni saqlash' } }));
+  const demoRestricted = () => window.dispatchEvent(new CustomEvent('open-demo-restriction', { detail: { actionTitle: tr('QR kodni saqlash', 'Сохранение QR-кода', 'Saving a QR code') } }));
 
   /** Saves the design of an existing link's QR (the "my link" mode). */
   const saveLinkDesign = async () => {
@@ -177,7 +178,7 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
       });
       const data = await res.json();
       if (!data.success) {
-        showToast('error', data.error || 'Saqlashda xatolik');
+        showToast('error', data.error || tr('Saqlashda xatolik', 'Ошибка сохранения', 'Couldn’t save'));
         return;
       }
       setLinks((all) => all.map((l) => (l.id === selectedLink.id ? data.link : l)));
@@ -215,13 +216,13 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
       });
       const data = await res.json();
       if (!data.success) {
-        showToast('error', data.error || 'Saqlashda xatolik');
+        showToast('error', data.error || tr('Saqlashda xatolik', 'Ошибка сохранения', 'Couldn’t save'));
         return;
       }
       const qr: ClientQrCode = data.qrCode;
       if (savedQr) {
         applySaved(qr);
-        showToast('success', 'O‘zgarishlar saqlandi');
+        showToast('success', tr('O‘zgarishlar saqlandi', 'Изменения сохранены', 'Changes saved'));
       } else {
         showToast('success', 'QR kod saqlandi');
         // The editor URL, so a reload (or a bookmark) opens this QR code
@@ -249,7 +250,7 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
 
   const detectLocation = () => {
     if (!navigator.geolocation) {
-      showToast('error', 'Brauzeringiz geolokatsiyani qo‘llab-quvvatlamaydi');
+      showToast('error', tr('Brauzeringiz geolokatsiyani qo‘llab-quvvatlamaydi', 'Ваш браузер не поддерживает геолокацию', 'Your browser doesn’t support geolocation'));
       return;
     }
     setIsLocating(true);
@@ -259,14 +260,14 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
           ...prev,
           latitude: pos.coords.latitude.toFixed(6),
           longitude: pos.coords.longitude.toFixed(6),
-          addressSearch: 'Mening joriy joylashuvim',
+          addressSearch: tr('Mening joriy joylashuvim', 'Моё текущее местоположение', 'My current location'),
         }));
         setIsLocating(false);
-        showToast('success', 'Joylashuvingiz aniqlandi');
+        showToast('success', tr('Joylashuvingiz aniqlandi', 'Местоположение определено', 'Location found'));
       },
       (err) => {
         setIsLocating(false);
-        showToast('error', 'Joylashuvni aniqlab bo‘lmadi: ' + err.message);
+        showToast('error', tr('Joylashuvni aniqlab bo‘lmadi', 'Не удалось определить местоположение', 'Couldn’t get your location') + ': ' + err.message);
       },
       { timeout: 10000, enableHighAccuracy: true }
     );
@@ -311,8 +312,12 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
         </h1>
         <p className="text-xs sm:text-sm text-zinc-400 mt-1">
           {savedQr
-            ? 'Saqlangan QR kod. Tarkib yoki dizaynni o‘zgartiring va saqlang.'
-            : 'Havola, vCard, joylashuv, tadbir, matn va Wi-Fi uchun QR kod yarating va keyin tahrirlash uchun saqlang.'}
+            ? tr('Saqlangan QR kod. Tarkib yoki dizaynni o‘zgartiring va saqlang.', 'Сохранённый QR-код. Измените содержимое или дизайн и сохраните.', 'A saved QR code. Change the content or design and save.')
+            : tr(
+                'Havola, vCard, joylashuv, tadbir, matn va Wi-Fi uchun QR kod yarating va keyin tahrirlash uchun saqlang.',
+                'Создавайте QR-коды для ссылок, vCard, локаций, событий, текста и Wi-Fi и сохраняйте, чтобы редактировать позже.',
+                'Create QR codes for links, vCards, locations, events, text and Wi-Fi, and save them to edit later.'
+              )}
         </p>
       </div>
       )}
@@ -334,7 +339,7 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
               }`}
             >
               <Icon className="w-3.5 h-3.5 text-indigo-400" />
-              <span>{tab.label}</span>
+              <span>{tr(tab.label[0], tab.label[1], tab.label[2])}</span>
             </button>
           );
         })}
@@ -345,13 +350,13 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
           <StudioPane
             icon={<FileText className="w-4 h-4" />}
             iconClass="bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
-            title="1. Tarkib"
+            title={tr('1. Tarkib', '1. Содержимое', '1. Content')}
             subtitle={
               savedQr?.link
-                ? 'O‘zgartirib saqlang: chop etilgan QR yangi ma’lumotni ko‘rsatadi'
+                ? tr('O‘zgartirib saqlang: chop etilgan QR yangi ma’lumotni ko‘rsatadi', 'Измените и сохраните: напечатанный QR покажет новые данные', 'Edit and save: the printed QR will show the new content')
                 : activeType === 'url' && !savedQr && !guest
-                  ? 'Mavjud havolangiz yoki yangi URL'
-                  : 'QR kod ma’lumoti'
+                  ? tr('Mavjud havolangiz yoki yangi URL', 'Ваша ссылка или новый URL', 'One of your links or a new URL')
+                  : tr('QR kod ma’lumoti', 'Данные QR-кода', 'QR code content')
             }
             open={activePane === 'content'}
             onToggle={() => toggle('content')}
@@ -380,8 +385,8 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
           <StudioPane
             icon={<Paintbrush className="w-4 h-4" />}
             iconClass="bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
-            title="2. Ranglar"
-            subtitle="Bitta rang, gradient va ko‘zlar rangi"
+            title={tr('2. Ranglar', '2. Цвета', '2. Colours')}
+            subtitle={tr('Bitta rang, gradient va ko‘zlar rangi', 'Один цвет, градиент и цвет «глаз»', 'Solid colour, gradient and eye colour')}
             open={activePane === 'colors'}
             onToggle={() => toggle('colors')}
           >
@@ -391,8 +396,8 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
           <StudioPane
             icon={<ImageIcon className="w-4 h-4" />}
             iconClass="bg-purple-500/10 text-purple-400 border-purple-500/20"
-            title="3. Logotip"
-            subtitle="Brend logotipi, emodzi yoki o‘z rasmingiz"
+            title={tr('3. Logotip', '3. Логотип', '3. Logo')}
+            subtitle={tr('Brend logotipi, emodzi yoki o‘z rasmingiz', 'Логотип бренда, эмодзи или своё изображение', 'Brand logo, emoji or your own image')}
             open={activePane === 'logo'}
             onToggle={() => toggle('logo')}
           >
@@ -402,8 +407,8 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
           <StudioPane
             icon={<Sliders className="w-4 h-4" />}
             iconClass="bg-amber-500/10 text-amber-400 border-amber-500/20"
-            title="4. Shakllar"
-            subtitle="Nuqtalar, ko‘z ramkasi va ko‘z markazi shakli"
+            title={tr('4. Shakllar', '4. Формы', '4. Shapes')}
+            subtitle={tr('Nuqtalar, ko‘z ramkasi va ko‘z markazi shakli', 'Форма точек, рамки и центра «глаз»', 'Dot, eye frame and eye centre shapes')}
             open={activePane === 'design'}
             onToggle={() => toggle('design')}
           >
@@ -440,16 +445,17 @@ function UrlForm({
 }) {
   const modeButton = (active: boolean) =>
     `flex-1 py-1.5 text-xs font-semibold rounded-lg border transition-all ${active ? 'bg-zinc-800 text-white border-zinc-600' : 'bg-zinc-950 text-zinc-400 border-zinc-800'}`;
+  const { tr } = useLanguage();
 
   return (
     <div className="space-y-3">
       {allowExisting && (
       <div className="flex gap-2">
         <button type="button" onClick={() => setUrlMode('existing')} className={modeButton(urlMode === 'existing')}>
-          Mening havolam
+          {tr('Mening havolam', 'Моя ссылка', 'My link')}
         </button>
         <button type="button" onClick={() => setUrlMode('custom')} className={modeButton(urlMode === 'custom')}>
-          Yangi URL
+          {tr('Yangi URL', 'Новый URL', 'New URL')}
         </button>
       </div>
       )}
@@ -458,7 +464,7 @@ function UrlForm({
         links.length > 0 ? (
           <div>
             <label htmlFor="qr-link" className="block text-[11px] font-mono uppercase text-zinc-400 mb-1">
-              Qisqa havola
+              {tr('Qisqa havola', 'Короткая ссылка', 'Short link')}
             </label>
             <select
               id="qr-link"
@@ -472,22 +478,22 @@ function UrlForm({
                 </option>
               ))}
             </select>
-            <p className="text-[11px] text-zinc-500 mt-1.5">Havolaning saqlangan dizayni yuklandi. O‘zgartirib, saqlang.</p>
+            <p className="text-[11px] text-zinc-500 mt-1.5">{tr('Havolaning saqlangan dizayni yuklandi. O‘zgartirib, saqlang.', 'Загружен сохранённый дизайн ссылки. Измените и сохраните.', 'The link’s saved design is loaded. Change it and save.')}</p>
           </div>
         ) : (
-          <p className="text-xs text-zinc-400">Hali havola yo‘q. «Yangi URL» ni tanlab, manzil kiriting.</p>
+          <p className="text-xs text-zinc-400">{tr('Hali havola yo‘q. «Yangi URL» ni tanlab, manzil kiriting.', 'Ссылок пока нет. Выберите «Новый URL» и введите адрес.', 'No links yet. Choose “New URL” and enter an address.')}</p>
         )
       ) : (
         <div>
           <label htmlFor="qr-url" className="block text-[11px] font-mono uppercase text-zinc-400 mb-1">
-            URL manzil
+            {tr('URL manzil', 'URL-адрес', 'URL')}
           </label>
           <input
             id="qr-url"
             type="url"
             value={customUrl}
             onChange={(e) => setCustomUrl(e.target.value)}
-            placeholder="https://sayt.uz/sahifa"
+            placeholder={tr('https://sayt.uz/sahifa', 'https://sayt.uz/stranitsa', 'https://site.uz/page')}
             className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-xs font-mono focus:outline-none focus:border-zinc-600"
           />
         </div>

@@ -6,19 +6,20 @@ import { BarChart3, Calendar, FileText, Link2, MapPin, Pencil, Plus, QrCode, Sea
 import { QrCanvas } from '@/components/ui/qr-canvas';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/toast';
+import { useLanguage } from '@/lib/language-context';
 import { designFrom } from '@/components/qr-studio/qr-design';
 import { describeContent, staticPayload } from '@/lib/qr/content';
 import { formatDate, formatNumber, shortUrl } from '@/lib/utils';
 import type { ClientQrCode } from '@/lib/client-types';
 import type { QrDataType } from '@/lib/qr-payloads';
 
-const TYPE_META: Record<QrDataType, { label: string; icon: React.ElementType }> = {
-  url: { label: 'Havola', icon: Link2 },
-  vcard: { label: 'vCard', icon: UserCheck },
-  location: { label: 'Joylashuv', icon: MapPin },
-  event: { label: 'Tadbir', icon: Calendar },
-  text: { label: 'Matn', icon: FileText },
-  wifi: { label: 'Wi-Fi', icon: Wifi },
+const TYPE_META: Record<QrDataType, { label: [uz: string, ru: string, en: string]; icon: React.ElementType }> = {
+  url: { label: ['Havola', 'Ссылка', 'Link'], icon: Link2 },
+  vcard: { label: ['vCard', 'vCard', 'vCard'], icon: UserCheck },
+  location: { label: ['Joylashuv', 'Локация', 'Location'], icon: MapPin },
+  event: { label: ['Tadbir', 'Событие', 'Event'], icon: Calendar },
+  text: { label: ['Matn', 'Текст', 'Text'], icon: FileText },
+  wifi: { label: ['Wi-Fi', 'Wi-Fi', 'Wi-Fi'], icon: Wifi },
 };
 
 interface Props {
@@ -29,6 +30,7 @@ interface Props {
 /** Saved QR codes: open one to edit it, see its scans, or delete it. */
 export default function QrLibrary({ qrCodes: initial, canWrite }: Props) {
   const { showToast } = useToast();
+  const { tr } = useLanguage();
   const [qrCodes, setQrCodes] = useState(initial);
   const [query, setQuery] = useState('');
   const [type, setType] = useState<QrDataType | 'all'>('all');
@@ -49,7 +51,7 @@ export default function QrLibrary({ qrCodes: initial, canWrite }: Props) {
 
   const remove = async (qr: ClientQrCode) => {
     if (!canWrite) {
-      window.dispatchEvent(new CustomEvent('open-demo-restriction', { detail: { actionTitle: 'QR kodni o‘chirish' } }));
+      window.dispatchEvent(new CustomEvent('open-demo-restriction', { detail: { actionTitle: tr('QR kodni o‘chirish', 'Удаление QR-кода', 'Deleting a QR code') } }));
       return;
     }
     if (armedDelete !== qr.id) {
@@ -62,11 +64,11 @@ export default function QrLibrary({ qrCodes: initial, canWrite }: Props) {
       const res = await fetch(`/api/qr-codes/${qr.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!data.success) {
-        showToast('error', data.error || 'O‘chirib bo‘lmadi');
+        showToast('error', data.error || tr('O‘chirib bo‘lmadi', 'Не удалось удалить', 'Couldn’t delete'));
         return;
       }
       setQrCodes((all) => all.filter((x) => x.id !== qr.id));
-      showToast('success', 'QR kod o‘chirildi');
+      showToast('success', tr('QR kod o‘chirildi', 'QR-код удалён', 'QR code deleted'));
     } catch {
       showToast('error', 'Tarmoq xatosi yuz berdi');
     }
@@ -83,17 +85,17 @@ export default function QrLibrary({ qrCodes: initial, canWrite }: Props) {
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
             <QrCode className="w-6 h-6 text-indigo-400" />
-            <span>QR kodlarim</span>
+            <span>{tr('QR kodlarim', 'Мои QR-коды', 'My QR codes')}</span>
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            Saqlangan QR kodlar. Dinamik QR kodlarning ma’lumotini chop etilgandan keyin ham o‘zgartirishingiz mumkin.
+            {tr('Saqlangan QR kodlar. Dinamik QR kodlarning ma’lumotini chop etilgandan keyin ham o‘zgartirishingiz mumkin.', 'Сохранённые QR-коды. Данные динамических QR-кодов можно менять даже после печати.', 'Your saved QR codes. Dynamic QR codes can be edited even after they’re printed.')}
           </p>
         </div>
         <Link
           href="/dashboard/qr/new"
           className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-semibold shrink-0"
         >
-          <Plus className="w-4 h-4" /> Yangi QR kod
+          <Plus className="w-4 h-4" /> {tr('Yangi QR kod', 'Новый QR-код', 'New QR code')}
         </Link>
       </div>
 
@@ -108,14 +110,14 @@ export default function QrLibrary({ qrCodes: initial, canWrite }: Props) {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Nomi yoki tarkibi bo‘yicha qidirish"
-                aria-label="QR kodlarni qidirish"
+                placeholder={tr('Nomi yoki tarkibi bo‘yicha qidirish', 'Поиск по названию или содержимому', 'Search by name or content')}
+                aria-label={tr('QR kodlarni qidirish', 'Поиск QR-кодов', 'Search QR codes')}
                 className="w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-xs focus:outline-none focus:border-zinc-600"
               />
             </div>
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
               <button type="button" onClick={() => setType('all')} className={chip(type === 'all')}>
-                Barchasi <span className="text-zinc-500 font-mono">{qrCodes.length}</span>
+                {tr('Barchasi', 'Все', 'All')} <span className="text-zinc-500 font-mono">{qrCodes.length}</span>
               </button>
               {(Object.keys(TYPE_META) as QrDataType[])
                 .filter((t) => counts.has(t))
@@ -123,7 +125,7 @@ export default function QrLibrary({ qrCodes: initial, canWrite }: Props) {
                   const Icon = TYPE_META[t].icon;
                   return (
                     <button key={t} type="button" onClick={() => setType(t)} className={chip(type === t)}>
-                      <Icon className="w-3.5 h-3.5 text-indigo-400" /> {TYPE_META[t].label}
+                      <Icon className="w-3.5 h-3.5 text-indigo-400" /> {tr(...TYPE_META[t].label)}
                       <span className="text-zinc-500 font-mono">{counts.get(t)}</span>
                     </button>
                   );
@@ -132,7 +134,7 @@ export default function QrLibrary({ qrCodes: initial, canWrite }: Props) {
           </div>
 
           {visible.length === 0 ? (
-            <p className="py-16 text-center text-xs text-zinc-500">Hech narsa topilmadi.</p>
+            <p className="py-16 text-center text-xs text-zinc-500">{tr('Hech narsa topilmadi.', 'Ничего не найдено.', 'Nothing found.')}</p>
           ) : (
             <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {visible.map((qr) => (
@@ -147,6 +149,7 @@ export default function QrLibrary({ qrCodes: initial, canWrite }: Props) {
 }
 
 function QrCard({ qr, armed, canWrite, onDelete }: { qr: ClientQrCode; armed: boolean; canWrite: boolean; onDelete: () => void }) {
+  const { tr, locale } = useLanguage();
   const meta = TYPE_META[qr.type];
   const Icon = meta.icon;
   const payload = qr.link ? shortUrl(qr.link.slug) : staticPayload(qr.type, qr.content);
@@ -155,7 +158,7 @@ function QrCard({ qr, armed, canWrite, onDelete }: { qr: ClientQrCode; armed: bo
 
   return (
     <li className="rounded-2xl border border-zinc-800 bg-zinc-950 overflow-hidden flex flex-col group">
-      <Link href={`/dashboard/qr/${qr.id}`} className="flex justify-center p-4 bg-zinc-900/50 border-b border-zinc-800" aria-label={`${qr.name} tahrirlash`}>
+      <Link href={`/dashboard/qr/${qr.id}`} className="flex justify-center p-4 bg-zinc-900/50 border-b border-zinc-800" aria-label={tr(`${qr.name} tahrirlash`, `Редактировать ${qr.name}`, `Edit ${qr.name}`)}>
         <QrCanvas value={payload} size={132} {...design} errorLevel={payload.length > 200 ? 'M' : design.errorLevel} showControls={false} />
       </Link>
       <div className="p-4 flex-1 flex flex-col gap-2">
@@ -165,41 +168,41 @@ function QrCard({ qr, armed, canWrite, onDelete }: { qr: ClientQrCode; armed: bo
           </Link>
           {qr.link ? (
             <Badge variant="success" size="xs" icon={<Zap className="w-3 h-3" />}>
-              Dinamik
+              {tr('Dinamik', 'Динамический', 'Dynamic')}
             </Badge>
           ) : (
             <Badge variant="default" size="xs">
-              Statik
+              {tr('Statik', 'Статический', 'Static')}
             </Badge>
           )}
         </div>
         <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 min-w-0">
           <Icon className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-          <span className="shrink-0">{meta.label}</span>
+          <span className="shrink-0">{tr(...meta.label)}</span>
           {summary && <span className="truncate" title={summary}>· {summary}</span>}
         </div>
         <div className="mt-auto pt-2 flex items-center justify-between text-[11px] font-mono text-zinc-500">
           {qr.link ? (
-            <Link href={`/dashboard/links/${qr.link.id}`} className="flex items-center gap-1 hover:text-zinc-300" title="Statistika">
-              <BarChart3 className="w-3 h-3" /> {formatNumber(qr.link.click_count)} skan
+            <Link href={`/dashboard/links/${qr.link.id}`} className="flex items-center gap-1 hover:text-zinc-300" title={tr('Statistika', 'Статистика', 'Stats')}>
+              <BarChart3 className="w-3 h-3" /> {formatNumber(qr.link.click_count)} {tr('skan', 'скан.', 'scans')}
             </Link>
           ) : (
             <span>—</span>
           )}
-          <span>{formatDate(qr.updated_at)}</span>
+          <span>{formatDate(qr.updated_at, locale)}</span>
         </div>
         <div className="flex items-center gap-1.5 pt-1">
           <Link
             href={`/dashboard/qr/${qr.id}`}
             className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-[11px] font-medium"
           >
-            <Pencil className="w-3 h-3" /> Tahrirlash
+            <Pencil className="w-3 h-3" /> {tr('Tahrirlash', 'Изменить', 'Edit')}
           </Link>
           {canWrite && (
             <button
               type="button"
               onClick={onDelete}
-              title={qr.link ? 'O‘chirish: chop etilgan nusxalar ishlamay qoladi' : 'O‘chirish'}
+              title={qr.link ? tr('O‘chirish: chop etilgan nusxalar ishlamay qoladi', 'Удалить: напечатанные копии перестанут работать', 'Delete: printed copies will stop working') : tr('O‘chirish', 'Удалить', 'Delete')}
               className={
                 armed
                   ? 'flex items-center gap-1 px-2 py-1.5 rounded-md bg-rose-600 text-white text-[11px] font-semibold'
@@ -207,7 +210,7 @@ function QrCard({ qr, armed, canWrite, onDelete }: { qr: ClientQrCode; armed: bo
               }
             >
               <Trash2 className="w-3.5 h-3.5" />
-              {armed && <span>Tasdiqlash</span>}
+              {armed && <span>{tr('Tasdiqlash', 'Подтвердить', 'Confirm')}</span>}
             </button>
           )}
         </div>
@@ -217,18 +220,19 @@ function QrCard({ qr, armed, canWrite, onDelete }: { qr: ClientQrCode; armed: bo
 }
 
 function EmptyState() {
+  const { tr } = useLanguage();
   const starters: { type: QrDataType; text: string }[] = [
-    { type: 'vcard', text: 'Vizitka: kontakt ma’lumotlari o‘zgarsa ham QR eskirmaydi' },
-    { type: 'url', text: 'Sayt, menyu yoki aksiya sahifasi uchun' },
-    { type: 'wifi', text: 'Mehmonlar uchun Wi-Fi ulanishi' },
+    { type: 'vcard', text: tr('Vizitka: kontakt ma’lumotlari o‘zgarsa ham QR eskirmaydi', 'Визитка: QR не устареет, даже если контакты изменятся', 'Business card: the QR stays valid when your details change') },
+    { type: 'url', text: tr('Sayt, menyu yoki aksiya sahifasi uchun', 'Для сайта, меню или акции', 'For a website, menu or promo page') },
+    { type: 'wifi', text: tr('Mehmonlar uchun Wi-Fi ulanishi', 'Wi-Fi для гостей', 'Guest Wi-Fi access') },
   ];
   return (
     <div className="rounded-2xl border border-dashed border-zinc-800 p-10 text-center space-y-5">
       <QrCode className="w-10 h-10 text-zinc-600 mx-auto" />
       <div>
-        <h2 className="text-sm font-semibold text-white">Hali saqlangan QR kod yo‘q</h2>
+        <h2 className="text-sm font-semibold text-white">{tr('Hali saqlangan QR kod yo‘q', 'Сохранённых QR-кодов пока нет', 'No saved QR codes yet')}</h2>
         <p className="text-xs text-zinc-500 mt-1 max-w-md mx-auto">
-          QR kod yarating va saqlang — keyin istalgan vaqt ochib tahrirlaysiz. Dinamik QR kodlar chop etilgandan keyin ham yangilanadi.
+          {tr('QR kod yarating va saqlang — keyin istalgan vaqt ochib tahrirlaysiz. Dinamik QR kodlar chop etilgandan keyin ham yangilanadi.', 'Создайте и сохраните QR-код — потом его можно открыть и отредактировать. Динамические QR-коды обновляются даже после печати.', 'Create and save a QR code, then open and edit it any time. Dynamic QR codes update even after they’re printed.')}
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto">
@@ -241,7 +245,7 @@ function EmptyState() {
               className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-zinc-700 text-left transition-colors"
             >
               <Icon className="w-4 h-4 text-indigo-400" />
-              <div className="mt-2 text-xs font-semibold text-white">{TYPE_META[type].label}</div>
+              <div className="mt-2 text-xs font-semibold text-white">{tr(...TYPE_META[type].label)}</div>
               <div className="mt-0.5 text-[11px] text-zinc-500">{text}</div>
             </Link>
           );

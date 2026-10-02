@@ -3,8 +3,10 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { KeyRound, Loader2, ShieldCheck } from 'lucide-react';
+import { useLanguage } from '@/lib/language-context';
 
 export default function TwoFactorForm() {
+  const { tr, tm } = useLanguage();
   const [useRecovery, setUseRecovery] = useState(false);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -26,10 +28,10 @@ export default function TwoFactorForm() {
         window.location.assign(data.redirect);
         return;
       }
-      setError(data.error || 'Kod noto‘g‘ri');
+      setError(data.error || tr('Kod noto‘g‘ri', 'Неверный код', 'Wrong code'));
       setCode('');
     } catch {
-      setError('Tarmoq xatosi yuz berdi');
+      setError(tr('Tarmoq xatosi yuz berdi', 'Ошибка сети', 'Network error'));
     } finally {
       setLoading(false);
     }
@@ -47,11 +49,11 @@ export default function TwoFactorForm() {
         {useRecovery ? <KeyRound className="w-6 h-6" /> : <ShieldCheck className="w-6 h-6" />}
       </div>
       <div>
-        <h1 className="text-lg font-semibold text-white">Ikki bosqichli tasdiqlash</h1>
+        <h1 className="text-lg font-semibold text-white">{tr('Ikki bosqichli tasdiqlash', 'Двухфакторная проверка', 'Two-step verification')}</h1>
         <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
           {useRecovery
-            ? 'Saqlab qo‘ygan tiklash kodlaringizdan birini kiriting. Har bir kod bir marta ishlaydi.'
-            : 'Google Authenticator (yoki boshqa autentifikator ilova)dagi 6 xonali kodni kiriting.'}
+            ? tr('Saqlab qo‘ygan tiklash kodlaringizdan birini kiriting. Har bir kod bir marta ishlaydi.', 'Введите один из сохранённых кодов восстановления. Каждый код работает один раз.', 'Enter one of your saved recovery codes. Each code works once.')
+            : tr('Google Authenticator (yoki boshqa autentifikator ilova)dagi 6 xonali kodni kiriting.', 'Введите 6-значный код из Google Authenticator (или другого приложения-аутентификатора).', 'Enter the 6-digit code from Google Authenticator (or another authenticator app).')}
         </p>
       </div>
 
@@ -60,7 +62,7 @@ export default function TwoFactorForm() {
           value={code}
           onChange={(e) => setCode(e.target.value)}
           placeholder="xxxxx-xxxxx"
-          aria-label="Tiklash kodi"
+          aria-label={tr('Tiklash kodi', 'Код восстановления', 'Recovery code')}
           autoFocus
           autoComplete="one-time-code"
           className="w-full text-center tracking-widest text-lg font-mono py-3 bg-zinc-950 border border-zinc-800 focus:border-indigo-500 rounded-xl text-white focus:outline-none"
@@ -74,7 +76,7 @@ export default function TwoFactorForm() {
             if (next.length === 6) void submit(next);
           }}
           placeholder="• • • • • •"
-          aria-label="Tasdiqlash kodi"
+          aria-label={tr('Tasdiqlash kodi', 'Код подтверждения', 'Verification code')}
           inputMode="numeric"
           autoComplete="one-time-code"
           autoFocus
@@ -82,7 +84,7 @@ export default function TwoFactorForm() {
         />
       )}
 
-      {error && <p className="text-xs text-rose-400 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">{error}</p>}
+      {error && <p className="text-xs text-rose-400 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">{tm(error)}</p>}
 
       <button
         type="submit"
@@ -90,7 +92,7 @@ export default function TwoFactorForm() {
         className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-semibold disabled:opacity-50"
       >
         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-        Tasdiqlash va kirish
+        {tr('Tasdiqlash va kirish', 'Подтвердить и войти', 'Confirm and sign in')}
       </button>
 
       <div className="flex items-center justify-between text-[11px]">
@@ -103,10 +105,10 @@ export default function TwoFactorForm() {
           }}
           className="text-indigo-400 hover:text-indigo-300"
         >
-          {useRecovery ? 'Ilovadagi koddan foydalanish' : 'Telefonim yo‘q — tiklash kodi'}
+          {useRecovery ? tr('Ilovadagi koddan foydalanish', 'Использовать код из приложения', 'Use the code from the app') : tr('Telefonim yo‘q — tiklash kodi', 'Нет телефона — код восстановления', 'No phone? Use a recovery code')}
         </button>
         <Link href="/" className="text-zinc-500 hover:text-zinc-300">
-          Bekor qilish
+          {tr('Bekor qilish', 'Отмена', 'Cancel')}
         </Link>
       </div>
     </form>

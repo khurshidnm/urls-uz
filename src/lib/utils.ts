@@ -159,9 +159,10 @@ export function formatDay(value: string | Date, locale: keyof typeof SHORT_MONTH
   return locale === 'uz' ? `${day}-${month}` : `${day} ${month}`;
 }
 
-/** "30-sen, 2026" — browsers render the uz-UZ locale inconsistently ("2026 M09 30"), so format by hand. */
-export function formatDate(dateStr: string): string {
+/** "30-sen, 2026" / "30 сен 2026" / "30 Sep 2026" — browsers render the uz-UZ locale inconsistently ("2026 M09 30"), so format by hand. */
+export function formatDate(dateStr: string, locale: keyof typeof SHORT_MONTHS = 'uz'): string {
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return dateStr;
-  return `${d.getDate()}-${UZ_MONTHS[d.getMonth()]}, ${d.getFullYear()}`;
+  const month = SHORT_MONTHS[locale][d.getMonth()];
+  return locale === 'uz' ? `${d.getDate()}-${month}, ${d.getFullYear()}` : `${d.getDate()} ${month} ${d.getFullYear()}`;
 }

@@ -28,6 +28,10 @@ export const SITE_DESCRIPTION =
   'O‘zbekiston uchun qisqa havolalar: qurilmaga qarab App Store, Google Play yoki AppGallery’ga yo‘naltirish, ' +
   'Telegram va Instagram ilovalarida ochiladigan havolalar, tahrirlanadigan QR kodlar, Link-in-Bio sahifa va viloyatlar bo‘yicha analitika.';
 
+/** The link preview in Telegram, Facebook, X, ... (short: previews cut long text). */
+export const SHARE_TITLE = 'Bitta havola — har bir qurilma o‘z yo‘lida';
+export const SHARE_DESCRIPTION = 'Qisqa havolalar, QR kodlar va analitika';
+
 export const SITE_KEYWORDS = [
   'havola qisqartirish',
   'qisqa havola',

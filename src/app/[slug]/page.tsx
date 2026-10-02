@@ -20,6 +20,7 @@ import HostedQrPage from './hosted-qr-page';
 import { qrRepo } from '@/lib/qr/qr-repo';
 import { isHostedType } from '@/lib/qr/content';
 import { SITE_NAME } from '@/lib/site';
+import { getLocale, getTr, type Tr } from '@/lib/locale';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -30,6 +31,7 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function SlugRedirectPage({ params }: Props) {
   const { slug } = await params;
+  const tr = await getTr();
 
   // Reserved paths guard (e.g. /api, /dashboard, /login, /settings, /bio, etc.)
   if (isReservedSlug(slug) || ['favicon.ico', '_next', 'robots.txt'].includes(slug)) {
@@ -53,16 +55,16 @@ export default async function SlugRedirectPage({ params }: Props) {
           <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-mono font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 mb-3">
             STATUS // EXPIRED_LINK
           </span>
-          <h2 className="text-lg font-semibold text-white mb-2 tracking-tight">Havola muddati tugagan</h2>
+          <h2 className="text-lg font-semibold text-white mb-2 tracking-tight">{tr('Havola muddati tugagan', 'Срок действия ссылки истёк', 'This link has expired')}</h2>
           <p className="text-zinc-400 text-xs mb-6 leading-relaxed">
-            Ushbu qisqa havolaning amal qilish muddati o‘tib ketgan. Yangi maʼlumot olish uchun havola egasi bilan bog‘laning.
+            {tr('Ushbu qisqa havolaning amal qilish muddati o‘tib ketgan. Yangi maʼlumot olish uchun havola egasi bilan bog‘laning.', 'Срок действия этой короткой ссылки истёк. Свяжитесь с её владельцем, чтобы получить актуальную.', 'This short link has expired. Contact its owner for an up-to-date one.')}
           </p>
           <Link
             href="/"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-medium transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>{SITE_NAME} bosh sahifasi</span>
+            <span>{tr(`${SITE_NAME} bosh sahifasi`, `Главная ${SITE_NAME}`, `${SITE_NAME} home`)}</span>
           </Link>
         </div>
       </div>
@@ -71,7 +73,7 @@ export default async function SlugRedirectPage({ params }: Props) {
 
   // 2. Check click limit
   if (link.click_limit && link.click_count >= link.click_limit) {
-    return <ClickLimitReached />;
+    return <ClickLimitReached tr={tr} />;
   }
 
   // 3. Password protection (the destination is never sent to the browser before unlock)
@@ -87,9 +89,9 @@ export default async function SlugRedirectPage({ params }: Props) {
             <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-mono font-medium bg-zinc-800 text-zinc-300 border border-zinc-700 mb-2">
               AUTH // SECURED_REDIRECT
             </span>
-            <h2 className="text-lg font-semibold text-white tracking-tight">Havola parol bilan himoyalangan</h2>
+            <h2 className="text-lg font-semibold text-white tracking-tight">{tr('Havola parol bilan himoyalangan', 'Ссылка защищена паролем', 'This link is password-protected')}</h2>
             <p className="text-zinc-400 text-xs mt-1">
-              Manzilga xavfsiz o‘tish uchun belgilangan parolni kiriting.
+              {tr('Manzilga xavfsiz o‘tish uchun belgilangan parolni kiriting.', 'Введите пароль, чтобы перейти по ссылке.', 'Enter the password to continue.')}
             </p>
           </div>
           <PasswordUnlockForm slug={slug} />
@@ -142,13 +144,13 @@ export default async function SlugRedirectPage({ params }: Props) {
 
   // Another request used the last allowed click between the check above and now
   if (!withinLimit) {
-    return <ClickLimitReached />;
+    return <ClickLimitReached tr={tr} />;
   }
 
   // Dynamic vCard / event / text QR codes open their (editable) page instead of redirecting
   if (link.source === 'qr') {
     const qr = await qrRepo.getByLinkId(link.id);
-    if (qr && isHostedType(qr.type)) return <HostedQrPage qr={qr} />;
+    if (qr && isHostedType(qr.type)) return <HostedQrPage qr={qr} tr={tr} locale={await getLocale()} />;
   }
 
   // 5. Intelligent Device Routing (iOS, Huawei, Android, Desktop, Fallback)
@@ -192,7 +194,7 @@ export default async function SlugRedirectPage({ params }: Props) {
 }
 
 
-function ClickLimitReached() {
+function ClickLimitReached({ tr }: { tr: Tr }) {
   return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-zinc-900/90 rounded-xl p-8 text-center border border-zinc-800 shadow-xl">
@@ -202,16 +204,16 @@ function ClickLimitReached() {
           <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-mono font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20 mb-3">
             STATUS // CLICK_LIMIT_REACHED
           </span>
-          <h2 className="text-lg font-semibold text-white mb-2 tracking-tight">Bosishlar limiti tugagan</h2>
+          <h2 className="text-lg font-semibold text-white mb-2 tracking-tight">{tr('Bosishlar limiti tugagan', 'Лимит переходов исчерпан', 'Click limit reached')}</h2>
           <p className="text-zinc-400 text-xs mb-6 leading-relaxed">
-            Ushbu havola uchun ajratilgan maksimal tashriflar soniga yetib bo‘lingan.
+            {tr('Ushbu havola uchun ajratilgan maksimal tashriflar soniga yetib bo‘lingan.', 'Ссылка достигла максимального числа переходов.', 'This link has reached its maximum number of visits.')}
           </p>
           <Link
             href="/"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-medium transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>{SITE_NAME} bosh sahifasi</span>
+            <span>{tr(`${SITE_NAME} bosh sahifasi`, `Главная ${SITE_NAME}`, `${SITE_NAME} home`)}</span>
           </Link>
         </div>
       </div>

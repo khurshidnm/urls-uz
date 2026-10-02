@@ -15,6 +15,7 @@ import {
 import { TelegramIcon, InstagramIcon, YouTubeIcon, LinkedInIcon, GitHubIcon, TikTokIcon, TwitterXIcon } from '@/components/ui/icons';
 import { QrCanvas } from '@/components/ui/qr-canvas';
 import { SITE_URL, SITE_NAME } from '@/lib/site';
+import { useLanguage } from '@/lib/language-context';
 
 interface BioClientViewProps {
   bioPage: {
@@ -41,6 +42,7 @@ interface BioClientViewProps {
 }
 
 export default function BioClientView({ bioPage }: BioClientViewProps) {
+  const { tr } = useLanguage();
   const [showQr, setShowQr] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -193,14 +195,14 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
           <button
             onClick={() => setShowQr(true)}
             className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-white transition-all"
-            title="QR Kod"
+            title={tr('QR Kod', 'QR-код', 'QR code')}
           >
             <QrCode className="w-4 h-4" />
           </button>
           <button
             onClick={handleShare}
             className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-white transition-all"
-            title="Ulashish"
+            title={tr('Ulashish', 'Поделиться', 'Share')}
           >
             {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
           </button>
@@ -269,7 +271,7 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
             })
           ) : (
             <div className="p-6 rounded-2xl border border-white/10 text-slate-400 text-xs">
-              Hozircha havolalar qo‘shilmagan.
+              {tr('Hozircha havolalar qo‘shilmagan.', 'Ссылок пока нет.', 'No links yet.')}
             </div>
           )}
         </div>
@@ -280,7 +282,7 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
             href="/"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-slate-300 transition-colors shadow-sm"
           >
-            <span>O‘zingizning bepul bio sahifangizni yarating —</span>
+            <span>{tr('O‘zingizning bepul bio sahifangizni yarating —', 'Создайте свою бесплатную bio-страницу —', 'Create your own free bio page —')}</span>
             <span className="font-bold text-indigo-400">{SITE_NAME}</span>
           </Link>
         </div>
@@ -297,8 +299,8 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
             >
               <X className="w-5 h-5" />
             </button>
-            <h3 className="text-base font-bold text-white mb-1">@{bioPage.handle} QR Kodi</h3>
-            <p className="text-xs text-slate-400 mb-4">Profilni ochish uchun smartfon kamerasi bilan skanerlang</p>
+            <h3 className="text-base font-bold text-white mb-1">@{bioPage.handle} — {tr('QR kod', 'QR-код', 'QR code')}</h3>
+            <p className="text-xs text-slate-400 mb-4">{tr('Profilni ochish uchun smartfon kamerasi bilan skanerlang', 'Отсканируйте камерой смартфона, чтобы открыть профиль', 'Scan with your phone camera to open the profile')}</p>
             <QrCanvas
               url={currentUrl}
               size={240}

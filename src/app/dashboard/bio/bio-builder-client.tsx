@@ -12,6 +12,7 @@ import ThemesTab from './themes-tab';
 import DevicePreview from './device-preview';
 import BioModals from './bio-modals';
 import { SITE_HOST } from '@/lib/site';
+import { useLanguage } from '@/lib/language-context';
 
 interface Props {
   initialBio: ClientBioPage | undefined;
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export default function BioBuilderClient({ initialBio, owner }: Props) {
+  const { tr } = useLanguage();
   const b = useBioBuilder(initialBio, owner);
   const { handle, BIO_LINKS_LIMIT, links, activeTab, setActiveTab, isSaving, savedSuccess, setQrModalOpen, copiedLink, handleCopyBioLink, handleSave, t } = b;
 
@@ -40,7 +42,7 @@ export default function BioBuilderClient({ initialBio, owner }: Props) {
             </span>
           </div>
           <p className="text-xs text-zinc-400">
-            Instagram, Telegram, TikTok va YouTube uchun yagona shaxsiy profilingizni boshqaring
+            {tr('Instagram, Telegram, TikTok va YouTube uchun yagona shaxsiy profilingizni boshqaring', 'Единый профиль для Instagram, Telegram, TikTok и YouTube', 'One profile page for your Instagram, Telegram, TikTok and YouTube')}
           </p>
         </div>
 
@@ -50,7 +52,7 @@ export default function BioBuilderClient({ initialBio, owner }: Props) {
           <button
             onClick={handleCopyBioLink}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-mono text-zinc-300 transition-colors"
-            title="Havoladan nusxa olish"
+            title={tr('Havoladan nusxa olish', 'Скопировать ссылку', 'Copy link')}
           >
             {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
             <span className="text-[11px]">{copiedLink ? 'Nusxalandi!' : `${SITE_HOST}/b/${handle}`}</span>
@@ -62,7 +64,7 @@ export default function BioBuilderClient({ initialBio, owner }: Props) {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-300 hover:text-white transition-colors"
           >
             <QrCode className="w-3.5 h-3.5 text-zinc-400" />
-            <span>QR Kod</span>
+            <span>{tr('QR Kod', 'QR-код', 'QR code')}</span>
           </button>
 
           {/* Open live page */}
@@ -71,7 +73,7 @@ export default function BioBuilderClient({ initialBio, owner }: Props) {
             target="_blank"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-300 hover:text-white transition-colors"
           >
-            <span>Ochish</span>
+            <span>{tr('Ochish', 'Открыть', 'Open')}</span>
             <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
           </Link>
 
@@ -84,12 +86,12 @@ export default function BioBuilderClient({ initialBio, owner }: Props) {
             {savedSuccess ? (
               <>
                 <Check className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Saqlandi!</span>
+                <span>{tr('Saqlandi!', 'Сохранено!', 'Saved!')}</span>
               </>
             ) : (
               <>
                 <Save className="w-3.5 h-3.5" />
-                <span>{isSaving ? 'Saqlanmoqda...' : t.save}</span>
+                <span>{isSaving ? tr('Saqlanmoqda...', 'Сохраняем...', 'Saving...') : t.save}</span>
               </>
             )}
           </button>
@@ -109,7 +111,7 @@ export default function BioBuilderClient({ initialBio, owner }: Props) {
               }`}
             >
               <UserIcon className="w-3.5 h-3.5" />
-              <span>Profil</span>
+              <span>{tr('Profil', 'Профиль', 'Profile')}</span>
             </button>
 
             <button
@@ -121,7 +123,7 @@ export default function BioBuilderClient({ initialBio, owner }: Props) {
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>Tugmalar</span>
+              <span>{tr('Tugmalar', 'Кнопки', 'Buttons')}</span>
               <span className="w-4 h-4 rounded-full bg-zinc-700 text-[10px] flex items-center justify-center text-zinc-200 font-mono">
                 {links.length}/{BIO_LINKS_LIMIT}
               </span>
@@ -136,7 +138,7 @@ export default function BioBuilderClient({ initialBio, owner }: Props) {
               }`}
             >
               <Share2 className="w-3.5 h-3.5" />
-              <span>Ijtimoiy</span>
+              <span>{tr('Ijtimoiy', 'Соцсети', 'Social')}</span>
             </button>
 
             <button
@@ -148,7 +150,7 @@ export default function BioBuilderClient({ initialBio, owner }: Props) {
               }`}
             >
               <Palette className="w-3.5 h-3.5" />
-              <span>Mavzular</span>
+              <span>{tr('Mavzular', 'Темы', 'Themes')}</span>
             </button>
           </div>
           {activeTab === 'profile' && <ProfileTab b={b} />}

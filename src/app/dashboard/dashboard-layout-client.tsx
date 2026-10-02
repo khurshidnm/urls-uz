@@ -8,6 +8,7 @@ import CreateLinkDrawer from '@/components/dashboard/create-link-modal';
 import { DemoBanner } from '@/components/dashboard/demo-banner';
 import { DemoRestrictionModal } from '@/components/dashboard/demo-restriction-modal';
 import { useAuth } from '@/lib/auth-context';
+import { useLanguage } from '@/lib/language-context';
 
 export default function DashboardLayoutClient({
   children,
@@ -18,13 +19,14 @@ export default function DashboardLayoutClient({
 }) {
   const router = useRouter();
   const { user, openAuthModal, isSuperAdmin, demoEditMode } = useAuth();
+  const { tr } = useLanguage();
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
   const [demoModalOpen, setDemoModalOpen] = useState(false);
   const [demoActionTitle, setDemoActionTitle] = useState<string | undefined>();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Trigger link creation or show demo restriction if not logged in
-  const handleRequestCreateLink = (actionTitle = 'Yangi havola yaratish') => {
+  const handleRequestCreateLink = (actionTitle = tr('Yangi havola yaratish', 'Создание ссылки', 'Creating a link')) => {
     if (!user && !isSuperAdmin) {
       setDemoActionTitle(actionTitle);
       setDemoModalOpen(true);
@@ -86,18 +88,18 @@ export default function DashboardLayoutClient({
 
       {/* Sidebar */}
       <div className={`${mobileSidebarOpen ? 'fixed inset-y-0 left-0 z-50 block' : 'hidden'} md:relative md:block`}>
-        <Sidebar bioHandle={bioHandle} onCreateLink={() => { handleRequestCreateLink('Yangi havola yaratish'); setMobileSidebarOpen(false); }} />
+        <Sidebar bioHandle={bioHandle} onCreateLink={() => { handleRequestCreateLink(); setMobileSidebarOpen(false); }} />
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Topbar
-          onCreateLink={() => handleRequestCreateLink('Yangi havola yaratish')}
+          onCreateLink={() => handleRequestCreateLink()}
           onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
         />
         
         {/* Demo Mode Notice Banner */}
-        <DemoBanner onStartFree={() => { setDemoActionTitle('Bepul ro‘yxatdan o‘tish'); openAuthModal(undefined, undefined, 'signup'); }} />
+        <DemoBanner onStartFree={() => { setDemoActionTitle(tr('Bepul ro‘yxatdan o‘tish', 'Бесплатная регистрация', 'Free sign-up')); openAuthModal(undefined, undefined, 'signup'); }} />
 
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-dot-pattern">
           <div className="max-w-7xl mx-auto">

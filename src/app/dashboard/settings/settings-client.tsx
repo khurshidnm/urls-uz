@@ -15,7 +15,7 @@ interface Props {
 
 export default function SettingsClient({ loginMethods, profile }: Props) {
   const { isSuperAdmin, demoEditMode, setDemoEditMode, resetDemoData, reloadUser } = useAuth();
-  const { locale, setLocale, t } = useLanguage();
+  const { locale, setLocale, t, tr } = useLanguage();
   const { showToast } = useToast();
 
   const [name, setName] = useState(profile?.name ?? '');
@@ -34,7 +34,7 @@ export default function SettingsClient({ loginMethods, profile }: Props) {
       });
       const data = await res.json();
       if (!data.success) {
-        showToast('error', data.error || 'Saqlab bo‘lmadi');
+        showToast('error', data.error || tr('Saqlab bo‘lmadi', 'Не удалось сохранить', 'Couldn’t save'));
         return;
       }
       setName(data.user.name);
@@ -53,7 +53,7 @@ export default function SettingsClient({ loginMethods, profile }: Props) {
     <div className="space-y-8 max-w-4xl">
       <div>
         <h1 className="text-2xl font-extrabold text-white tracking-tight">{t.settings}</h1>
-        <p className="text-xs sm:text-sm text-slate-400 mt-1">Kirish usullari, xavfsizlik, profil va til</p>
+        <p className="text-xs sm:text-sm text-slate-400 mt-1">{tr('Kirish usullari, xavfsizlik, profil va til', 'Способы входа, безопасность, профиль и язык', 'Sign-in methods, security, profile and language')}</p>
       </div>
 
       {loginMethods}
@@ -62,13 +62,13 @@ export default function SettingsClient({ loginMethods, profile }: Props) {
         <form onSubmit={saveProfile} className="glass-panel p-6 rounded-3xl border border-white/5 space-y-4">
           <div className="flex items-center gap-2.5 pb-2 border-b border-slate-800">
             <User className="w-4 h-4 text-indigo-400" />
-            <h3 className="text-sm font-bold text-white">Profil maʼlumotlari</h3>
+            <h3 className="text-sm font-bold text-white">{tr('Profil maʼlumotlari', 'Профиль', 'Profile')}</h3>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="profile-name" className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Ism-familiya
+                {tr('Ism-familiya', 'Имя и фамилия', 'Full name')}
               </label>
               <input
                 id="profile-name"
@@ -81,11 +81,11 @@ export default function SettingsClient({ loginMethods, profile }: Props) {
               />
             </div>
             <div>
-              <span className="block text-xs font-semibold text-slate-300 mb-1.5">Email va telefon</span>
+              <span className="block text-xs font-semibold text-slate-300 mb-1.5">{tr('Email va telefon', 'Email и телефон', 'Email and phone')}</span>
               <div className="px-3.5 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-400 text-xs">
                 {[profile.email, profile.phone].filter(Boolean).join(' · ') || '—'}
               </div>
-              <p className="text-[11px] text-slate-500 mt-1">Google va telefon raqam «Kirish usullari» orqali ulanadi.</p>
+              <p className="text-[11px] text-slate-500 mt-1">{tr('Google va telefon raqam «Kirish usullari» orqali ulanadi.', 'Google и номер телефона подключаются в разделе «Способы входа».', 'Google and your phone number are connected under “Sign-in methods”.')}</p>
             </div>
           </div>
 
@@ -96,7 +96,7 @@ export default function SettingsClient({ loginMethods, profile }: Props) {
               className="flex items-center gap-2 px-5 py-2 bg-gradient-btn text-white text-xs font-semibold rounded-xl disabled:opacity-50"
             >
               {savedSuccess ? <Check className="w-4 h-4 text-emerald-400" /> : <Save className="w-4 h-4" />}
-              <span>{savedSuccess ? 'Saqlandi!' : t.save}</span>
+              <span>{savedSuccess ? tr('Saqlandi!', 'Сохранено!', 'Saved!') : t.save}</span>
             </button>
           </div>
         </form>
@@ -106,7 +106,7 @@ export default function SettingsClient({ loginMethods, profile }: Props) {
       <div className="glass-panel p-6 rounded-3xl border border-white/5 space-y-4">
         <div className="flex items-center gap-2.5 pb-2 border-b border-slate-800">
           <Globe className="w-4 h-4 text-cyan-400" />
-          <h3 className="text-sm font-bold text-white">Interfeys tili</h3>
+          <h3 className="text-sm font-bold text-white">{tr('Interfeys tili', 'Язык интерфейса', 'Interface language')}</h3>
         </div>
 
         <div className="grid grid-cols-3 gap-3">

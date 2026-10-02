@@ -22,6 +22,7 @@ import type { ClientFolder, WorkspaceUsage } from '@/lib/client-types';
 import type { LinkFormValues } from './link-form-model';
 import { quotaState } from './use-workspace-data';
 import { SITE_HOST } from '@/lib/site';
+import { useLanguage } from '@/lib/language-context';
 
 /*
  * Sections of the link form, shared by the create drawer and the link
@@ -136,14 +137,15 @@ function QuotaNote({ children }: { children: React.ReactNode }) {
 
 /** Live slug validation: format rules locally, availability on the server. `currentSlug` is always available. */
 export function useSlugStatus(slug: string, currentSlug?: string) {
+  const { tr } = useLanguage();
   const trimmed = slug.trim().toLowerCase();
   const unchanged = Boolean(currentSlug) && trimmed === currentSlug;
   const localError = !trimmed || unchanged
     ? null
     : isReservedSlug(trimmed)
-      ? 'Ushbu slug tizim tomonidan band qilingan'
+      ? tr('Ushbu slug tizim tomonidan band qilingan', 'Этот адрес зарезервирован системой', 'This slug is reserved by the system')
       : !isValidSlug(trimmed)
-        ? 'Slug 3–50 ta belgi (faqat harf, raqam, tire yoki tagchiziq) bo‘lishi lozim'
+        ? tr('Slug 3–50 ta belgi (faqat harf, raqam, tire yoki tagchiziq) bo‘lishi lozim', 'Адрес — 3–50 символов (буквы, цифры, дефис или подчёркивание)', 'The slug must be 3–50 characters (letters, digits, dashes or underscores)')
         : null;
 
   const [remote, setRemote] = useState<{ slug: string; available?: boolean; message?: string } | null>(null);
@@ -169,14 +171,15 @@ export function useSlugStatus(slug: string, currentSlug?: string) {
 }
 
 export function SlugField({ values, set, currentSlug }: SectionProps & { currentSlug?: string }) {
+  const { tr, tm } = useLanguage();
   const status = useSlugStatus(values.slug, currentSlug);
   const edited = values.slug && values.slug !== currentSlug;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <label className="block text-xs font-semibold text-zinc-300">Maxsus Qisqa Nom (Slug)</label>
-        {!currentSlug && <span className="text-[10px] font-mono text-zinc-500">Ixtiyoriy</span>}
+        <label className="block text-xs font-semibold text-zinc-300">{tr('Maxsus Qisqa Nom (Slug)', 'Свой короткий адрес (slug)', 'Custom slug')}</label>
+        {!currentSlug && <span className="text-[10px] font-mono text-zinc-500">{tr('Ixtiyoriy', 'Необязательно', 'Optional')}</span>}
       </div>
       <div
         className={`flex items-center rounded-xl bg-zinc-900 border px-3 py-2 text-xs font-mono transition-colors ${
@@ -200,15 +203,19 @@ export function SlugField({ values, set, currentSlug }: SectionProps & { current
       </div>
       {edited ? (
         <div className="mt-1 text-[11px] font-mono">
-          {status.available === true && <span className="text-emerald-400">✓ Ushbu slug bo‘sh va foydalanishga tayyor</span>}
-          {status.available === false && <span className="text-rose-400">{status.message || 'Band qilingan'}</span>}
+          {status.available === true && <span className="text-emerald-400">{tr('✓ Ushbu slug bo‘sh va foydalanishga tayyor', '✓ Адрес свободен', '✓ This slug is available')}</span>}
+          {status.available === false && <span className="text-rose-400">{tm(status.message) || tr('Band qilingan', 'Занят', 'Taken')}</span>}
         </div>
       ) : (
-        !currentSlug && <span className="text-[10px] text-zinc-500 mt-1 block font-mono">Bo‘sh qolsa: avtomatik 5-belgili ID beriladi</span>
+        !currentSlug && <span className="text-[10px] text-zinc-500 mt-1 block font-mono">{tr('Bo‘sh qolsa: avtomatik 5-belgili ID beriladi', 'Если пусто — будет выдан ID из 5 символов', 'Leave empty for an automatic 5-character ID')}</span>
       )}
       {currentSlug && edited && (
         <span className="text-[10px] text-amber-300/80 mt-1 block font-mono">
-          Diqqat: eski havola ({SITE_HOST}/{currentSlug}) ishlamay qoladi.
+          {tr(
+            `Diqqat: eski havola (${SITE_HOST}/${currentSlug}) ishlamay qoladi.`,
+            `Внимание: старая ссылка (${SITE_HOST}/${currentSlug}) перестанет работать.`,
+            `Note: the old link (${SITE_HOST}/${currentSlug}) will stop working.`
+          )}
         </span>
       )}
     </div>
@@ -220,6 +227,7 @@ export function SlugField({ values, set, currentSlug }: SectionProps & { current
 // ---------------------------------------------------------------------------
 
 export function TagInput({ tags, onChange }: { tags: string[]; onChange: (tags: string[]) => void }) {
+  const { tr } = useLanguage();
   const [draft, setDraft] = useState('');
 
   const add = () => {
@@ -233,7 +241,7 @@ export function TagInput({ tags, onChange }: { tags: string[]; onChange: (tags: 
       {tags.map((tag) => (
         <span key={tag} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[10px] font-mono">
           #{tag}
-          <button type="button" onClick={() => onChange(tags.filter((t) => t !== tag))} className="text-zinc-500 hover:text-white" aria-label={`${tag} tegini olib tashlash`}>
+          <button type="button" onClick={() => onChange(tags.filter((t) => t !== tag))} className="text-zinc-500 hover:text-white" aria-label={tr(`${tag} tegini olib tashlash`, `Убрать тег ${tag}`, `Remove tag ${tag}`)}>
             <X className="w-2.5 h-2.5" />
           </button>
         </span>
@@ -260,24 +268,25 @@ export function TagInput({ tags, onChange }: { tags: string[]; onChange: (tags: 
 }
 
 export function OrganizeFields({ values, set, folders }: SectionProps & { folders: ClientFolder[] }) {
+  const { tr } = useLanguage();
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
         <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300 mb-1.5">
-          <Tag className="w-3.5 h-3.5 text-zinc-500" /> Teglar
+          <Tag className="w-3.5 h-3.5 text-zinc-500" /> {tr('Teglar', 'Теги', 'Tags')}
         </label>
         <TagInput tags={values.tags} onChange={(tags) => set('tags', tags)} />
       </div>
       <div>
         <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300 mb-1.5">
-          <FolderOpen className="w-3.5 h-3.5 text-zinc-500" /> Papka
+          <FolderOpen className="w-3.5 h-3.5 text-zinc-500" /> {tr('Papka', 'Папка', 'Folder')}
         </label>
         <select
           value={values.folder_id}
           onChange={(e) => set('folder_id', e.target.value)}
           className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-xs focus:outline-none focus:border-zinc-600"
         >
-          <option value="">Papkasiz</option>
+          <option value="">{tr('Papkasiz', 'Без папки', 'No folder')}</option>
           {folders.map((f) => (
             <option key={f.id} value={f.id}>
               {f.name}
@@ -299,6 +308,7 @@ export function DeepLinkSection({
   usage,
   alreadyUsing = false,
 }: SectionProps & { usage: WorkspaceUsage | null; alreadyUsing?: boolean }) {
+  const { tr } = useLanguage();
   const quota = quotaState(usage?.usage.deepLinks, usage?.limits.deepLinks, alreadyUsing);
   const locked = quota.reached && !values.open_in_app;
 
@@ -307,12 +317,12 @@ export function DeepLinkSection({
       icon={<Smartphone className="w-4 h-4" />}
       iconClass="bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
       title="Smart Deep Link"
-      description="Telegram yoki Instagram havolasini smartfon ilovasida to‘g‘ridan-to‘g‘ri ochadi"
+      description={tr('Telegram yoki Instagram havolasini smartfon ilovasida to‘g‘ridan-to‘g‘ri ochadi', 'Открывает ссылку на Telegram или Instagram прямо в приложении на смартфоне', 'Opens Telegram or Instagram links straight in the phone app')}
       badge={usage && <QuotaBadge label={quota.label} reached={locked} />}
       active={values.open_in_app}
       activeClass="bg-indigo-950/20 border-indigo-500/40"
       toggle={{ checked: values.open_in_app, disabled: locked, onChange: (v) => set('open_in_app', v), color: 'peer-checked:bg-indigo-600' }}
-      footer={locked && <QuotaNote>Tarifingizdagi Deep Link limiti to‘lgan ({quota.label}). Pro tarifda cheksiz bo‘ladi.</QuotaNote>}
+      footer={locked && <QuotaNote>{tr(`Tarifingizdagi Deep Link limiti to‘lgan (${quota.label}). Pro tarifda cheksiz bo‘ladi.`, `Лимит Deep Link на вашем тарифе исчерпан (${quota.label}). На Pro — без ограничений.`, `You’ve used all Deep Links on your plan (${quota.label}). Pro has no limit.`)}</QuotaNote>}
     />
   );
 }
@@ -323,6 +333,7 @@ export function DeviceTargetingSection({
   usage,
   alreadyUsing = false,
 }: SectionProps & { usage: WorkspaceUsage | null; alreadyUsing?: boolean }) {
+  const { tr } = useLanguage();
   const quota = quotaState(usage?.usage.deviceTargeting, usage?.limits.deviceTargeting, alreadyUsing);
   const locked = quota.reached && !values.device_targeting;
 
@@ -330,7 +341,7 @@ export function DeviceTargetingSection({
     <div>
       <div className="flex items-center justify-between mb-1">
         <label className="text-[10px] text-zinc-300 font-medium">{label}</label>
-        <span className="text-[9px] text-zinc-500">Bo‘sh qolsa: asosiy URL</span>
+        <span className="text-[9px] text-zinc-500">{tr('Bo‘sh qolsa: asosiy URL', 'Если пусто — основной URL', 'Empty: main URL')}</span>
       </div>
       <input
         type="text"
@@ -346,25 +357,25 @@ export function DeviceTargetingSection({
     <FeatureCard
       icon={<Target className="w-4 h-4" />}
       iconClass="bg-purple-500/10 text-purple-400 border-purple-500/20"
-      title="Qurilmalar Bo‘yicha Yo‘naltirish"
-      description="iPhone (iOS), Android, HarmonyOS (Huawei) va Kompyuterlarni turli do‘kon va ilovalarga yo‘naltirish"
+      title={tr('Qurilmalar Bo‘yicha Yo‘naltirish', 'Переадресация по устройству', 'Routing by device')}
+      description={tr('iPhone (iOS), Android, HarmonyOS (Huawei) va Kompyuterlarni turli do‘kon va ilovalarga yo‘naltirish', 'Отправляет iPhone (iOS), Android, HarmonyOS (Huawei) и компьютеры в разные магазины и приложения', 'Sends iPhone (iOS), Android, HarmonyOS (Huawei) and computers to different stores and apps')}
       badge={usage && <QuotaBadge label={quota.label} reached={locked} />}
       active={values.device_targeting}
       activeClass="bg-purple-950/20 border-purple-500/40"
       toggle={{ checked: values.device_targeting, disabled: locked, onChange: (v) => set('device_targeting', v), color: 'peer-checked:bg-purple-600' }}
-      footer={locked && <QuotaNote>Tarifingizdagi qurilmalar bo‘yicha yo‘naltirish limiti to‘lgan ({quota.label}).</QuotaNote>}
+      footer={locked && <QuotaNote>{tr(`Tarifingizdagi qurilmalar bo‘yicha yo‘naltirish limiti to‘lgan (${quota.label}).`, `Лимит переадресации по устройству на вашем тарифе исчерпан (${quota.label}).`, `You’ve used all device-routed links on your plan (${quota.label}).`)}</QuotaNote>}
     >
       <div className="space-y-3 text-xs font-mono">
         <div className="p-3 rounded-xl bg-zinc-950/90 border border-indigo-500/30 text-[10px] text-zinc-400 leading-relaxed font-sans">
           <span className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-300 mb-1">
-            <Shield className="w-3.5 h-3.5 text-indigo-400" /> Asosiy URL — zaxira havola
+            <Shield className="w-3.5 h-3.5 text-indigo-400" /> {tr('Asosiy URL — zaxira havola', 'Основной URL — запасной адрес', 'Main URL is the fallback')}
           </span>
-          Qurilma uchun alohida havola kiritilmagan bo‘lsa, asosiy URL ochiladi: <span className="font-mono text-zinc-300 break-all">{values.destination_url || '—'}</span>
+          {tr('Qurilma uchun alohida havola kiritilmagan bo‘lsa, asosiy URL ochiladi:', 'Если для устройства нет своей ссылки, откроется основной URL:', 'Devices without their own link open the main URL:')} <span className="font-mono text-zinc-300 break-all">{values.destination_url || '—'}</span>
         </div>
-        {deviceInput('ios_url', '🍎 Apple iOS (App Store yoki Universal Link)', 'https://apps.apple.com/app/id...')}
-        {deviceInput('android_url', '🤖 Google Android (Play Store yoki App Link)', 'https://play.google.com/store/apps/...')}
+        {deviceInput('ios_url', tr('🍎 Apple iOS (App Store yoki Universal Link)', '🍎 Apple iOS (App Store или Universal Link)', '🍎 Apple iOS (App Store or Universal Link)'), 'https://apps.apple.com/app/id...')}
+        {deviceInput('android_url', tr('🤖 Google Android (Play Store yoki App Link)', '🤖 Google Android (Play Store или App Link)', '🤖 Google Android (Play Store or App Link)'), 'https://play.google.com/store/apps/...')}
         {deviceInput('huawei_url', '🔴 Huawei / HarmonyOS (AppGallery)', 'https://appgallery.huawei.com/app/C...')}
-        {deviceInput('desktop_url', '💻 Kompyuter (Desktop Web — ixtiyoriy)', 'https://sayt.uz/desktop')}
+        {deviceInput('desktop_url', tr('💻 Kompyuter (Desktop Web — ixtiyoriy)', '💻 Компьютер (сайт — необязательно)', '💻 Computer (website — optional)'), 'https://sayt.uz/desktop')}
       </div>
     </FeatureCard>
   );
@@ -376,6 +387,7 @@ export function ProtectionSection({
   hasPassword = false,
   defaultOpen = false,
 }: SectionProps & { hasPassword?: boolean; defaultOpen?: boolean }) {
+  const { tr } = useLanguage();
   const [open, setOpen] = useState(defaultOpen);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -383,14 +395,14 @@ export function ProtectionSection({
     <FeatureCard
       icon={<Shield className="w-4 h-4" />}
       iconClass="bg-amber-500/10 text-amber-400 border-amber-500/20"
-      title="Xavfsizlik & Muddat"
-      description="Parol, amal qilish muddati va bosishlar limiti"
+      title={tr('Xavfsizlik & Muddat', 'Защита и срок', 'Security & expiry')}
+      description={tr('Parol, amal qilish muddati va bosishlar limiti', 'Пароль, срок действия и лимит переходов', 'Password, expiry date and click limit')}
       expandable={{ open, onToggle: () => setOpen(!open) }}
     >
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label className="block text-[11px] font-mono text-zinc-400 mb-1">
-            {hasPassword ? 'Yangi parol' : 'Parol bilan himoyalash'}
+            {hasPassword ? tr('Yangi parol', 'Новый пароль', 'New password') : tr('Parol bilan himoyalash', 'Защита паролем', 'Password protection')}
           </label>
           <div className="relative">
             <input
@@ -398,7 +410,7 @@ export function ProtectionSection({
               value={values.password}
               disabled={values.remove_password}
               onChange={(e) => set('password', e.target.value)}
-              placeholder={hasPassword ? '•••••• (o‘zgarmaydi)' : 'Maxfiy kod...'}
+              placeholder={hasPassword ? tr('•••••• (o‘zgarmaydi)', '•••••• (не меняется)', '•••••• (unchanged)') : tr('Maxfiy kod...', 'Секретный код...', 'Secret code...')}
               className={`${inputClass} pr-8 disabled:opacity-40`}
             />
             <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white">
@@ -408,12 +420,12 @@ export function ProtectionSection({
           {hasPassword && (
             <label className="mt-1.5 flex items-center gap-1.5 text-[10px] text-zinc-400 cursor-pointer">
               <input type="checkbox" checked={values.remove_password} onChange={(e) => set('remove_password', e.target.checked)} />
-              Parolni olib tashlash
+              {tr('Parolni olib tashlash', 'Убрать пароль', 'Remove password')}
             </label>
           )}
         </div>
         <div>
-          <label className="block text-[11px] font-mono text-zinc-400 mb-1">Amal qilish muddati</label>
+          <label className="block text-[11px] font-mono text-zinc-400 mb-1">{tr('Amal qilish muddati', 'Срок действия', 'Expiry date')}</label>
           <input
             type="datetime-local"
             value={values.expires_at}
@@ -422,13 +434,13 @@ export function ProtectionSection({
           />
         </div>
         <div>
-          <label className="block text-[11px] font-mono text-zinc-400 mb-1">Bosishlar limiti</label>
+          <label className="block text-[11px] font-mono text-zinc-400 mb-1">{tr('Bosishlar limiti', 'Лимит переходов', 'Click limit')}</label>
           <input
             type="number"
             min={1}
             value={values.click_limit}
             onChange={(e) => set('click_limit', e.target.value)}
-            placeholder="Cheksiz"
+            placeholder={tr('Cheksiz', 'Без лимита', 'Unlimited')}
             className={inputClass}
           />
         </div>
@@ -445,19 +457,20 @@ const UTM_PRESETS = [
 ];
 
 export function UtmSection({ values, set, defaultOpen = false }: SectionProps & { defaultOpen?: boolean }) {
+  const { tr } = useLanguage();
   const [open, setOpen] = useState(defaultOpen);
 
   return (
     <FeatureCard
       icon={<Layers className="w-4 h-4" />}
       iconClass="bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-      title="Marketing & UTM Teglar"
-      description="Google Ads, Telegram va Instagram reklama kampaniyalari uchun parametrlar"
+      title={tr('Marketing & UTM Teglar', 'Маркетинг и UTM-метки', 'Marketing & UTM tags')}
+      description={tr('Google Ads, Telegram va Instagram reklama kampaniyalari uchun parametrlar', 'Параметры для рекламных кампаний Google Ads, Telegram и Instagram', 'Parameters for Google Ads, Telegram and Instagram campaigns')}
       expandable={{ open, onToggle: () => setOpen(!open) }}
     >
       <div className="space-y-3 font-mono text-xs">
         <div className="flex flex-wrap gap-1.5">
-          <span className="text-[10px] text-zinc-500 py-1">Shablonlar:</span>
+          <span className="text-[10px] text-zinc-500 py-1">{tr('Shablonlar:', 'Шаблоны:', 'Presets:')}</span>
           {UTM_PRESETS.map((p) => (
             <button
               key={p.l}

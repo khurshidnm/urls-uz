@@ -4,6 +4,7 @@ import React, { useCallback, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Link2, Plus, SearchX } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { useLanguage } from '@/lib/language-context';
 import { copyToClipboard, shortUrl } from '@/lib/utils';
 import type { ClientFolder, ClientLink, WorkspaceUsage } from '@/lib/client-types';
 import { filterToQuery, type LinksFilterState } from './types';
@@ -33,6 +34,7 @@ function demoRestricted(actionTitle: string) {
 export default function LinksManagerClient({ links, total, filter, pageSize, folders, tags, archivedCount, usage, canWrite }: Props) {
   const router = useRouter();
   const { showToast } = useToast();
+  const { tr, tm } = useLanguage();
   const [pending, startTransition] = useTransition();
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -68,13 +70,13 @@ export default function LinksManagerClient({ links, total, filter, pageSize, fol
     const url = shortUrl(link.slug);
     if (await copyToClipboard(url)) {
       setCopiedId(link.id);
-      showToast('copied', `${url} nusxalandi!`);
+      showToast('copied', tr(`${url} nusxalandi!`, `${url} скопировано!`, `${url} copied!`));
       setTimeout(() => setCopiedId((id) => (id === link.id ? null : id)), 2000);
     }
   };
 
   const runBulk = async (request: BulkRequest, ids: string[] = [...selected]) => {
-    if (!canWrite) return demoRestricted('Havolalarni o‘zgartirish');
+    if (!canWrite) return demoRestricted(tr('Havolalarni o‘zgartirish', 'Изменение ссылок', 'Changing links'));
     setBusy(true);
     try {
       const res = await fetch('/api/links/bulk', {
@@ -84,9 +86,9 @@ export default function LinksManagerClient({ links, total, filter, pageSize, fol
       });
       const data = await res.json();
       if (data.failed?.length) {
-        showToast('error', `${data.succeeded.length} ta bajarildi, ${data.failed.length} ta bajarilmadi: ${data.failed[0].error}`);
+        showToast('error', tr(`${data.succeeded.length} ta bajarildi, ${data.failed.length} ta bajarilmadi`, `Выполнено: ${data.succeeded.length}, не выполнено: ${data.failed.length}`, `${data.succeeded.length} done, ${data.failed.length} failed`) + `: ${tm(data.failed[0].error)}`);
       } else if (data.success) {
-        showToast('success', `${data.succeeded.length} ta havola yangilandi`);
+        showToast('success', tr(`${data.succeeded.length} ta havola yangilandi`, `Обновлено ссылок: ${data.succeeded.length}`, `${data.succeeded.length} links updated`));
       } else {
         showToast('error', data.error || 'Xatolik yuz berdi');
       }
@@ -113,7 +115,7 @@ export default function LinksManagerClient({ links, total, filter, pageSize, fol
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
     a.download = `urls-uz-links-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
-    showToast('success', `${rows.length} ta havola CSV formatda yuklab olindi`);
+    showToast('success', tr(`${rows.length} ta havola CSV formatda yuklab olindi`, `Скачано ссылок в CSV: ${rows.length}`, `${rows.length} links downloaded as CSV`));
   };
 
   const pages = Math.max(1, Math.ceil(total / pageSize));
@@ -124,9 +126,11 @@ export default function LinksManagerClient({ links, total, filter, pageSize, fol
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Mening havolalarim</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{tr('Mening havolalarim', 'Мои ссылки', 'My links')}</h1>
           <p className="text-xs text-zinc-400 mt-1">
-            {total} ta havola{isFiltered ? ' (filtrlangan)' : ''} · Sarlavhani bosing: analitika, QR, sozlamalar va tarix
+            {tr(`${total} ta havola`, `Ссылок: ${total}`, `${total} links`)}
+            {isFiltered ? tr(' (filtrlangan)', ' (с фильтром)', ' (filtered)') : ''} ·{' '}
+            {tr('Sarlavhani bosing: analitika, QR, sozlamalar va tarix', 'Нажмите на название: аналитика, QR, настройки и история', 'Click a title for analytics, QR, settings and history')}
           </p>
         </div>
         <button
@@ -134,7 +138,7 @@ export default function LinksManagerClient({ links, total, filter, pageSize, fol
           onClick={openCreate}
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 text-xs font-semibold self-start sm:self-auto"
         >
-          <Plus className="w-3.5 h-3.5" /> Yangi havola
+          <Plus className="w-3.5 h-3.5" /> {tr('Yangi havola', 'Новая ссылка', 'New link')}
         </button>
       </div>
 
@@ -191,7 +195,7 @@ export default function LinksManagerClient({ links, total, filter, pageSize, fol
               onClick={() => navigate({ page: filter.page - 1 })}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 disabled:opacity-40 hover:text-white"
             >
-              <ChevronLeft className="w-3.5 h-3.5" /> Oldingi
+              <ChevronLeft className="w-3.5 h-3.5" /> {tr('Oldingi', 'Назад', 'Previous')}
             </button>
             <button
               type="button"
@@ -199,7 +203,7 @@ export default function LinksManagerClient({ links, total, filter, pageSize, fol
               onClick={() => navigate({ page: filter.page + 1 })}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 disabled:opacity-40 hover:text-white"
             >
-              Keyingi <ChevronRight className="w-3.5 h-3.5" />
+              {tr('Keyingi', 'Далее', 'Next')} <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -221,6 +225,7 @@ function EmptyState({
   onShowArchive: () => void;
   onCreate: () => void;
 }) {
+  const { tr } = useLanguage();
   const actionClass = 'inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 text-xs font-semibold';
   return (
     <div className="p-10 rounded-2xl bg-zinc-950 border border-zinc-800 text-center space-y-3">
@@ -229,27 +234,27 @@ function EmptyState({
       </div>
       {kind === 'filtered' && (
         <>
-          <p className="text-sm font-semibold text-white">Bu filtrga mos havola topilmadi</p>
+          <p className="text-sm font-semibold text-white">{tr('Bu filtrga mos havola topilmadi', 'По этому фильтру ссылок нет', 'No links match this filter')}</p>
           <button type="button" onClick={onClear} className="text-xs text-indigo-400 hover:text-indigo-300">
-            Filtrlarni tozalash
+            {tr('Filtrlarni tozalash', 'Сбросить фильтры', 'Clear filters')}
           </button>
         </>
       )}
       {kind === 'all-archived' && (
         <>
-          <p className="text-sm font-semibold text-white">Faol havolalar yo‘q</p>
-          <p className="text-xs text-zinc-400">Arxivda {archivedCount} ta havola bor — ular ishlashda davom etadi.</p>
+          <p className="text-sm font-semibold text-white">{tr('Faol havolalar yo‘q', 'Нет активных ссылок', 'No active links')}</p>
+          <p className="text-xs text-zinc-400">{tr(`Arxivda ${archivedCount} ta havola bor — ular ishlashda davom etadi.`, `В архиве ссылок: ${archivedCount} — они продолжают работать.`, `${archivedCount} links are archived — they keep working.`)}</p>
           <button type="button" onClick={onShowArchive} className={actionClass}>
-            Arxivni ko‘rish
+            {tr('Arxivni ko‘rish', 'Открыть архив', 'View archive')}
           </button>
         </>
       )}
       {kind === 'no-links' && (
         <>
-          <p className="text-sm font-semibold text-white">Hali havola yo‘q</p>
-          <p className="text-xs text-zinc-400">Birinchi qisqa havolangizni yarating — bir necha soniya kifoya.</p>
+          <p className="text-sm font-semibold text-white">{tr('Hali havola yo‘q', 'Ссылок пока нет', 'No links yet')}</p>
+          <p className="text-xs text-zinc-400">{tr('Birinchi qisqa havolangizni yarating — bir necha soniya kifoya.', 'Создайте первую короткую ссылку — это займёт пару секунд.', 'Create your first short link — it takes a few seconds.')}</p>
           <button type="button" onClick={onCreate} className={actionClass}>
-            <Plus className="w-3.5 h-3.5" /> Yangi havola
+            <Plus className="w-3.5 h-3.5" /> {tr('Yangi havola', 'Новая ссылка', 'New link')}
           </button>
         </>
       )}

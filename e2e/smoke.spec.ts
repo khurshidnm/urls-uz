@@ -3,7 +3,7 @@ import { loginAsTelegramUser } from './helpers';
 
 test('landing page shows real statistics', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('TOTAL REDIRECTS')).toBeVisible();
+  await expect(page.getByText('JAMI O‘TISHLAR')).toBeVisible();
   await expect(page.getByText('40,698,620')).toHaveCount(0);
 });
 

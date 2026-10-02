@@ -4,19 +4,21 @@ import React from 'react';
 import { Check, Lock } from 'lucide-react';
 import { THEMES } from './bio-builder-constants';
 import type { BioBuilder } from './use-bio-builder';
+import { useLanguage } from '@/lib/language-context';
 
 /** Page theme picker (Pro themes are locked). */
 export default function ThemesTab({ b }: { b: BioBuilder }) {
+  const { tr } = useLanguage();
   const { theme, handleThemeSelect } = b;
   return (
     <div className="space-y-4">
       <div className="p-5 rounded-2xl bg-zinc-900/40 border border-zinc-800 space-y-4">
         <div>
           <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider font-mono">
-            Dizayn Mavzulari
+            {tr('Dizayn Mavzulari', 'Темы оформления', 'Themes')}
           </h3>
           <p className="text-[11px] text-zinc-500 mt-0.5">
-            Bepul versiyada 3 ta asosiy mavzu ochiq. Kengaytirilgan mavzular Pro tarifda tez kunda chiqadi.
+            {tr('Bepul versiyada 3 ta asosiy mavzu ochiq. Kengaytirilgan mavzular Pro tarifda tez kunda chiqadi.', 'В бесплатной версии доступны 3 темы. Остальные скоро появятся на тарифе Pro.', 'The free plan includes 3 themes. More are coming soon with Pro.')}
           </p>
         </div>
 
@@ -57,7 +59,7 @@ export default function ThemesTab({ b }: { b: BioBuilder }) {
                     />
                   ))}
                   <span className="text-[10px] font-mono text-zinc-500 ml-auto">
-                    {th.pro ? 'Tez kunda' : 'Faol'}
+                    {th.pro ? tr('Tez kunda', 'Скоро', 'Soon') : tr('Faol', 'Доступна', 'Available')}
                   </span>
                 </div>
               </button>

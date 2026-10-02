@@ -55,7 +55,7 @@ export function useFolders(initial?: ClientFolder[]) {
 
 /** Remaining quota for a feature; `current` is true when this link already uses it. */
 export function quotaState(used: number | undefined, limit: number | null | undefined, current = false) {
-  if (limit === null || limit === undefined || used === undefined) return { reached: false, label: 'Cheksiz' };
+  if (limit === null || limit === undefined || used === undefined) return { reached: false, label: '∞' };
   const effectiveUsed = current ? used - 1 : used;
   return { reached: !current && effectiveUsed >= limit, label: `${Math.max(used, 0)}/${limit}` };
 }

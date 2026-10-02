@@ -7,6 +7,7 @@ import { detectDeviceFromUserAgent } from '@/lib/deep-link';
 import { DEVICE_DEMO_APPS, type DeviceDemoApp } from '@/lib/device-demo';
 import { copyToClipboard, shortUrl } from '@/lib/utils';
 import { SITE_NAME } from '@/lib/site';
+import { useLanguage } from '@/lib/language-context';
 
 type Device = 'ios' | 'android' | 'huawei' | 'desktop';
 
@@ -45,6 +46,7 @@ function useVisitorDevice(): Device | null {
  * to see the routing happen.
  */
 export default function SmartDeepLinkSection() {
+  const { locale, tr } = useLanguage();
   const [app, setApp] = useState(DEVICE_DEMO_APPS[0]);
   const visitorDevice = useVisitorDevice();
   const [picked, setPicked] = useState<Device | null>(null);
@@ -67,19 +69,22 @@ export default function SmartDeepLinkSection() {
         <div className="mb-10 pb-6 border-b border-zinc-800/80">
           <div className="inline-flex items-center gap-2 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[10px] font-mono uppercase tracking-wider text-zinc-400 mb-3">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            <span>Qurilma bo‘yicha yo‘naltirish</span>
+            <span>{tr('Qurilma bo‘yicha yo‘naltirish', 'Переадресация по устройству', 'Routing by device')}</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">Bitta havola — har bir qurilma o‘z do‘koniga</h2>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">{tr('Bitta havola — har bir qurilma o‘z do‘koniga', 'Одна ссылка — каждое устройство в свой магазин', 'One link — every device to its own store')}</h2>
           <p className="text-sm text-zinc-400 mt-2 max-w-2xl leading-relaxed">
-            Havolani kim ochganini {SITE_NAME} aniqlaydi: iPhone — App Store, Android — Google Play, Huawei — AppGallery, kompyuter — veb-sayt.
-            QR kodni telefoningiz bilan skanerlab, o‘zingiz sinab ko‘ring.
+            {tr(
+              `Havolani kim ochganini ${SITE_NAME} aniqlaydi: iPhone — App Store, Android — Google Play, Huawei — AppGallery, kompyuter — veb-sayt. QR kodni telefoningiz bilan skanerlab, o‘zingiz sinab ko‘ring.`,
+              `${SITE_NAME} определяет, кто открыл ссылку: iPhone — App Store, Android — Google Play, Huawei — AppGallery, компьютер — сайт. Отсканируйте QR-код телефоном и проверьте сами.`,
+              `${SITE_NAME} detects who opened the link: iPhone — App Store, Android — Google Play, Huawei — AppGallery, computer — website. Scan the QR code with your phone to try it.`
+            )}
           </p>
         </div>
 
         {/* 1. The app */}
         <div className="mb-6">
-          <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 mb-2.5">1. Ilovani tanlang</div>
-          <div role="radiogroup" aria-label="Ilova" className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 mb-2.5">{tr('1. Ilovani tanlang', '1. Выберите приложение', '1. Pick an app')}</div>
+          <div role="radiogroup" aria-label={tr('Ilova', 'Приложение', 'App')} className="grid grid-cols-2 lg:grid-cols-4 gap-2">
             {DEVICE_DEMO_APPS.map((a) => {
               const selected = a.id === app.id;
               return (
@@ -102,7 +107,7 @@ export default function SmartDeepLinkSection() {
                   </span>
                   <span className="min-w-0">
                     <span className="block text-xs font-semibold text-white truncate">{a.name}</span>
-                    <span className="block text-[11px] text-zinc-400 truncate">{a.category}</span>
+                    <span className="block text-[11px] text-zinc-400 truncate">{a.category[locale]}</span>
                     <span className="block text-[10px] font-mono text-zinc-500 truncate">/{a.slug}</span>
                   </span>
                 </button>
@@ -115,12 +120,12 @@ export default function SmartDeepLinkSection() {
           {/* 2. Where each device goes */}
           <div className="lg:col-span-7 bg-[#101014] border border-zinc-800 rounded-xl p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-zinc-800/80">
-              <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">2. Qaysi qurilma qayerga boradi</div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">{tr('2. Qaysi qurilma qayerga boradi', '2. Куда попадёт каждое устройство', '2. Where each device goes')}</div>
               <button
                 type="button"
                 onClick={copy}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-mono text-zinc-200"
-                title="Havoladan nusxa olish"
+                title={tr('Havoladan nusxa olish', 'Скопировать ссылку', 'Copy link')}
               >
                 {linkLabel}
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
@@ -145,21 +150,21 @@ export default function SmartDeepLinkSection() {
                       <div className="flex items-center justify-between gap-2">
                         <span className="flex items-center gap-2 text-xs font-semibold text-white">
                           <Icon className={`w-4 h-4 ${active ? 'text-emerald-400' : 'text-zinc-500'}`} />
-                          {d.label}
+                          {d.id === 'desktop' ? tr('Kompyuter', 'Компьютер', 'Computer') : d.label}
                           {visitorDevice === d.id && (
-                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">SIZ</span>
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">{tr('SIZ', 'ВЫ', 'YOU')}</span>
                           )}
                         </span>
                         <span className={`flex items-center gap-1.5 text-[11px] font-medium ${dest.fallback ? 'text-amber-300' : 'text-zinc-300'}`}>
                           <ArrowRight className="w-3 h-3 text-zinc-500" />
-                          {dest.fallback ? 'Veb-sayt (zaxira)' : d.store}
+                          {dest.fallback ? tr('Veb-sayt (zaxira)', 'Сайт (запасной)', 'Website (fallback)') : d.id === 'desktop' ? tr('Veb-sayt', 'Сайт', 'Website') : d.store}
                         </span>
                       </div>
                       <div className="mt-1.5 pl-6 text-[11px] font-mono text-zinc-500 truncate" title={dest.url}>
                         {decodeURI(dest.url)}
                       </div>
                       {dest.fallback && (
-                        <div className="mt-1 pl-6 text-[11px] text-amber-200/80">AppGallery’da ilova yo‘q — foydalanuvchi veb-saytga o‘tadi.</div>
+                        <div className="mt-1 pl-6 text-[11px] text-amber-200/80">{tr('AppGallery’da ilova yo‘q — foydalanuvchi veb-saytga o‘tadi.', 'В AppGallery приложения нет — пользователь попадёт на сайт.', 'The app isn’t on AppGallery, so the visitor goes to the website.')}</div>
                       )}
                     </button>
                   </li>
@@ -169,20 +174,20 @@ export default function SmartDeepLinkSection() {
 
             <p className="mt-4 text-[11px] text-zinc-500 leading-relaxed flex gap-2">
               <Globe className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-              Qoidasi yo‘q qurilmalar asosiy manzilga boradi. Har bir o‘tish analitikada qurilma, OS va viloyat bilan hisoblanadi.
+              {tr('Qoidasi yo‘q qurilmalar asosiy manzilga boradi. Har bir o‘tish analitikada qurilma, OS va viloyat bilan hisoblanadi.', 'Устройства без правила попадают на основной адрес. Каждый переход учитывается в аналитике с устройством, ОС и регионом.', 'Devices without a rule go to the main address. Every visit is counted in analytics with device, OS and region.')}
             </p>
           </div>
 
           {/* 3. Try it on a real phone */}
           <div className="lg:col-span-5 bg-[#101014] border border-zinc-800 rounded-xl p-4 sm:p-5 flex flex-col items-center justify-center text-center gap-4">
             <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-              <ScanLine className="w-3.5 h-3.5" /> 3. Telefoningizda sinab ko‘ring
+              <ScanLine className="w-3.5 h-3.5" /> {tr('3. Telefoningizda sinab ko‘ring', '3. Проверьте на телефоне', '3. Try it on your phone')}
             </div>
             <QrCanvas value={link} size={200} fgColor="#0f172a" bgColor="#ffffff" bodyShape="rounded" eyeFrameShape="rounded" eyeBallShape="rounded" centerLogo="none" frameStyle="none" showControls={false} />
             <div>
               <div className="text-sm font-mono text-white">{linkLabel}</div>
               <p className="text-xs text-zinc-400 mt-1 max-w-xs leading-relaxed">
-                Kamera bilan skanerlang: iPhone’da App Store, Android’da Google Play, Huawei’da AppGallery ochiladi.
+                {tr('Kamera bilan skanerlang: iPhone’da App Store, Android’da Google Play, Huawei’da AppGallery ochiladi.', 'Отсканируйте камерой: на iPhone откроется App Store, на Android — Google Play, на Huawei — AppGallery.', 'Scan with your camera: iPhone opens the App Store, Android opens Google Play, Huawei opens AppGallery.')}
               </p>
             </div>
             {onMobile && (
@@ -193,7 +198,7 @@ export default function SmartDeepLinkSection() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-semibold"
               >
-                Shu telefonda ochish <ExternalLink className="w-3.5 h-3.5" />
+                {tr('Shu telefonda ochish', 'Открыть на этом телефоне', 'Open on this phone')} <ExternalLink className="w-3.5 h-3.5" />
               </a>
             )}
           </div>

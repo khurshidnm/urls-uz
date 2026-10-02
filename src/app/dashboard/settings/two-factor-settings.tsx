@@ -6,6 +6,7 @@ import { Check, Copy, Loader2, ShieldCheck, ShieldOff } from 'lucide-react';
 import { QrCanvas } from '@/components/ui/qr-canvas';
 import { useToast } from '@/components/ui/toast';
 import { copyToClipboard, formatDate } from '@/lib/utils';
+import { useLanguage } from '@/lib/language-context';
 
 interface Props {
   enabled: boolean;
@@ -22,6 +23,7 @@ async function post(body: Record<string, unknown>) {
 
 /** Two-step login with an authenticator app (Google Authenticator, ...), optional per user. */
 export default function TwoFactorSettings({ enabled, enabledAt, recoveryCodesLeft }: Props) {
+  const { tr, locale } = useLanguage();
   const router = useRouter();
   const { showToast } = useToast();
   const [step, setStep] = useState<Step>({ kind: 'idle' });
@@ -40,7 +42,7 @@ export default function TwoFactorSettings({ enabled, enabledAt, recoveryCodesLef
     setBusy(true);
     try {
       const data = await post(body);
-      if (!data.success) return showToast('error', data.error || 'Bajarilmadi');
+      if (!data.success) return showToast('error', data.error || tr('Bajarilmadi', 'Не удалось', 'Something went wrong'));
       setCode('');
       onOk(data);
     } catch {
@@ -53,13 +55,13 @@ export default function TwoFactorSettings({ enabled, enabledAt, recoveryCodesLef
   const startSetup = () => run({ action: 'setup' }, (d) => setStep({ kind: 'setup', secret: d.secret!, uri: d.uri! }));
   const confirmSetup = () =>
     run({ action: 'enable', code }, (d) => {
-      showToast('success', 'Ikki bosqichli himoya yoqildi');
+      showToast('success', tr('Ikki bosqichli himoya yoqildi', 'Двухфакторная защита включена', 'Two-factor authentication is on'));
       setStep({ kind: 'codes', codes: d.recoveryCodes! });
     });
   const confirmAction = (action: 'disable' | 'recovery-codes') =>
     run({ action, code }, (d) => {
       if (action === 'disable') {
-        showToast('success', 'Ikki bosqichli himoya o‘chirildi');
+        showToast('success', tr('Ikki bosqichli himoya o‘chirildi', 'Двухфакторная защита отключена', 'Two-factor authentication is off'));
         setStep({ kind: 'idle' });
         router.refresh();
       } else {
@@ -67,13 +69,13 @@ export default function TwoFactorSettings({ enabled, enabledAt, recoveryCodesLef
       }
     });
 
-  const codeInput = (onEnter: () => void, placeholder = '6 xonali kod') => (
+  const codeInput = (onEnter: () => void, placeholder = tr('6 xonali kod', '6-значный код', '6-digit code')) => (
     <input
       value={code}
       onChange={(e) => setCode(e.target.value.slice(0, 20))}
       onKeyDown={(e) => e.key === 'Enter' && code.length >= 6 && onEnter()}
       placeholder={placeholder}
-      aria-label="Tasdiqlash kodi"
+      aria-label={tr('Tasdiqlash kodi', 'Код подтверждения', 'Verification code')}
       inputMode="numeric"
       autoComplete="one-time-code"
       autoFocus
@@ -88,9 +90,9 @@ export default function TwoFactorSettings({ enabled, enabledAt, recoveryCodesLef
       <div className="flex items-center gap-2.5 pb-2 border-b border-slate-800">
         {enabled ? <ShieldCheck className="w-4 h-4 text-emerald-400" /> : <ShieldOff className="w-4 h-4 text-slate-500" />}
         <div>
-          <h3 className="text-sm font-bold text-white">Ikki bosqichli himoya (2FA)</h3>
+          <h3 className="text-sm font-bold text-white">{tr('Ikki bosqichli himoya (2FA)', 'Двухфакторная защита (2FA)', 'Two-factor authentication (2FA)')}</h3>
           <p className="text-[11px] text-slate-400">
-            Kirishda Telegram, telefon yoki Google’dan tashqari Google Authenticator ilovasidagi kod ham so‘raladi.
+            {tr('Kirishda Telegram, telefon yoki Google’dan tashqari Google Authenticator ilovasidagi kod ham so‘raladi.', 'При входе, помимо Telegram, телефона или Google, запрашивается код из Google Authenticator.', 'On sign-in, besides Telegram, phone or Google, you’ll also be asked for a code from Google Authenticator.')}
           </p>
         </div>
       </div>
@@ -98,16 +100,16 @@ export default function TwoFactorSettings({ enabled, enabledAt, recoveryCodesLef
       {step.kind === 'codes' ? (
         <div className="space-y-3">
           <p className="text-xs text-amber-300">
-            Tiklash kodlarini xavfsiz joyga saqlang — ular qayta ko‘rsatilmaydi. Telefoningiz yo‘qolsa, har bir kod bilan bir marta kirish mumkin.
+            {tr('Tiklash kodlarini xavfsiz joyga saqlang — ular qayta ko‘rsatilmaydi. Telefoningiz yo‘qolsa, har bir kod bilan bir marta kirish mumkin.', 'Сохраните коды восстановления в надёжном месте — они больше не покажутся. Если потеряете телефон, каждым кодом можно войти один раз.', 'Keep these recovery codes somewhere safe — they won’t be shown again. If you lose your phone, each code signs you in once.')}
           </p>
-          <ul className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-slate-950 border border-slate-800 font-mono text-sm text-white text-center" aria-label="Tiklash kodlari">
+          <ul className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-slate-950 border border-slate-800 font-mono text-sm text-white text-center" aria-label={tr('Tiklash kodlari', 'Коды восстановления', 'Recovery codes')}>
             {step.codes.map((c) => (
               <li key={c}>{c}</li>
             ))}
           </ul>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => copy(step.codes.join('\n'), 'codes')} className={secondary}>
-              {copied === 'codes' ? 'Nusxalandi' : 'Nusxalash'}
+              {copied === 'codes' ? tr('Nusxalandi', 'Скопировано', 'Copied') : tr('Nusxalash', 'Копировать', 'Copy')}
             </button>
             <button
               type="button"
@@ -117,7 +119,7 @@ export default function TwoFactorSettings({ enabled, enabledAt, recoveryCodesLef
               }}
               className={primary}
             >
-              Saqladim
+              {tr('Saqladim', 'Я сохранил(а)', 'I’ve saved them')}
             </button>
           </div>
         </div>
@@ -127,9 +129,13 @@ export default function TwoFactorSettings({ enabled, enabledAt, recoveryCodesLef
             <QrCanvas value={step.uri} size={160} fgColor="#0f172a" bgColor="#ffffff" centerLogo="none" frameStyle="none" showControls={false} />
           </div>
           <ol className="space-y-3 text-xs text-slate-300 list-decimal list-inside">
-            <li>Telefoningizga Google Authenticator (yoki Microsoft Authenticator, 1Password) o‘rnating.</li>
+            <li>{tr('Telefoningizga Google Authenticator (yoki Microsoft Authenticator, 1Password) o‘rnating.', 'Установите на телефон Google Authenticator (или Microsoft Authenticator, 1Password).', 'Install Google Authenticator (or Microsoft Authenticator, 1Password) on your phone.')}</li>
             <li>
-              Ilovada «+» → «QR kodni skanerlash»ni tanlab, chapdagi kodni skanerlang. Skanerlab bo‘lmasa, kalitni qo‘lda kiriting:
+              {tr(
+                'Ilovada «+» → «QR kodni skanerlash»ni tanlab, chapdagi kodni skanerlang. Skanerlab bo‘lmasa, kalitni qo‘lda kiriting:',
+                'В приложении нажмите «+» → «Сканировать QR-код» и отсканируйте код слева. Если не получается, введите ключ вручную:',
+                'In the app tap “+” → “Scan a QR code” and scan the code on the left. If that doesn’t work, enter the key by hand:'
+              )}
               <button
                 type="button"
                 onClick={() => copy(step.secret, 'secret')}
@@ -140,14 +146,14 @@ export default function TwoFactorSettings({ enabled, enabledAt, recoveryCodesLef
               </button>
             </li>
             <li>
-              Ilova ko‘rsatgan 6 xonali kodni kiriting:
+              {tr('Ilova ko‘rsatgan 6 xonali kodni kiriting:', 'Введите 6-значный код из приложения:', 'Enter the 6-digit code the app shows:')}
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 {codeInput(confirmSetup)}
                 <button type="button" onClick={confirmSetup} disabled={busy || code.length < 6} className={primary}>
-                  {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Tasdiqlash va yoqish
+                  {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />} {tr('Tasdiqlash va yoqish', 'Подтвердить и включить', 'Confirm and turn on')}
                 </button>
                 <button type="button" onClick={() => setStep({ kind: 'idle' })} className="text-[11px] text-slate-500 hover:text-white">
-                  Bekor qilish
+                  {tr('Bekor qilish', 'Отмена', 'Cancel')}
                 </button>
               </div>
             </li>
@@ -156,35 +162,37 @@ export default function TwoFactorSettings({ enabled, enabledAt, recoveryCodesLef
       ) : enabled ? (
         <div className="space-y-3">
           <p className="text-xs text-emerald-300">
-            Yoqilgan{enabledAt ? ` · ${formatDate(enabledAt)}` : ''} · {recoveryCodesLeft} ta tiklash kodi qoldi
+            {tr('Yoqilgan', 'Включена', 'On')}
+            {enabledAt ? ` · ${formatDate(enabledAt, locale)}` : ''} ·{' '}
+            {tr(`${recoveryCodesLeft} ta tiklash kodi qoldi`, `осталось кодов восстановления: ${recoveryCodesLeft}`, `${recoveryCodesLeft} recovery codes left`)}
           </p>
           {step.kind === 'confirm' ? (
             <div className="flex flex-wrap items-center gap-2">
-              {codeInput(() => confirmAction(step.action), 'Ilovadagi kod')}
+              {codeInput(() => confirmAction(step.action), tr('Ilovadagi kod', 'Код из приложения', 'Code from the app'))}
               <button type="button" onClick={() => confirmAction(step.action)} disabled={busy || code.length < 6} className={step.action === 'disable' ? `${primary} !bg-rose-600 !text-white` : primary}>
                 {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                {step.action === 'disable' ? 'O‘chirish' : 'Yangi kodlarni olish'}
+                {step.action === 'disable' ? tr('O‘chirish', 'Отключить', 'Turn off') : tr('Yangi kodlarni olish', 'Получить новые коды', 'Get new codes')}
               </button>
               <button type="button" onClick={() => setStep({ kind: 'idle' })} className="text-[11px] text-slate-500 hover:text-white">
-                Bekor qilish
+                {tr('Bekor qilish', 'Отмена', 'Cancel')}
               </button>
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => setStep({ kind: 'confirm', action: 'recovery-codes' })} className={secondary}>
-                Yangi tiklash kodlari
+                {tr('Yangi tiklash kodlari', 'Новые коды восстановления', 'New recovery codes')}
               </button>
               <button type="button" onClick={() => setStep({ kind: 'confirm', action: 'disable' })} className={`${secondary} !text-rose-300 !border-rose-500/30`}>
-                2FA ni o‘chirish
+                {tr('2FA ni o‘chirish', 'Отключить 2FA', 'Turn off 2FA')}
               </button>
             </div>
           )}
         </div>
       ) : (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <p className="text-xs text-slate-400">O‘chiq. Yoqsangiz, akkauntingizga faqat telefoningizdagi kod bilan kirish mumkin bo‘ladi.</p>
+          <p className="text-xs text-slate-400">{tr('O‘chiq. Yoqsangiz, akkauntingizga faqat telefoningizdagi kod bilan kirish mumkin bo‘ladi.', 'Выключена. Если включить, войти в аккаунт можно будет только с кодом с телефона.', 'Off. Turn it on and signing in will also need the code from your phone.')}</p>
           <button type="button" onClick={startSetup} disabled={busy} className={`${primary} shrink-0`}>
-            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />} 2FA ni yoqish
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />} {tr('2FA ni yoqish', 'Включить 2FA', 'Turn on 2FA')}
           </button>
         </div>
       )}

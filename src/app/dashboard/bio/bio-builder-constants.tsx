@@ -133,20 +133,20 @@ export const AVATAR_PRESETS = [
 ];
 
 export const ICON_OPTIONS = [
-  { id: 'link', label: 'Havola', icon: Globe },
-  { id: 'telegram', label: 'Telegram', icon: TelegramIcon },
-  { id: 'instagram', label: 'Instagram', icon: InstagramIcon },
-  { id: 'youtube', label: 'YouTube', icon: YouTubeIcon },
-  { id: 'tiktok', label: 'TikTok', icon: TikTokIcon },
-  { id: 'github', label: 'GitHub', icon: GitHubIcon },
-  { id: 'shop', label: 'Do‘kon', icon: ShoppingBag },
-  { id: 'star', label: 'Yulduz', icon: Star },
-  { id: 'phone', label: 'Telefon', icon: Phone },
-  { id: 'mail', label: 'Email', icon: Mail },
-  { id: 'music', label: 'Musiqa', icon: Music },
-  { id: 'video', label: 'Video', icon: Video },
-  { id: 'file', label: 'Fayl / PDF', icon: FileText },
-  { id: 'zap', label: 'Maxsus', icon: Zap },
+  { id: 'link', label: ['Havola', 'Ссылка', 'Link'] as const, icon: Globe },
+  { id: 'telegram', label: ['Telegram', 'Telegram', 'Telegram'] as const, icon: TelegramIcon },
+  { id: 'instagram', label: ['Instagram', 'Instagram', 'Instagram'] as const, icon: InstagramIcon },
+  { id: 'youtube', label: ['YouTube', 'YouTube', 'YouTube'] as const, icon: YouTubeIcon },
+  { id: 'tiktok', label: ['TikTok', 'TikTok', 'TikTok'] as const, icon: TikTokIcon },
+  { id: 'github', label: ['GitHub', 'GitHub', 'GitHub'] as const, icon: GitHubIcon },
+  { id: 'shop', label: ['Do‘kon', 'Магазин', 'Shop'] as const, icon: ShoppingBag },
+  { id: 'star', label: ['Yulduz', 'Звезда', 'Star'] as const, icon: Star },
+  { id: 'phone', label: ['Telefon', 'Телефон', 'Phone'] as const, icon: Phone },
+  { id: 'mail', label: ['Email', 'Email', 'Email'] as const, icon: Mail },
+  { id: 'music', label: ['Musiqa', 'Музыка', 'Music'] as const, icon: Music },
+  { id: 'video', label: ['Video', 'Видео', 'Video'] as const, icon: Video },
+  { id: 'file', label: ['Fayl / PDF', 'Файл / PDF', 'File / PDF'] as const, icon: FileText },
+  { id: 'zap', label: ['Maxsus', 'Особая', 'Special'] as const, icon: Zap },
 ];
 
 /** Saved button -> editable builder state. */

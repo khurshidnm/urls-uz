@@ -5,8 +5,12 @@ import { requireWorkspace } from '@/lib/auth';
 import { toClientJson } from '@/lib/serialize';
 import { qrRepo } from '@/lib/qr/qr-repo';
 import QrStudioClient from '@/components/qr-studio/qr-studio';
+import { getTr } from '@/lib/locale';
 
-export const metadata: Metadata = { title: 'QR kod' };
+export async function generateMetadata(): Promise<Metadata> {
+  const tr = await getTr();
+  return { title: tr('QR kod', 'QR-код', 'QR code') };
+}
 
 interface Props {
   params: Promise<{ id: string }>;

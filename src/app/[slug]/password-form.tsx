@@ -2,8 +2,10 @@
 
 import React, { useState } from 'react';
 import { ArrowRight, KeyRound, Loader2 } from 'lucide-react';
+import { useLanguage } from '@/lib/language-context';
 
 export default function PasswordUnlockForm({ slug }: { slug: string }) {
+  const { tr, tm } = useLanguage();
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,10 +27,10 @@ export default function PasswordUnlockForm({ slug }: { slug: string }) {
         // The server set an unlock cookie; reloading runs the normal redirect
         window.location.reload();
       } else {
-        setError(data.error || 'Parol noto‘g‘ri. Qayta urinib ko‘ring.');
+        setError(data.error || tr('Parol noto‘g‘ri. Qayta urinib ko‘ring.', 'Неверный пароль. Попробуйте ещё раз.', 'Wrong password. Please try again.'));
       }
     } catch {
-      setError('Xatolik yuz berdi. Iltimos qaytadan urinib ko‘ring.');
+      setError(tr('Xatolik yuz berdi. Iltimos qaytadan urinib ko‘ring.', 'Произошла ошибка. Попробуйте ещё раз.', 'Something went wrong. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -46,13 +48,13 @@ export default function PasswordUnlockForm({ slug }: { slug: string }) {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Parolni kiriting..."
+            placeholder={tr('Parolni kiriting...', 'Введите пароль...', 'Enter the password...')}
             required
             autoFocus
             className="w-full pl-9 pr-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-xs font-mono placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors"
           />
         </div>
-        {error && <p className="text-rose-400 text-xs mt-1.5 font-mono">{error}</p>}
+        {error && <p className="text-rose-400 text-xs mt-1.5 font-mono">{tm(error)}</p>}
       </div>
 
       <button
@@ -67,7 +69,7 @@ export default function PasswordUnlockForm({ slug }: { slug: string }) {
           </>
         ) : (
           <>
-            <span>Ochish va o‘tish</span>
+            <span>{tr('Ochish va o‘tish', 'Открыть ссылку', 'Open the link')}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </>
         )}

@@ -9,13 +9,13 @@ import { formatNumber } from '@/lib/utils';
 import { SITE_NAME } from '@/lib/site';
 
 export default function Hero({ totalRedirects }: { totalRedirects: number }) {
-  const { t, locale } = useLanguage();
+  const { locale, tr } = useLanguage();
 
   const highlights = [
     { icon: Zap, label: 'SMART ROUTING', value: 'iOS · Android · Huawei' },
-    { icon: Smartphone, label: 'DEEP LINKING', value: 'Telegram · Instagram ilovada' },
-    { icon: MapPin, label: 'GEO-TELEMETRY', value: '14 viloyat analitikasi' },
-    { icon: Shield, label: 'LINK ARMOR', value: 'Parol & Rate Limiting' },
+    { icon: Smartphone, label: 'DEEP LINKING', value: tr('Telegram · Instagram ilovada', 'Telegram · Instagram в приложении', 'Telegram · Instagram in-app') },
+    { icon: MapPin, label: 'GEO-TELEMETRY', value: tr('14 viloyat analitikasi', 'Аналитика по 14 регионам', 'Analytics for 14 regions') },
+    { icon: Shield, label: 'LINK ARMOR', value: tr('Parol & Rate Limiting', 'Пароль и лимиты', 'Password & rate limits') },
   ];
 
   return (
@@ -27,7 +27,7 @@ export default function Hero({ totalRedirects }: { totalRedirects: number }) {
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-zinc-300 font-semibold">{SITE_NAME}</span>
             <span className="text-zinc-600">·</span>
-            <span>{formatNumber(totalRedirects)} Redirects Processed</span>
+            <span>{formatNumber(totalRedirects)} {tr('ta yo‘naltirish', 'переходов', 'redirects processed')}</span>
           </div>
 
           <Link
@@ -35,7 +35,7 @@ export default function Hero({ totalRedirects }: { totalRedirects: number }) {
             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-mono transition-all group"
           >
             <Sparkles className="w-3 h-3 text-amber-400" />
-            <span>Jonli Demo Versiya (Faqat ko‘rish)</span>
+            <span>{tr('Jonli Demo Versiya (Faqat ko‘rish)', 'Живое демо (только просмотр)', 'Live demo (view only)')}</span>
             <span className="text-amber-400/80 group-hover:translate-x-0.5 transition-transform">→</span>
           </Link>
         </div>

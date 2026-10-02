@@ -21,6 +21,28 @@ export const UZBEKISTAN_REGIONS = [
 
 export type UzbekistanRegion = typeof UZBEKISTAN_REGIONS[number];
 
+/** Regions are stored in Uzbek; their Russian and English names for display. */
+const REGION_NAMES: Record<string, { ru: string; en: string }> = {
+  'Toshkent shahri': { ru: 'Ташкент', en: 'Tashkent city' },
+  'Toshkent viloyati': { ru: 'Ташкентская область', en: 'Tashkent region' },
+  Samarqand: { ru: 'Самарканд', en: 'Samarkand' },
+  'Farg‘ona': { ru: 'Фергана', en: 'Fergana' },
+  Andijon: { ru: 'Андижан', en: 'Andijan' },
+  Namangan: { ru: 'Наманган', en: 'Namangan' },
+  Buxoro: { ru: 'Бухара', en: 'Bukhara' },
+  Qashqadaryo: { ru: 'Кашкадарья', en: 'Kashkadarya' },
+  Surxondaryo: { ru: 'Сурхандарья', en: 'Surkhandarya' },
+  Xorazm: { ru: 'Хорезм', en: 'Khorezm' },
+  Navoiy: { ru: 'Навои', en: 'Navoi' },
+  Jizzax: { ru: 'Джизак', en: 'Jizzakh' },
+  Sirdaryo: { ru: 'Сырдарья', en: 'Syrdarya' },
+  'Qoraqalpog‘iston': { ru: 'Каракалпакстан', en: 'Karakalpakstan' },
+};
+
+export function regionName(region: string, locale: 'uz' | 'ru' | 'en'): string {
+  return locale === 'uz' ? region : (REGION_NAMES[region]?.[locale] ?? region);
+}
+
 export const COUNTRY_META: Record<string, { nameUz: string; nameRu: string; nameEn: string; flag: string }> = {
   UZ: { nameUz: 'O‘zbekiston', nameRu: 'Узбекистан', nameEn: 'Uzbekistan', flag: '🇺🇿' },
   RU: { nameUz: 'Rossiya', nameRu: 'Россия', nameEn: 'Russia', flag: '🇷🇺' },

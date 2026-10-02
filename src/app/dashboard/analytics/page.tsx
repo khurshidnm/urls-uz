@@ -4,8 +4,12 @@ import { db, toPublicLink } from '@/lib/db';
 import { requireWorkspace } from '@/lib/auth';
 import { toClientJson } from '@/lib/serialize';
 import AnalyticsViewClient from './analytics-client';
+import { getTr } from '@/lib/locale';
 
-export const metadata: Metadata = { title: 'Analitika' };
+export async function generateMetadata(): Promise<Metadata> {
+  const tr = await getTr();
+  return { title: tr('Analitika', 'Аналитика', 'Analytics') };
+}
 
 interface PageProps {
   searchParams?: Promise<{ link_id?: string; slug?: string }>;

@@ -6,8 +6,12 @@ import { parseLinkFilter } from '@/lib/links/list-filter';
 import { limitsFor, toJsonLimit } from '@/lib/plans';
 import { toClientJson } from '@/lib/serialize';
 import LinksManagerClient from './links-client';
+import { getTr } from '@/lib/locale';
 
-export const metadata: Metadata = { title: 'Havolalar' };
+export async function generateMetadata(): Promise<Metadata> {
+  const tr = await getTr();
+  return { title: tr('Havolalar', 'Ссылки', 'Links') };
+}
 
 const PAGE_SIZE = 25;
 

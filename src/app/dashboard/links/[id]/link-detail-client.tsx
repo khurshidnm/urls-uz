@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Activity, ArrowLeft, Check, Copy, ExternalLink, History, QrCode, Settings2, Shield, Smartphone } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/toast';
+import { useLanguage } from '@/lib/language-context';
 import { copyToClipboard, formatDate, formatNumber, shortUrl } from '@/lib/utils';
 import type { ClientFolder, ClientLink, LinkAnalytics, LinkEvent } from '@/lib/client-types';
 import AnalyticsTab from './analytics-tab';
@@ -14,11 +15,11 @@ import HistoryTab from './history-tab';
 
 export type LinkTab = 'analytics' | 'qr' | 'settings' | 'history';
 
-const TAB_META: Record<LinkTab, { label: string; icon: React.ReactNode }> = {
-  analytics: { label: 'Analitika', icon: <Activity className="w-3.5 h-3.5" /> },
-  qr: { label: 'QR kod', icon: <QrCode className="w-3.5 h-3.5" /> },
-  settings: { label: 'Sozlamalar', icon: <Settings2 className="w-3.5 h-3.5" /> },
-  history: { label: 'Tarix', icon: <History className="w-3.5 h-3.5" /> },
+const TAB_META: Record<LinkTab, { label: [uz: string, ru: string, en: string]; icon: React.ReactNode }> = {
+  analytics: { label: ['Analitika', 'Аналитика', 'Analytics'], icon: <Activity className="w-3.5 h-3.5" /> },
+  qr: { label: ['QR kod', 'QR-код', 'QR code'], icon: <QrCode className="w-3.5 h-3.5" /> },
+  settings: { label: ['Sozlamalar', 'Настройки', 'Settings'], icon: <Settings2 className="w-3.5 h-3.5" /> },
+  history: { label: ['Tarix', 'История', 'History'], icon: <History className="w-3.5 h-3.5" /> },
 };
 
 interface Props {
@@ -34,6 +35,7 @@ interface Props {
 
 export default function LinkDetailClient({ initialTab, link: initialLink, analytics, events, folders, canWrite, qrCodeId }: Props) {
   const { showToast } = useToast();
+  const { t, tr, locale } = useLanguage();
   const [tab, setTab] = useState<LinkTab>(initialTab);
   const [link, setLink] = useState(initialLink);
   const [copied, setCopied] = useState(false);
@@ -49,7 +51,7 @@ export default function LinkDetailClient({ initialTab, link: initialLink, analyt
   const copy = async () => {
     if (await copyToClipboard(url)) {
       setCopied(true);
-      showToast('copied', `${url} nusxalandi!`);
+      showToast('copied', tr(`${url} nusxalandi!`, `${url} скопировано!`, `${url} copied!`));
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -57,7 +59,7 @@ export default function LinkDetailClient({ initialTab, link: initialLink, analyt
   return (
     <div className="space-y-6">
       <Link href="/dashboard/links" className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors">
-        <ArrowLeft className="w-3.5 h-3.5" /> Havolalar
+        <ArrowLeft className="w-3.5 h-3.5" /> {tr('Havolalar', 'Ссылки', 'Links')}
       </Link>
 
       {/* Header */}
@@ -66,10 +68,10 @@ export default function LinkDetailClient({ initialTab, link: initialLink, analyt
           <div className="space-y-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="font-bold text-lg text-white truncate">{link.title}</h1>
-              {!link.is_active && <Badge variant="danger" size="xs">O‘chirilgan</Badge>}
-              {link.is_archived && <Badge variant="warning" size="xs">Arxivlangan</Badge>}
+              {!link.is_active && <Badge variant="danger" size="xs">{tr('O‘chirilgan', 'Отключена', 'Disabled')}</Badge>}
+              {link.is_archived && <Badge variant="warning" size="xs">{tr('Arxivlangan', 'В архиве', 'Archived')}</Badge>}
               {link.open_in_app && <Badge variant="cyan" size="xs" icon={<Smartphone className="w-3 h-3" />}>Deep Link</Badge>}
-              {link.has_password && <Badge variant="warning" size="xs" icon={<Shield className="w-3 h-3" />}>Parolli</Badge>}
+              {link.has_password && <Badge variant="warning" size="xs" icon={<Shield className="w-3 h-3" />}>{tr('Parolli', 'С паролем', 'Password')}</Badge>}
               {folder && <Badge variant="default" size="xs">📁 {folder.name}</Badge>}
             </div>
             <div className="flex items-center gap-3 text-xs flex-wrap">
@@ -94,14 +96,14 @@ export default function LinkDetailClient({ initialTab, link: initialLink, analyt
               }`}
             >
               {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span className="font-mono">{copied ? 'Nusxalandi' : 'Nusxa olish'}</span>
+              <span className="font-mono">{copied ? t.copied : t.copy}</span>
             </button>
             <a
               href={`/${link.slug}`}
               target="_blank"
               rel="noopener noreferrer"
               className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition-colors"
-              title="Havolani yangi oynada ochish"
+              title={tr('Havolani yangi oynada ochish', 'Открыть ссылку в новом окне', 'Open link in a new tab')}
             >
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
@@ -109,10 +111,10 @@ export default function LinkDetailClient({ initialTab, link: initialLink, analyt
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-zinc-850 text-xs">
-          <Metric label="Jami bosishlar" value={formatNumber(link.click_count)} />
-          <Metric label="Bosishlar limiti" value={link.click_limit ? formatNumber(link.click_limit) : 'Cheksiz'} />
-          <Metric label="Amal qilish muddati" value={link.expires_at ? formatDate(link.expires_at) : 'Muddatsiz'} />
-          <Metric label="Yaratilgan sana" value={formatDate(link.created_at)} />
+          <Metric label={tr('Jami bosishlar', 'Всего переходов', 'Total clicks')} value={formatNumber(link.click_count)} />
+          <Metric label={tr('Bosishlar limiti', 'Лимит переходов', 'Click limit')} value={link.click_limit ? formatNumber(link.click_limit) : tr('Cheksiz', 'Без лимита', 'Unlimited')} />
+          <Metric label={tr('Amal qilish muddati', 'Срок действия', 'Expires')} value={link.expires_at ? formatDate(link.expires_at, locale) : tr('Muddatsiz', 'Бессрочно', 'Never')} />
+          <Metric label={tr('Yaratilgan sana', 'Дата создания', 'Created')} value={formatDate(link.created_at, locale)} />
         </div>
       </div>
 
@@ -129,7 +131,7 @@ export default function LinkDetailClient({ initialTab, link: initialLink, analyt
             }`}
           >
             {TAB_META[key].icon}
-            {TAB_META[key].label}
+            {tr(...TAB_META[key].label)}
           </button>
         ))}
       </div>
@@ -153,16 +155,17 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 /** A dynamic QR code's link: the QR itself is edited in the studio. */
 function QrCodeNotice({ qrCodeId }: { qrCodeId: string }) {
+  const { tr } = useLanguage();
   return (
     <div className="glass-card-static p-6 rounded-2xl border border-[var(--border-subtle)] text-center space-y-3">
       <QrCode className="w-8 h-8 text-indigo-400 mx-auto" />
-      <p className="text-sm text-zinc-300">Bu havola saqlangan dinamik QR kodga tegishli.</p>
-      <p className="text-xs text-zinc-500">QR kodning tarkibi va dizayni QR studiyada tahrirlanadi.</p>
+      <p className="text-sm text-zinc-300">{tr('Bu havola saqlangan dinamik QR kodga tegishli.', 'Эта ссылка принадлежит сохранённому динамическому QR-коду.', 'This link belongs to a saved dynamic QR code.')}</p>
+      <p className="text-xs text-zinc-500">{tr('QR kodning tarkibi va dizayni QR studiyada tahrirlanadi.', 'Содержимое и дизайн QR-кода редактируются в QR-студии.', 'The QR code’s content and design are edited in the QR studio.')}</p>
       <Link
         href={`/dashboard/qr/${qrCodeId}`}
         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-semibold"
       >
-        QR kodni tahrirlash
+        {tr('QR kodni tahrirlash', 'Редактировать QR-код', 'Edit QR code')}
       </Link>
     </div>
   );

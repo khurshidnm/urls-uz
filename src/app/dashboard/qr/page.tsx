@@ -5,8 +5,12 @@ import { requireWorkspace } from '@/lib/auth';
 import { toClientJson } from '@/lib/serialize';
 import { qrRepo } from '@/lib/qr/qr-repo';
 import QrLibrary from './qr-library';
+import { getTr } from '@/lib/locale';
 
-export const metadata: Metadata = { title: 'QR kodlar' };
+export async function generateMetadata(): Promise<Metadata> {
+  const tr = await getTr();
+  return { title: tr('QR kodlar', 'QR-коды', 'QR codes') };
+}
 
 interface Props {
   searchParams: Promise<{ link?: string }>;

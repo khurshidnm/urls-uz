@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, Archive, ArchiveRestore, Link2, Loader2, Power, Save, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { useLanguage } from '@/lib/language-context';
 import { formFromLink, updatePayload, type LinkFormValues } from '@/components/links/link-form-model';
 import {
   DeepLinkSection,
@@ -29,6 +30,7 @@ interface Props {
 export default function SettingsTab({ link, folders, canWrite, onSaved, qrCodeId }: Props) {
   const router = useRouter();
   const { showToast } = useToast();
+  const { tr, tm } = useLanguage();
   const { usage, reload: reloadUsage } = useWorkspaceUsage();
 
   const original = useMemo(() => formFromLink(link), [link]);
@@ -52,7 +54,7 @@ export default function SettingsTab({ link, folders, canWrite, onSaved, qrCodeId
       });
       const data = await res.json();
       if (!data.success) {
-        setError(data.error || 'Saqlashda xatolik');
+        setError(data.error || tr('Saqlashda xatolik', 'Ошибка сохранения', 'Couldn’t save'));
         return;
       }
       onSaved(data.link);
@@ -73,11 +75,11 @@ export default function SettingsTab({ link, folders, canWrite, onSaved, qrCodeId
       const res = await fetch(`/api/links/${link.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
-        showToast('info', 'Havola o‘chirildi');
+        showToast('info', tr('Havola o‘chirildi', 'Ссылка удалена', 'Link deleted'));
         router.push('/dashboard/links');
         router.refresh();
       } else {
-        setError(data.error || 'O‘chirishda xatolik');
+        setError(data.error || tr('O‘chirishda xatolik', 'Ошибка удаления', 'Couldn’t delete'));
       }
     } finally {
       setSaving(false);
@@ -87,7 +89,7 @@ export default function SettingsTab({ link, folders, canWrite, onSaved, qrCodeId
   if (!canWrite) {
     return (
       <div className="p-6 rounded-2xl bg-zinc-950 border border-zinc-800 text-center text-xs text-zinc-400">
-        Demo rejimida havola sozlamalarini o‘zgartirib bo‘lmaydi. Bepul ro‘yxatdan o‘ting va o‘z havolalaringizni yarating.
+        {tr('Demo rejimida havola sozlamalarini o‘zgartirib bo‘lmaydi. Bepul ro‘yxatdan o‘ting va o‘z havolalaringizni yarating.', 'В демо-режиме настройки ссылки менять нельзя. Зарегистрируйтесь бесплатно и создавайте свои ссылки.', 'Link settings can’t be changed in demo mode. Sign up for free and create your own links.')}
       </div>
     );
   }
@@ -96,13 +98,13 @@ export default function SettingsTab({ link, folders, canWrite, onSaved, qrCodeId
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (dirty) patch(changes, 'O‘zgarishlar saqlandi');
+        if (dirty) patch(changes, tr('O‘zgarishlar saqlandi', 'Изменения сохранены', 'Changes saved'));
       }}
       className="space-y-5"
     >
       <div className="glass-card-static p-5 rounded-2xl border border-[var(--border-subtle)] space-y-4">
         <div>
-          <label className="block text-xs font-semibold text-zinc-300 mb-1.5">Asl havola manzili (Destination URL)</label>
+          <label className="block text-xs font-semibold text-zinc-300 mb-1.5">{tr('Asl havola manzili (Destination URL)', 'Целевой адрес (Destination URL)', 'Destination URL')}</label>
           <div className="relative">
             <Link2 className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -116,11 +118,11 @@ export default function SettingsTab({ link, folders, canWrite, onSaved, qrCodeId
           </div>
           {qrCodeId && (
             <p className="mt-1.5 text-[11px] text-zinc-500">
-              Bu havola QR kodga tegishli: manzil{' '}
+              {tr('Bu havola QR kodga tegishli: manzil', 'Эта ссылка принадлежит QR-коду: адрес меняется', 'This link belongs to a QR code: change the address')}{' '}
               <Link href={`/dashboard/qr/${qrCodeId}`} className="text-indigo-400 hover:text-indigo-300">
-                QR studiyada
-              </Link>{' '}
-              o‘zgartiriladi.
+                {tr('QR studiyada', 'в QR-студии', 'in the QR studio')}
+              </Link>
+              {tr(' o‘zgartiriladi.', '.', '.')}
             </p>
           )}
         </div>
@@ -128,7 +130,7 @@ export default function SettingsTab({ link, folders, canWrite, onSaved, qrCodeId
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <SlugField values={values} set={set} currentSlug={link.slug} />
           <div>
-            <label className="block text-xs font-semibold text-zinc-300 mb-1.5">Sarlavha (Eslatma)</label>
+            <label className="block text-xs font-semibold text-zinc-300 mb-1.5">{tr('Sarlavha (Eslatma)', 'Название (заметка)', 'Title (note)')}</label>
             <input
               type="text"
               value={values.title}
@@ -151,10 +153,10 @@ export default function SettingsTab({ link, folders, canWrite, onSaved, qrCodeId
       <div className="sticky bottom-0 -mx-1 px-1 py-3 bg-[var(--background)]/90 backdrop-blur flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-zinc-800/80">
         {error ? (
           <div className="text-xs text-rose-400 flex items-center gap-1.5 font-mono">
-            <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {error}
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {tm(error)}
           </div>
         ) : (
-          <span className="text-[11px] text-zinc-500 font-mono">{dirty ? `${Object.keys(changes).length} ta o‘zgarish saqlanmagan` : 'Barcha o‘zgarishlar saqlangan'}</span>
+          <span className="text-[11px] text-zinc-500 font-mono">{dirty ? tr(`${Object.keys(changes).length} ta o‘zgarish saqlanmagan`, `Несохранённых изменений: ${Object.keys(changes).length}`, `${Object.keys(changes).length} unsaved changes`) : tr('Barcha o‘zgarishlar saqlangan', 'Все изменения сохранены', 'All changes saved')}</span>
         )}
         <div className="flex items-center gap-2">
           <button
@@ -163,7 +165,7 @@ export default function SettingsTab({ link, folders, canWrite, onSaved, qrCodeId
             onClick={() => setValues(original)}
             className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-40 transition-colors"
           >
-            Bekor qilish
+            {tr('Bekor qilish', 'Отмена', 'Cancel')}
           </button>
           <button
             type="submit"
@@ -171,40 +173,45 @@ export default function SettingsTab({ link, folders, canWrite, onSaved, qrCodeId
             className="flex items-center gap-2 px-5 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 text-xs font-semibold disabled:opacity-50 transition-colors"
           >
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            Saqlash
+            {tr('Saqlash', 'Сохранить', 'Save')}
           </button>
         </div>
       </div>
 
       {/* Status and danger zone */}
       <div className="p-5 rounded-2xl border border-rose-500/20 bg-rose-950/10 space-y-4">
-        <h3 className="text-sm font-bold text-white">Holat</h3>
+        <h3 className="text-sm font-bold text-white">{tr('Holat', 'Статус', 'Status')}</h3>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             disabled={saving}
-            onClick={() => patch({ is_active: !link.is_active }, link.is_active ? 'Havola o‘chirildi (vaqtincha)' : 'Havola yoqildi')}
+            onClick={() => patch({ is_active: !link.is_active }, link.is_active ? tr('Havola o‘chirildi (vaqtincha)', 'Ссылка отключена (временно)', 'Link turned off (temporarily)') : tr('Havola yoqildi', 'Ссылка включена', 'Link turned on'))}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs text-zinc-200"
           >
-            <Power className="w-3.5 h-3.5" /> {link.is_active ? 'Vaqtincha o‘chirish' : 'Yoqish'}
+            <Power className="w-3.5 h-3.5" /> {link.is_active ? tr('Vaqtincha o‘chirish', 'Временно отключить', 'Turn off for now') : tr('Yoqish', 'Включить', 'Turn on')}
           </button>
           <button
             type="button"
             disabled={saving}
-            onClick={() => patch({ is_archived: !link.is_archived }, link.is_archived ? 'Havola arxivdan chiqarildi' : 'Havola arxivlandi')}
+            onClick={() => patch({ is_archived: !link.is_archived }, link.is_archived ? tr('Havola arxivdan chiqarildi', 'Ссылка возвращена из архива', 'Link unarchived') : tr('Havola arxivlandi', 'Ссылка в архиве', 'Link archived'))}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs text-zinc-200"
           >
             {link.is_archived ? <ArchiveRestore className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}
-            {link.is_archived ? 'Arxivdan chiqarish' : 'Arxivlash'}
+            {link.is_archived ? tr('Arxivdan chiqarish', 'Из архива', 'Unarchive') : tr('Arxivlash', 'В архив', 'Archive')}
           </button>
         </div>
         <p className="text-[11px] text-zinc-500">
-          Vaqtincha o‘chirilgan havola ochilmaydi, lekin sozlamalari saqlanadi. Arxivlangan havola ishlashda davom etadi, faqat tarif limitiga hisoblanmaydi.
+          {tr('Vaqtincha o‘chirilgan havola ochilmaydi, lekin sozlamalari saqlanadi. Arxivlangan havola ishlashda davom etadi, faqat tarif limitiga hisoblanmaydi.', 'Отключённая ссылка не открывается, но её настройки сохраняются. Архивная ссылка продолжает работать и не учитывается в лимите тарифа.', 'A turned-off link doesn’t open but keeps its settings. An archived link keeps working and doesn’t count toward your plan’s limit.')}
         </p>
 
         <div className="pt-4 border-t border-rose-500/20 space-y-2">
           <p className="text-xs text-rose-300">
-            Havolani butunlay o‘chirish qaytarib bo‘lmaydi: statistika va tarix ham o‘chadi. Tasdiqlash uchun <span className="font-mono font-bold">{link.slug}</span> deb yozing.
+            {tr(
+              'Havolani butunlay o‘chirish qaytarib bo‘lmaydi: statistika va tarix ham o‘chadi. Tasdiqlash uchun quyidagini yozing:',
+              'Удаление ссылки необратимо: статистика и история тоже удалятся. Для подтверждения введите:',
+              'Deleting the link can’t be undone: its stats and history go too. To confirm, type:'
+            )}{' '}
+            <span className="font-mono font-bold">{link.slug}</span>
           </p>
           <div className="flex flex-col sm:flex-row gap-2">
             <input
@@ -220,7 +227,7 @@ export default function SettingsTab({ link, folders, canWrite, onSaved, qrCodeId
               onClick={remove}
               className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold disabled:opacity-40 transition-colors"
             >
-              <Trash2 className="w-3.5 h-3.5" /> Butunlay o‘chirish
+              <Trash2 className="w-3.5 h-3.5" /> {tr('Butunlay o‘chirish', 'Удалить навсегда', 'Delete for good')}
             </button>
           </div>
         </div>

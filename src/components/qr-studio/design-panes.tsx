@@ -5,6 +5,7 @@ import { Ban, Smile, Trash2, Upload } from 'lucide-react';
 import { BUILTIN_LOGOS, PHONE_EMOJI_CATEGORIES, type GradientType } from '@/components/ui/qr-canvas';
 import { useToast } from '@/components/ui/toast';
 import type { QrDesign, UpdateDesign } from './qr-design';
+import { useLanguage } from '@/lib/language-context';
 
 /* Design controls of the QR studio. Each edits part of one QrDesign. */
 
@@ -14,11 +15,12 @@ interface PaneProps {
 }
 
 export function ColorsPane({ design, update }: PaneProps) {
+  const { tr } = useLanguage();
   return (
     <>
         {/* Foreground Mode Radio */}
         <div className="space-y-2">
-          <label className="block text-[11px] font-mono uppercase text-zinc-400">Foreground Color</label>
+          <label className="block text-[11px] font-mono uppercase text-zinc-400">{tr('Rang', 'Цвет', 'Colour')}</label>
           <div className="flex flex-wrap items-center gap-4 text-xs">
             <label className="flex items-center gap-1.5 text-zinc-200 cursor-pointer">
               <input
@@ -28,7 +30,7 @@ export function ColorsPane({ design, update }: PaneProps) {
                 onChange={() => update({ colorMode: 'single' })}
                 className="text-indigo-600 focus:ring-0"
               />
-              <span>Single Color</span>
+              <span>{tr('Bitta rang', 'Один цвет', 'Solid colour')}</span>
             </label>
             <label className="flex items-center gap-1.5 text-zinc-200 cursor-pointer">
               <input
@@ -38,7 +40,7 @@ export function ColorsPane({ design, update }: PaneProps) {
                 onChange={() => update({ colorMode: 'gradient' })}
                 className="text-indigo-600 focus:ring-0"
               />
-              <span>Color Gradient</span>
+              <span>{tr('Gradient', 'Градиент', 'Gradient')}</span>
             </label>
             <label className="flex items-center gap-1.5 text-zinc-200 cursor-pointer ml-auto">
               <input
@@ -47,7 +49,7 @@ export function ColorsPane({ design, update }: PaneProps) {
                 onChange={(e) => update({ customEyeColor: e.target.checked })}
                 className="text-indigo-600 focus:ring-0 rounded"
               />
-              <span>Custom Eye Color</span>
+              <span>{tr('Ko‘zlar uchun alohida rang', 'Свой цвет «глаз»', 'Custom eye colour')}</span>
             </label>
           </div>
         </div>
@@ -56,7 +58,7 @@ export function ColorsPane({ design, update }: PaneProps) {
         {design.colorMode === 'single' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-between">
-              <span className="text-xs text-zinc-300">Asosiy Rang (Body)</span>
+              <span className="text-xs text-zinc-300">{tr('Asosiy rang', 'Основной цвет', 'Main colour')}</span>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -68,7 +70,7 @@ export function ColorsPane({ design, update }: PaneProps) {
               </div>
             </div>
             <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-between">
-              <span className="text-xs text-zinc-300">Orqa Fon (Background)</span>
+              <span className="text-xs text-zinc-300">{tr('Fon', 'Фон', 'Background')}</span>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -101,14 +103,14 @@ export function ColorsPane({ design, update }: PaneProps) {
               />
             </div>
             <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-between">
-              <span className="text-xs text-zinc-300">Turi</span>
+              <span className="text-xs text-zinc-300">{tr('Turi', 'Тип', 'Type')}</span>
               <select
                 value={design.gradientType}
                 onChange={(e) => update({ gradientType: e.target.value as GradientType })}
                 className="bg-zinc-900 border border-zinc-800 text-xs text-white rounded px-2 py-1"
               >
-                <option value="linear">Linear</option>
-                <option value="radial">Radial</option>
+                <option value="linear">{tr('Chiziqli', 'Линейный', 'Linear')}</option>
+                <option value="radial">{tr('Radial', 'Радиальный', 'Radial')}</option>
               </select>
             </div>
           </div>
@@ -118,7 +120,7 @@ export function ColorsPane({ design, update }: PaneProps) {
         {design.customEyeColor && (
           <div className="pt-3 border-t border-zinc-800/80 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-between">
-              <span className="text-xs text-zinc-300">Eye Frame Color</span>
+              <span className="text-xs text-zinc-300">{tr('Ko‘z ramkasi rangi', 'Цвет рамки «глаз»', 'Eye frame colour')}</span>
               <input
                 type="color"
                 value={design.eyeFrameColor}
@@ -127,7 +129,7 @@ export function ColorsPane({ design, update }: PaneProps) {
               />
             </div>
             <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-between">
-              <span className="text-xs text-zinc-300">Eye Ball Color</span>
+              <span className="text-xs text-zinc-300">{tr('Ko‘z markazi rangi', 'Цвет центра «глаз»', 'Eye centre colour')}</span>
               <input
                 type="color"
                 value={design.eyeBallColor}
@@ -145,6 +147,7 @@ export function ColorsPane({ design, update }: PaneProps) {
 const MAX_LOGO_BYTES = 100 * 1024;
 
 export function LogoPane({ design, update }: PaneProps) {
+  const { tr } = useLanguage();
   const { showToast } = useToast();
   const [logoTab, setLogoTab] = useState<'brands' | 'emojis' | 'upload'>('brands');
   const [customEmojiInput, setCustomEmojiInput] = useState('');
@@ -154,13 +157,13 @@ export function LogoPane({ design, update }: PaneProps) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_LOGO_BYTES) {
-      showToast('error', 'Logo hajmi 100 KB dan oshmasligi kerak');
+      showToast('error', tr('Logo hajmi 100 KB dan oshmasligi kerak', 'Логотип — не больше 100 КБ', 'The logo must be 100 KB or smaller'));
       return;
     }
     const reader = new FileReader();
     reader.onload = (uploadEvent) => {
       update({ customLogoUrl: uploadEvent.target?.result as string, centerLogo: 'custom', centerEmoji: null });
-      showToast('success', 'Maxsus logotip yuklandi');
+      showToast('success', tr('Maxsus logotip yuklandi', 'Логотип загружен', 'Logo uploaded'));
     };
     reader.readAsDataURL(file);
   };
@@ -179,7 +182,7 @@ export function LogoPane({ design, update }: PaneProps) {
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
-              Brend Logotiplar
+              {tr('Brend logotiplari', 'Логотипы брендов', 'Brand logos')}
             </button>
             <button
               type="button"
@@ -191,7 +194,7 @@ export function LogoPane({ design, update }: PaneProps) {
               }`}
             >
               <Smile className="w-3.5 h-3.5 text-amber-400" />
-              <span>Telefon Emodzilari</span>
+              <span>{tr('Emodzilar', 'Эмодзи', 'Emoji')}</span>
             </button>
             <button
               type="button"
@@ -203,7 +206,7 @@ export function LogoPane({ design, update }: PaneProps) {
               }`}
             >
               <Upload className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Rasm Yuklash</span>
+              <span>{tr('Rasm yuklash', 'Загрузить изображение', 'Upload image')}</span>
             </button>
           </div>
 
@@ -214,7 +217,7 @@ export function LogoPane({ design, update }: PaneProps) {
               onChange={(e) => update({ removeBgBehindLogo: e.target.checked })}
               className="text-indigo-600 focus:ring-0 rounded"
             />
-            <span>Belgi orqasidagi fonni tozalash</span>
+            <span>{tr('Belgi orqasidagi fonni tozalash', 'Убрать фон под значком', 'Clear the background behind the icon')}</span>
           </label>
         </div>
 
@@ -223,11 +226,11 @@ export function LogoPane({ design, update }: PaneProps) {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-mono uppercase text-zinc-400">
-                Brend logotipi yoki “No Icon” ni tanlang:
+                {tr('Brend logotipini yoki «Belgisiz» ni tanlang:', 'Выберите логотип бренда или «Без значка»:', 'Pick a brand logo or “No icon”:')}
               </span>
               {design.centerLogo === 'none' && !design.centerEmoji && !design.customLogoUrl && (
                 <span className="text-[11px] text-rose-400 font-mono flex items-center gap-1">
-                  <Ban className="w-3 h-3" /> Belgi yo‘q (Toza QR)
+                  <Ban className="w-3 h-3" /> {tr('Belgi yo‘q (toza QR)', 'Без значка', 'No icon')}
                 </span>
               )}
             </div>
@@ -247,12 +250,12 @@ export function LogoPane({ design, update }: PaneProps) {
                     ? 'bg-rose-500/15 border-rose-500/70 ring-2 ring-rose-500/40 text-rose-300'
                     : 'bg-zinc-950 border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-200'
                 }`}
-                title="Belgisiz toza QR kod"
+                title={tr('Belgisiz toza QR kod', 'Чистый QR-код без значка', 'Plain QR code without an icon')}
               >
                 <div className="w-6 h-6 flex items-center justify-center">
                   <Ban className="w-5 h-5 text-rose-400" />
                 </div>
-                <span className="text-[10px] font-semibold truncate max-w-full">No Icon</span>
+                <span className="text-[10px] font-semibold truncate max-w-full">{tr('Belgisiz', 'Без значка', 'No icon')}</span>
               </button>
 
               {/* BUILT-IN LOGOS */}
@@ -277,7 +280,7 @@ export function LogoPane({ design, update }: PaneProps) {
                       className="w-6 h-6 flex items-center justify-center"
                       dangerouslySetInnerHTML={{ __html: item.svg }}
                     />
-                    <span className="text-[10px] text-zinc-400 truncate max-w-full">{item.label}</span>
+                    <span className="text-[10px] text-zinc-400 truncate max-w-full">{item.labels ? tr(item.labels[0], item.labels[1], item.labels[2]) : item.label}</span>
                   </button>
                 );
               })}
@@ -293,7 +296,7 @@ export function LogoPane({ design, update }: PaneProps) {
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-zinc-200 flex items-center gap-1.5">
                   <Smile className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Telefondan yoki klaviaturadan istalgan emodzini kiriting:</span>
+                  <span>{tr('Telefondan yoki klaviaturadan istalgan emodzini kiriting:', 'Введите любой эмодзи с телефона или клавиатуры:', 'Type any emoji from your phone or keyboard:')}</span>
                 </label>
                 {design.centerEmoji && (
                   <button
@@ -304,7 +307,7 @@ export function LogoPane({ design, update }: PaneProps) {
                     }}
                     className="text-[11px] text-zinc-400 hover:text-rose-400"
                   >
-                    Tozalash
+                    {tr('Tozalash', 'Очистить', 'Clear')}
                   </button>
                 )}
               </div>
@@ -326,7 +329,7 @@ export function LogoPane({ design, update }: PaneProps) {
                         update({ centerEmoji: null });
                       }
                     }}
-                    placeholder="Masalan: 🚀, 😎, 👑, 🔥, 🏆..."
+                    placeholder={tr('Masalan: 🚀, 😎, 👑, 🔥, 🏆...', 'Например: 🚀, 😎, 👑, 🔥, 🏆...', 'e.g. 🚀, 😎, 👑, 🔥, 🏆...')}
                     className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-base focus:outline-none focus:border-indigo-500 placeholder:text-zinc-600 placeholder:text-xs"
                   />
                 </div>
@@ -337,7 +340,7 @@ export function LogoPane({ design, update }: PaneProps) {
                 </div>
               </div>
               <p className="text-[11px] text-zinc-500">
-                Smartfoningiz emodzi klaviaturasidan (iOS / Android) to‘g‘ridan-to‘g‘ri nusxalab qo‘yishingiz mumkin.
+                {tr('Smartfoningiz emodzi klaviaturasidan (iOS / Android) to‘g‘ridan-to‘g‘ri nusxalab qo‘yishingiz mumkin.', 'Можно скопировать прямо с эмодзи-клавиатуры смартфона (iOS / Android).', 'You can paste straight from your phone’s emoji keyboard (iOS / Android).')}
               </p>
             </div>
 
@@ -355,7 +358,7 @@ export function LogoPane({ design, update }: PaneProps) {
                   }`}
                 >
                   <span>{cat.icon}</span>
-                  <span>{cat.name}</span>
+                  <span>{tr(cat.name[0], cat.name[1], cat.name[2])}</span>
                 </button>
               ))}
             </div>
@@ -376,10 +379,10 @@ export function LogoPane({ design, update }: PaneProps) {
                     ? 'bg-rose-500/15 border-rose-500/70 ring-2 ring-rose-500/40 text-rose-300'
                     : 'bg-zinc-950 border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-200'
                 }`}
-                title="Belgisiz toza QR kod"
+                title={tr('Belgisiz toza QR kod', 'Чистый QR-код без значка', 'Plain QR code without an icon')}
               >
                 <Ban className="w-5 h-5 text-rose-400" />
-                <span className="text-[9px] font-semibold">No Icon</span>
+                <span className="text-[9px] font-semibold">{tr('Belgisiz', 'Без значка', 'No icon')}</span>
               </button>
 
               {/* EMOJIS FROM ACTIVE CATEGORY */}
@@ -418,7 +421,7 @@ export function LogoPane({ design, update }: PaneProps) {
             <div className="flex flex-wrap items-center gap-3">
               <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow transition-all">
                 <Upload className="w-3.5 h-3.5" />
-                <span>Fayl tanlash (.png, .svg, .jpg, .webp)</span>
+                <span>{tr('Fayl tanlash (.png, .svg, .jpg, .webp)', 'Выбрать файл (.png, .svg, .jpg, .webp)', 'Choose a file (.png, .svg, .jpg, .webp)')}</span>
                 <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
               </label>
 
@@ -433,7 +436,7 @@ export function LogoPane({ design, update }: PaneProps) {
                   className="inline-flex items-center gap-1.5 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-rose-400 border border-zinc-800 rounded-xl text-xs font-medium transition-colors"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>Yuklangan rasmni o‘chirish</span>
+                  <span>{tr('Yuklangan rasmni o‘chirish', 'Удалить загруженное изображение', 'Remove uploaded image')}</span>
                 </button>
               )}
             </div>
@@ -446,8 +449,8 @@ export function LogoPane({ design, update }: PaneProps) {
                   className="w-12 h-12 object-contain rounded-lg border border-zinc-700 bg-white/5 p-1"
                 />
                 <div className="text-xs">
-                  <p className="font-medium text-white">Yuklangan maxsus rasm faol</p>
-                  <p className="text-[11px] text-zinc-400">QR kod markazida aks etadi</p>
+                  <p className="font-medium text-white">{tr('Yuklangan maxsus rasm faol', 'Используется загруженное изображение', 'Your uploaded image is in use')}</p>
+                  <p className="text-[11px] text-zinc-400">{tr('QR kod markazida aks etadi', 'Отображается в центре QR-кода', 'Shown in the centre of the QR code')}</p>
                 </div>
               </div>
             )}
@@ -458,18 +461,19 @@ export function LogoPane({ design, update }: PaneProps) {
 }
 
 export function ShapesPane({ design, update }: PaneProps) {
+  const { tr } = useLanguage();
   return (
     <>
         {/* 4.1 Body Shape */}
         <div>
-          <label className="block text-[11px] font-mono uppercase text-zinc-400 mb-2">Body Shape</label>
+          <label className="block text-[11px] font-mono uppercase text-zinc-400 mb-2">{tr('Nuqtalar shakli', 'Форма точек', 'Dot shape')}</label>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
             {[
-              { id: 'square' as const, label: 'Square' },
-              { id: 'dots' as const, label: 'Dots (Circles)' },
-              { id: 'rounded' as const, label: 'Rounded' },
-              { id: 'diamond' as const, label: 'Diamond' },
-              { id: 'mosaic' as const, label: 'Mosaic' },
+              { id: 'square' as const, label: tr('Kvadrat', 'Квадрат', 'Square') },
+              { id: 'dots' as const, label: tr('Nuqtalar', 'Точки', 'Dots') },
+              { id: 'rounded' as const, label: tr('Yumaloq', 'Скруглённые', 'Rounded') },
+              { id: 'diamond' as const, label: tr('Olmos', 'Ромб', 'Diamond') },
+              { id: 'mosaic' as const, label: tr('Mozaika', 'Мозаика', 'Mosaic') },
             ].map((item) => (
               <button
                 key={item.id}
@@ -489,13 +493,13 @@ export function ShapesPane({ design, update }: PaneProps) {
 
         {/* 4.2 Eye Frame Shape */}
         <div>
-          <label className="block text-[11px] font-mono uppercase text-zinc-400 mb-2">Eye Frame Shape</label>
+          <label className="block text-[11px] font-mono uppercase text-zinc-400 mb-2">{tr('Ko‘z ramkasi shakli', 'Форма рамки «глаз»', 'Eye frame shape')}</label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
-              { id: 'square' as const, label: 'Square' },
-              { id: 'rounded' as const, label: 'Rounded' },
-              { id: 'circle' as const, label: 'Circle' },
-              { id: 'leaf' as const, label: 'Leaf (Asymmetric)' },
+              { id: 'square' as const, label: tr('Kvadrat', 'Квадрат', 'Square') },
+              { id: 'rounded' as const, label: tr('Yumaloq', 'Скруглённые', 'Rounded') },
+              { id: 'circle' as const, label: tr('Doira', 'Круг', 'Circle') },
+              { id: 'leaf' as const, label: tr('Barg', 'Лист', 'Leaf') },
             ].map((item) => (
               <button
                 key={item.id}
@@ -515,13 +519,13 @@ export function ShapesPane({ design, update }: PaneProps) {
 
         {/* 4.3 Eye Ball Shape */}
         <div>
-          <label className="block text-[11px] font-mono uppercase text-zinc-400 mb-2">Eye Ball Shape</label>
+          <label className="block text-[11px] font-mono uppercase text-zinc-400 mb-2">{tr('Ko‘z markazi shakli', 'Форма центра «глаз»', 'Eye centre shape')}</label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
-              { id: 'square' as const, label: 'Square' },
-              { id: 'circle' as const, label: 'Circle' },
-              { id: 'rounded' as const, label: 'Rounded' },
-              { id: 'diamond' as const, label: 'Diamond' },
+              { id: 'square' as const, label: tr('Kvadrat', 'Квадрат', 'Square') },
+              { id: 'circle' as const, label: tr('Doira', 'Круг', 'Circle') },
+              { id: 'rounded' as const, label: tr('Yumaloq', 'Скруглённые', 'Rounded') },
+              { id: 'diamond' as const, label: tr('Olmos', 'Ромб', 'Diamond') },
             ].map((item) => (
               <button
                 key={item.id}

@@ -5,8 +5,12 @@ import { requireWorkspace } from '@/lib/auth';
 import { toClientJson } from '@/lib/serialize';
 import { limitsFor } from '@/lib/plans';
 import ApiKeysClient from './api-keys-client';
+import { getTr } from '@/lib/locale';
 
-export const metadata: Metadata = { title: 'API kalitlar' };
+export async function generateMetadata(): Promise<Metadata> {
+  const tr = await getTr();
+  return { title: tr('API kalitlar', 'API-ключи', 'API keys') };
+}
 
 export default async function ApiKeysPage() {
   const { workspace, isAdmin } = await requireWorkspace();

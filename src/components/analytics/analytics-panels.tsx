@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Activity, Clock, Globe, Monitor, Navigation, Smartphone, Tablet } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/lib/language-context';
-import { getCountryInfo } from '@/lib/geo';
+import { getCountryInfo, regionName } from '@/lib/geo';
 import { formatDateTime, formatDay } from '@/lib/utils';
 import type { AnalyticsView, ClickRow } from '@/lib/client-types';
 
@@ -15,9 +15,9 @@ import type { AnalyticsView, ClickRow } from '@/lib/client-types';
 
 export type AnalyticsRangeValue = '7d' | '30d' | 'all';
 
-export const RANGE_LABELS: Record<AnalyticsRangeValue, string> = { '7d': '7 kun', '30d': '30 kun', all: 'Barchasi' };
-
 export function RangeSwitch({ value, onChange }: { value: AnalyticsRangeValue; onChange: (range: AnalyticsRangeValue) => void }) {
+  const { tr } = useLanguage();
+  const labels: Record<AnalyticsRangeValue, string> = { '7d': tr('7 kun', '7 дней', '7 days'), '30d': tr('30 kun', '30 дней', '30 days'), all: tr('Barchasi', 'Всё время', 'All time') };
   return (
     <div className="flex bg-[var(--surface-1)] border border-[var(--border-subtle)] rounded-xl p-0.5 text-xs shrink-0">
       {(['7d', '30d', 'all'] as const).map((range) => (
@@ -29,7 +29,7 @@ export function RangeSwitch({ value, onChange }: { value: AnalyticsRangeValue; o
             value === range ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
           }`}
         >
-          {RANGE_LABELS[range]}
+          {labels[range]}
         </button>
       ))}
     </div>
@@ -39,8 +39,8 @@ export function RangeSwitch({ value, onChange }: { value: AnalyticsRangeValue; o
 export function TimelineChart({
   timeline,
   title,
-  countLabel = 'bosish',
-  emptyLabel = 'Maʼlumotlar to‘planmoqda...',
+  countLabel,
+  emptyLabel,
   locale = 'uz',
 }: {
   timeline: AnalyticsView['timeline'];
@@ -50,6 +50,7 @@ export function TimelineChart({
   emptyLabel?: string;
   locale?: 'uz' | 'ru' | 'en';
 }) {
+  const { tr } = useLanguage();
   const maxCount = Math.max(...timeline.map((t) => t.count), 1);
   // Label about ten bars so 30- and 90-day ranges stay readable
   const labelEvery = Math.max(1, Math.ceil(timeline.length / 10));
@@ -74,7 +75,7 @@ export function TimelineChart({
               // min-w-0: date labels must not widen the columns (they'd push the chart out of its card)
               <div key={t.date} className="flex-1 min-w-0 h-full flex flex-col items-center justify-end group/bar relative">
                 <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded-lg bg-slate-800 text-[10px] text-white font-mono opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 shadow-lg border border-slate-700">
-                  {t.count} {countLabel} · {dayLabel}
+                  {t.count} {countLabel ?? tr('bosish', 'перех.', 'clicks')} · {dayLabel}
                 </div>
                 <div
                   className={`w-full rounded-t-lg transition-all duration-500 cursor-pointer ${
@@ -96,7 +97,7 @@ export function TimelineChart({
           })}
         </div>
       ) : (
-        <div className="h-44 flex items-center justify-center text-xs text-slate-600">{emptyLabel}</div>
+        <div className="h-44 flex items-center justify-center text-xs text-slate-600">{emptyLabel ?? tr('Maʼlumotlar to‘planmoqda...', 'Данные собираются...', 'Collecting data...')}</div>
       )}
     </div>
   );
@@ -128,7 +129,7 @@ function EmptyNote({ children }: { children: React.ReactNode }) {
 }
 
 export function GeoPanel({ data, totalClicks }: { data: Pick<AnalyticsView, 'regions' | 'countries'>; totalClicks: number }) {
-  const { locale } = useLanguage();
+  const { locale, tr } = useLanguage();
   const [tab, setTab] = useState<'uzbekistan' | 'global'>('uzbekistan');
 
   return (
@@ -139,8 +140,8 @@ export function GeoPanel({ data, totalClicks }: { data: Pick<AnalyticsView, 'reg
             <Globe className="w-4.5 h-4.5" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-white">Geolokatsiya</h2>
-            <p className="text-[11px] text-slate-500">Viloyatlar va xalqaro bosishlar</p>
+            <h2 className="text-sm font-bold text-white">{tr('Geolokatsiya', 'Геолокация', 'Location')}</h2>
+            <p className="text-[11px] text-slate-500">{tr('Viloyatlar va xalqaro bosishlar', 'Регионы и переходы из-за рубежа', 'Regions and international clicks')}</p>
           </div>
         </div>
 
@@ -152,7 +153,7 @@ export function GeoPanel({ data, totalClicks }: { data: Pick<AnalyticsView, 'reg
               tab === 'uzbekistan' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
             }`}
           >
-            🇺🇿 Viloyatlar
+            🇺🇿 {tr('Viloyatlar', 'Регионы', 'Regions')}
           </button>
           <button
             type="button"
@@ -161,7 +162,7 @@ export function GeoPanel({ data, totalClicks }: { data: Pick<AnalyticsView, 'reg
               tab === 'global' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
             }`}
           >
-            🌍 Global
+            🌍 {tr('Global', 'Мир', 'Global')}
           </button>
         </div>
       </div>
@@ -178,14 +179,14 @@ export function GeoPanel({ data, totalClicks }: { data: Pick<AnalyticsView, 'reg
                 label={
                   <>
                     <span className="text-[10px] text-slate-600 font-mono w-5">#{idx + 1}</span>
-                    <span className="font-semibold text-white truncate">{reg.region}</span>
+                    <span className="font-semibold text-white truncate">{regionName(reg.region, locale)}</span>
                   </>
                 }
               />
             ))}
           </div>
         ) : (
-          <EmptyNote>Oʻzbekiston viloyatlari boʻyicha bosishlar hali qayd etilmagan</EmptyNote>
+          <EmptyNote>{tr('Oʻzbekiston viloyatlari boʻyicha bosishlar hali qayd etilmagan', 'Переходов по регионам Узбекистана пока нет', 'No clicks from Uzbekistan’s regions yet')}</EmptyNote>
         ))}
 
       {tab === 'global' &&
@@ -212,7 +213,7 @@ export function GeoPanel({ data, totalClicks }: { data: Pick<AnalyticsView, 'reg
             })}
           </div>
         ) : (
-          <EmptyNote>Xalqaro davlatlar boʻyicha bosishlar hali qayd etilmagan</EmptyNote>
+          <EmptyNote>{tr('Xalqaro davlatlar boʻyicha bosishlar hali qayd etilmagan', 'Переходов из других стран пока нет', 'No international clicks yet')}</EmptyNote>
         ))}
     </div>
   );
@@ -231,7 +232,10 @@ export function SourcesAndDevices({
   data: Pick<AnalyticsView, 'referrers' | 'devices' | 'os'>;
   totalClicks: number;
 }) {
-  const { t } = useLanguage();
+  const { t, tr } = useLanguage();
+  const deviceName = (type: string) =>
+    ({ mobile: tr('Mobil', 'Мобильные', 'Mobile'), tablet: tr('Planshet', 'Планшеты', 'Tablet'), desktop: tr('Kompyuter', 'Компьютеры', 'Desktop') })[type.toLowerCase()] ?? type;
+  const sourceName = (source: string) => (source === 'Direct' ? tr('To‘g‘ridan-to‘g‘ri', 'Прямые', 'Direct') : source);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -248,12 +252,12 @@ export function SourcesAndDevices({
                 count={ref.count}
                 total={totalClicks}
                 color="bg-gradient-to-r from-cyan-500 to-sky-400"
-                label={<span className="font-semibold text-white">{ref.referer}</span>}
+                label={<span className="font-semibold text-white">{sourceName(ref.referer)}</span>}
               />
             ))}
           </div>
         ) : (
-          <div className="py-8 text-center text-xs text-zinc-500 font-mono">Trafik manbalari hali qayd etilmagan</div>
+          <div className="py-8 text-center text-xs text-zinc-500 font-mono">{tr('Trafik manbalari hali qayd etilmagan', 'Источников трафика пока нет', 'No traffic sources yet')}</div>
         )}
       </div>
 
@@ -272,7 +276,7 @@ export function SourcesAndDevices({
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${style.color}`}>{style.icon}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="font-semibold text-white capitalize">{dev.device_type}</span>
+                      <span className="font-semibold text-white capitalize">{deviceName(dev.device_type || '')}</span>
                       <span className="font-mono font-bold text-slate-300">{perc}%</span>
                     </div>
                     <div className="w-full h-1.5 bg-[var(--surface-3)] rounded-full overflow-hidden">
@@ -285,12 +289,12 @@ export function SourcesAndDevices({
             })}
           </div>
         ) : (
-          <div className="py-8 text-center text-xs text-zinc-500 font-mono">Qurilmalar statistikasi hali qayd etilmagan</div>
+          <div className="py-8 text-center text-xs text-zinc-500 font-mono">{tr('Qurilmalar statistikasi hali qayd etilmagan', 'Статистики по устройствам пока нет', 'No device stats yet')}</div>
         )}
 
         {data.os.length > 0 && (
           <div className="mt-4 pt-4 border-t border-[var(--border-subtle)]">
-            <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold mb-2.5">Operatsion tizimlar</div>
+            <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold mb-2.5">{tr('Operatsion tizimlar', 'Операционные системы', 'Operating systems')}</div>
             <div className="flex flex-wrap gap-2">
               {data.os.map((os) => (
                 <Badge key={os.os} variant="default" size="sm">
@@ -306,6 +310,7 @@ export function SourcesAndDevices({
 }
 
 export function VisitsLog({ clicks }: { clicks: ClickRow[] }) {
+  const { locale, tr } = useLanguage();
   if (clicks.length === 0) return null;
 
   return (
@@ -316,22 +321,22 @@ export function VisitsLog({ clicks }: { clicks: ClickRow[] }) {
             <Navigation className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-white">Oxirgi tashriflar telemetriyasi</h3>
-            <p className="text-[11px] text-zinc-400">Ushbu havolaga oxirgi 100 ta real-vaqt bosishlar jurnali</p>
+            <h3 className="text-sm font-bold text-white">{tr('Oxirgi tashriflar telemetriyasi', 'Последние переходы', 'Recent visits')}</h3>
+            <p className="text-[11px] text-zinc-400">{tr('Ushbu havolaga oxirgi 100 ta real-vaqt bosishlar jurnali', 'Журнал последних 100 переходов по этой ссылке', 'Log of the last 100 visits to this link')}</p>
           </div>
         </div>
-        <span className="text-xs font-mono text-zinc-400">{clicks.length} ta yozuv</span>
+        <span className="text-xs font-mono text-zinc-400">{tr(`${clicks.length} ta yozuv`, `записей: ${clicks.length}`, `${clicks.length} entries`)}</span>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-zinc-800">
         <table className="w-full text-left text-xs">
           <thead className="bg-zinc-900/80 text-zinc-400 font-mono uppercase text-[10px] border-b border-zinc-800">
             <tr>
-              <th className="py-2.5 px-3">Vaqt</th>
-              <th className="py-2.5 px-3">Geolokatsiya</th>
-              <th className="py-2.5 px-3">Qurilma / OS</th>
-              <th className="py-2.5 px-3">Brauzer</th>
-              <th className="py-2.5 px-3">Trafik Manbasi</th>
+              <th className="py-2.5 px-3">{tr('Vaqt', 'Время', 'Time')}</th>
+              <th className="py-2.5 px-3">{tr('Geolokatsiya', 'Геолокация', 'Location')}</th>
+              <th className="py-2.5 px-3">{tr('Qurilma / OS', 'Устройство / ОС', 'Device / OS')}</th>
+              <th className="py-2.5 px-3">{tr('Brauzer', 'Браузер', 'Browser')}</th>
+              <th className="py-2.5 px-3">{tr('Trafik Manbasi', 'Источник', 'Source')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-850/60 font-mono text-zinc-300">
@@ -348,7 +353,7 @@ export function VisitsLog({ clicks }: { clicks: ClickRow[] }) {
                   <td className="py-2.5 px-3 whitespace-nowrap font-sans">
                     <div className="flex items-center gap-1.5 font-medium text-white">
                       <span>{country.flag}</span>
-                      <span>{click.region !== 'Unknown' ? click.region : country.nameUz}</span>
+                      <span>{click.region !== 'Unknown' ? regionName(click.region, locale) : tr(country.nameUz, country.nameRu, country.nameEn)}</span>
                       {click.city && click.city !== 'Unknown' && <span className="text-zinc-500 font-normal">({click.city})</span>}
                     </div>
                   </td>

@@ -13,7 +13,7 @@ import { SITE_URL } from '@/lib/site';
 /** All state and actions of the bio builder; the tab components read what they need from it. */
 export function useBioBuilder(initialBio: ClientBioPage | undefined, owner: { name: string; avatar: string }) {
   const { user, isSuperAdmin, demoEditMode } = useAuth();
-  const { t } = useLanguage();
+  const { t, tr } = useLanguage();
   const { showToast } = useToast();
 
   const checkDemoRestricted = (actionName: string) => {
@@ -49,7 +49,7 @@ export function useBioBuilder(initialBio: ClientBioPage | undefined, owner: { na
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (checkDemoRestricted('Profil rasmini almashtirish')) {
+    if (checkDemoRestricted(tr('Profil rasmini almashtirish', 'Смена фото профиля', 'Changing the profile photo'))) {
       e.target.value = '';
       return;
     }
@@ -57,7 +57,7 @@ export function useBioBuilder(initialBio: ClientBioPage | undefined, owner: { na
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      showToast('error', 'Iltimos, rasm formatidagi faylni tanlang (PNG, JPG, WebP)');
+      showToast('error', tr('Iltimos, rasm formatidagi faylni tanlang (PNG, JPG, WebP)', 'Выберите изображение (PNG, JPG, WebP)', 'Please choose an image file (PNG, JPG, WebP)'));
       return;
     }
 
@@ -121,10 +121,10 @@ export function useBioBuilder(initialBio: ClientBioPage | undefined, owner: { na
 
   // Link Handlers
   const addLink = () => {
-    if (checkDemoRestricted('Yangi bio havola qo‘shish')) return;
+    if (checkDemoRestricted(tr('Yangi bio havola qo‘shish', 'Добавление кнопки', 'Adding a button'))) return;
 
     if (links.length >= BIO_LINKS_LIMIT) {
-      setProModalText('Bepul tarifda faqat 4 ta tugma yaratish mumkin. Cheksiz tugmalar Pro tarifda tez kunda ishga tushadi!');
+      setProModalText(tr(`Bepul tarifda faqat ${BIO_LINKS_LIMIT} ta tugma yaratish mumkin. Cheksiz tugmalar Pro tarifda tez kunda ishga tushadi!`, `На бесплатном тарифе — только ${BIO_LINKS_LIMIT} кнопок. Безлимит скоро появится на тарифе Pro!`, `The free plan allows only ${BIO_LINKS_LIMIT} buttons. Unlimited buttons are coming soon with Pro!`));
       setProModalOpen(true);
       return;
     }
@@ -132,7 +132,7 @@ export function useBioBuilder(initialBio: ClientBioPage | undefined, owner: { na
     setLinks([
       ...links,
       {
-        title: 'Yangi Havola',
+        title: tr('Yangi havola', 'Новая ссылка', 'New link'),
         url: 'https://',
         icon: 'link',
         style: 'glass',
@@ -145,7 +145,7 @@ export function useBioBuilder(initialBio: ClientBioPage | undefined, owner: { na
   };
 
   const removeLink = (index: number) => {
-    if (checkDemoRestricted('Bio havolani o‘chirish')) return;
+    if (checkDemoRestricted(tr('Bio havolani o‘chirish', 'Удаление кнопки', 'Deleting a button'))) return;
     setLinks(links.filter((_, i) => i !== index));
   };
 
@@ -177,7 +177,7 @@ export function useBioBuilder(initialBio: ClientBioPage | undefined, owner: { na
 
   const handleThemeSelect = (th: typeof THEMES[0]) => {
     if (th.pro) {
-      setProModalText(`"${th.name}" mavzusi pullik Pro tarifda tez kunda ishga tushadi! Hozirda Midnight Obsidian, Uzbekistan Emerald va Minimal Light mavzulari barcha uchun to‘liq bepul.`);
+      setProModalText(tr(`"${th.name}" mavzusi pullik Pro tarifda tez kunda ishga tushadi! Hozirda Midnight Obsidian, Uzbekistan Emerald va Minimal Light mavzulari barcha uchun to‘liq bepul.`, `Тема «${th.name}» скоро появится на платном тарифе Pro! Сейчас всем бесплатно доступны темы Midnight Obsidian, Uzbekistan Emerald и Minimal Light.`, `The "${th.name}" theme is coming soon with Pro! Midnight Obsidian, Uzbekistan Emerald and Minimal Light are free for everyone.`));
       setProModalOpen(true);
       return;
     }
@@ -185,7 +185,7 @@ export function useBioBuilder(initialBio: ClientBioPage | undefined, owner: { na
   };
 
   const handleSave = async () => {
-    if (checkDemoRestricted('Bio sahifani saqlash')) return;
+    if (checkDemoRestricted(tr('Bio sahifani saqlash', 'Сохранение bio-страницы', 'Saving the bio page'))) return;
     setIsSaving(true);
     setSavedSuccess(false);
 
@@ -224,7 +224,7 @@ export function useBioBuilder(initialBio: ClientBioPage | undefined, owner: { na
 
       const data = await res.json();
       if (!data.success) {
-        showToast('error', data.error || 'Saqlashda xatolik yuz berdi');
+        showToast('error', data.error || tr('Saqlashda xatolik yuz berdi', 'Ошибка сохранения', 'Couldn’t save'));
       } else {
         // Adopt server ids so the next save keeps each button's short link and statistics
         setLinks(data.bioPage.links.map(toBuilderButton));

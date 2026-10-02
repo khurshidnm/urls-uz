@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { Check, X, AlertCircle, Info, Copy } from 'lucide-react';
+import { useLanguage } from '@/lib/language-context';
 
 type ToastType = 'success' | 'error' | 'info' | 'copied';
 
@@ -28,10 +29,12 @@ export function useToast() {
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const { tm } = useLanguage();
 
   const showToast = useCallback((type: ToastType, message: string) => {
     const id = crypto.randomUUID();
-    setToasts((prev) => [...prev, { id, type, message }]);
+    // Messages from the API arrive in Uzbek; show them in the visitor's language
+    setToasts((prev) => [...prev, { id, type, message: tm(message) }]);
 
     // Auto-dismiss after 3s
     setTimeout(() => {
@@ -42,7 +45,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         setToasts((prev) => prev.filter((t) => t.id !== id));
       }, 250);
     }, 3000);
-  }, []);
+  }, [tm]);
 
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) =>

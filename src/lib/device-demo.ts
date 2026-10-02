@@ -7,7 +7,7 @@
 export interface DeviceDemoApp {
   id: string;
   name: string;
-  category: string;
+  category: { uz: string; ru: string; en: string };
   /** Short link slug: urls.uz/<slug>. */
   slug: string;
   /** Brand color for the initial badge. */
@@ -24,7 +24,7 @@ export const DEVICE_DEMO_APPS: DeviceDemoApp[] = [
   {
     id: 'uzum',
     name: 'Uzum Market',
-    category: 'Onlayn do‘kon',
+    category: { uz: 'Onlayn do‘kon', ru: 'Онлайн-магазин', en: 'Online store' },
     slug: 'app-uzum',
     color: '#7000FF',
     ios: 'https://apps.apple.com/uz/app/uzum-market-internet-do-kon-uz/id1640483056',
@@ -35,7 +35,7 @@ export const DEVICE_DEMO_APPS: DeviceDemoApp[] = [
   {
     id: 'yandexgo',
     name: 'Yandex Go',
-    category: 'Taksi va yetkazib berish',
+    category: { uz: 'Taksi va yetkazib berish', ru: 'Такси и доставка', en: 'Taxi and delivery' },
     slug: 'app-yandexgo',
     color: '#FC3F1D',
     ios: 'https://apps.apple.com/us/app/yandex-go-taxi-food-delivery/id472650686',
@@ -46,7 +46,7 @@ export const DEVICE_DEMO_APPS: DeviceDemoApp[] = [
   {
     id: 'payme',
     name: 'Payme',
-    category: 'To‘lovlar',
+    category: { uz: 'To‘lovlar', ru: 'Платежи', en: 'Payments' },
     slug: 'app-payme',
     color: '#00CCCC',
     ios: 'https://apps.apple.com/uz/app/payme-%D0%BF%D0%B5%D1%80%D0%B5%D0%B2%D0%BE%D0%B4%D1%8B-%D0%B8-%D0%BF%D0%BB%D0%B0%D1%82%D0%B5%D0%B6%D0%B8/id1093525667',
@@ -57,7 +57,7 @@ export const DEVICE_DEMO_APPS: DeviceDemoApp[] = [
   {
     id: 'telegram',
     name: 'Telegram',
-    category: 'Messenjer',
+    category: { uz: 'Messenjer', ru: 'Мессенджер', en: 'Messenger' },
     slug: 'app-telegram',
     color: '#229ED9',
     ios: 'https://apps.apple.com/us/app/telegram-messenger/id686449807',

@@ -6,9 +6,11 @@ import { ExternalLink, Globe, Smartphone, Tablet, Share2 } from 'lucide-react';
 import { TelegramIcon, InstagramIcon, YouTubeIcon, LinkedInIcon, GitHubIcon, TikTokIcon, TwitterXIcon } from '@/components/ui/icons';
 import type { BioBuilder } from './use-bio-builder';
 import { SITE_URL, SITE_HOST, SITE_NAME } from '@/lib/site';
+import { useLanguage } from '@/lib/language-context';
 
 /** Live iPhone / iPad preview of the bio page. */
 export default function DevicePreview({ b }: { b: BioBuilder }) {
+  const { tr } = useLanguage();
   const { handle, title, bio, avatarUrl, buttonRadius, socialTelegram, socialInstagram, socialYoutube, socialTiktok, socialGithub, socialLinkedin, socialTwitter, socialWebsite, links, deviceMode, setDeviceMode, deviceFinish, setDeviceFinish, previewScale, setPreviewScale, currentThemeObj, getDeviceFinishBorder, renderIconComponent } = b;
   return (
     <div className="lg:col-span-6 xl:col-span-6 flex flex-col items-center sticky top-20">
@@ -45,7 +47,7 @@ export default function DevicePreview({ b }: { b: BioBuilder }) {
 
         {/* Device Finish Selector */}
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-mono text-zinc-500 hidden sm:inline">Korpus:</span>
+          <span className="text-[10px] font-mono text-zinc-500 hidden sm:inline">{tr('Korpus:', 'Корпус:', 'Finish:')}</span>
           <button
             type="button"
             onClick={() => setDeviceFinish('black')}
@@ -71,7 +73,7 @@ export default function DevicePreview({ b }: { b: BioBuilder }) {
           <button
             onClick={() => setPreviewScale(previewScale === 100 ? 90 : 100)}
             className="px-2 py-1 rounded bg-zinc-950 border border-zinc-800 hover:text-white"
-            title="Masshtabni o‘zgartirish"
+            title={tr('Masshtabni o‘zgartirish', 'Изменить масштаб', 'Change zoom')}
           >
             {previewScale}%
           </button>
@@ -199,7 +201,7 @@ export default function DevicePreview({ b }: { b: BioBuilder }) {
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         {renderIconComponent(l.icon)}
-                        <span className="truncate">{l.title || 'Nomsiz havola'}</span>
+                        <span className="truncate">{l.title || tr('Nomsiz havola', 'Без названия', 'Untitled link')}</span>
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0 ml-2">
@@ -238,7 +240,7 @@ export default function DevicePreview({ b }: { b: BioBuilder }) {
             >
               {/* Top iPad Status Bar */}
               <div className="pt-2 px-6 pb-1 flex items-center justify-between text-white text-[11px] font-medium tracking-tight z-30 shrink-0">
-                <span className="font-mono text-zinc-400 text-[11px]">Chorshanba, 09:41</span>
+                <span className="font-mono text-zinc-400 text-[11px]">{tr('Chorshanba, 09:41', 'Среда, 09:41', 'Wednesday, 09:41')}</span>
                 <div className="w-2 h-2 rounded-full bg-black ring-1 ring-zinc-800" />
                 <div className="flex items-center gap-2 font-mono text-[10px] text-zinc-400">
                   <span>Wi-Fi</span>
@@ -340,7 +342,7 @@ export default function DevicePreview({ b }: { b: BioBuilder }) {
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         {renderIconComponent(l.icon)}
-                        <span className="truncate">{l.title || 'Nomsiz havola'}</span>
+                        <span className="truncate">{l.title || tr('Nomsiz havola', 'Без названия', 'Untitled link')}</span>
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0 ml-2">

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { Download, Share2, Check, ZoomIn } from 'lucide-react';
+import { useLanguage } from '@/lib/language-context';
 import { copyToClipboard } from '@/lib/utils';
 import { SITE_URL, SITE_NAME } from '@/lib/site';
 
@@ -39,7 +40,7 @@ export interface QrCanvasProps {
 }
 
 // Authentic Vector SVG Assets for Brand Gallery
-export const BUILTIN_LOGOS: Record<string, { label: string; svg: string }> = {
+export const BUILTIN_LOGOS: Record<string, { label: string; labels?: [uz: string, ru: string, en: string]; svg: string }> = {
   vcard: {
     label: 'vCard',
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
@@ -58,6 +59,7 @@ export const BUILTIN_LOGOS: Record<string, { label: string; svg: string }> = {
   },
   location: {
     label: 'Location',
+    labels: ['Joylashuv', 'Локация', 'Location'],
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
       <circle cx="50" cy="50" r="50" fill="#dc2626"/>
       <path fill="#ffffff" d="M50 20c-13.25 0-24 10.75-24 24 0 18 24 38 24 38s24-20 24-38c0-13.25-10.75-24-24-24zm0 33a9 9 0 1 1 0-18 9 9 0 0 1 0 18z"/>
@@ -65,6 +67,7 @@ export const BUILTIN_LOGOS: Record<string, { label: string; svg: string }> = {
   },
   event: {
     label: 'Event',
+    labels: ['Tadbir', 'Событие', 'Event'],
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
       <circle cx="50" cy="50" r="50" fill="#d97706"/>
       <rect x="22" y="27" width="56" height="50" rx="9" fill="#ffffff"/>
@@ -109,6 +112,7 @@ export const BUILTIN_LOGOS: Record<string, { label: string; svg: string }> = {
   },
   globe: {
     label: 'Web URL',
+    labels: ['Veb-sayt', 'Сайт', 'Website'],
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
       <circle cx="50" cy="50" r="50" fill="#4f46e5"/>
       <circle cx="50" cy="50" r="32" fill="none" stroke="#ffffff" stroke-width="6"/>
@@ -167,6 +171,7 @@ export const BUILTIN_LOGOS: Record<string, { label: string; svg: string }> = {
   },
   phone: {
     label: 'Phone',
+    labels: ['Telefon', 'Телефон', 'Phone'],
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
       <circle cx="50" cy="50" r="50" fill="#10B981"/>
       <path fill="#ffffff" d="M37 31c1.5-1.5 4-1.5 5.5 0l3 3c1.5 1.5 1.5 4 0 5.5l-2.2 2.2c1.7 3.5 4.5 6.3 8 8l2.2-2.2c1.5-1.5 4-1.5 5.5 0l3 3c1.5 1.5 1.5 4 0 5.5l-3.3 3.3c-2.3 2.3-5.8 2.8-8.6 1.3C40 55 31 46 25.7 36c-1.5-2.8-1-6.3 1.3-8.6L37 31z"/>
@@ -183,7 +188,7 @@ export const BUILTIN_LOGOS: Record<string, { label: string; svg: string }> = {
 
 export interface EmojiCategory {
   id: string;
-  name: string;
+  name: [uz: string, ru: string, en: string];
   icon: string;
   emojis: string[];
 }
@@ -191,31 +196,31 @@ export interface EmojiCategory {
 export const PHONE_EMOJI_CATEGORIES: EmojiCategory[] = [
   {
     id: 'popular',
-    name: 'Top / Mashhur',
+    name: ['Mashhur', 'Популярные', 'Popular'],
     icon: '🔥',
     emojis: ['🔥', '⭐', '❤️', '🚀', '💡', '💎', '🎯', '✨', '🏆', '👑', '⚡', '🔔', '🎉', '💯', '👍', '💪'],
   },
   {
     id: 'business',
-    name: 'Biznes va Ofis',
+    name: ['Biznes va ofis', 'Бизнес и офис', 'Business & office'],
     icon: '💼',
     emojis: ['💼', '🏢', '📈', '💳', '🛒', '📦', '🏷️', '🤝', '📊', '📅', '📞', '✉️', '🏦', '📎', '💰', '📑'],
   },
   {
     id: 'tech',
-    name: 'Texnika va Aloqa',
+    name: ['Texnika va aloqa', 'Техника и связь', 'Tech & communication'],
     icon: '📱',
     emojis: ['💬', '📱', '💻', '🌐', '📷', '🎮', '🎧', '🎵', '🔒', '🔑', '🤖', '📡', '🕹️', '📺', '🚀', '⚡'],
   },
   {
     id: 'lifestyle',
-    name: 'Hayot, Sayohat, Taom',
+    name: ['Hayot, sayohat, taom', 'Жизнь, путешествия, еда', 'Life, travel, food'],
     icon: '☕',
     emojis: ['☕', '🍕', '🍔', '🍰', '🥗', '🍹', '✈️', '🚗', '🏠', '🎁', '🛍️', '🩺', '🌍', '🚴', '⚽', '🎨'],
   },
   {
     id: 'flags',
-    name: 'Bayroqlar va Belgilar',
+    name: ['Bayroqlar va belgilar', 'Флаги и символы', 'Flags & symbols'],
     icon: '🇺🇿',
     emojis: ['🇺🇿', '🇷🇺', '🇺🇸', '🇬🇧', '🇹🇷', '🇰🇿', '🏁', '✅', '⛔', '🟢', '🔴', '🔷', '🔶', '📍', '🌍', '⭐️'],
   },
@@ -248,6 +253,7 @@ export function QrCanvas({
 }: QrCanvasProps) {
   const finalValue = value || url || SITE_URL;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const { t, tr } = useLanguage();
   const [copied, setCopied] = useState(false);
 
   // Render method used for both preview and high-res export
@@ -748,7 +754,7 @@ export function QrCanvas({
               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 bg-indigo-600 hover:bg-indigo-500 active:scale-98 text-white font-medium text-xs rounded-xl shadow-lg shadow-indigo-600/25 transition-all"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Download PNG ({exportResolution}px)</span>
+              <span>{tr('PNG yuklab olish', 'Скачать PNG', 'Download PNG')} ({exportResolution}px)</span>
             </button>
           </div>
 
@@ -780,7 +786,7 @@ export function QrCanvas({
               className="py-1.5 px-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-lg text-center transition-colors flex items-center justify-center gap-1"
             >
               {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Share2 className="w-3 h-3 text-zinc-400" />}
-              <span>{copied ? 'Copied' : 'Copy'}</span>
+              <span>{copied ? t.copied : t.copy}</span>
             </button>
           </div>
         </div>

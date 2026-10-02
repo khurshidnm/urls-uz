@@ -4,7 +4,7 @@ import { LanguageProvider } from '@/lib/language-context';
 import { AuthProvider } from '@/lib/auth-context';
 import AuthModal from '@/components/auth/auth-modal';
 import { ToastProvider } from '@/components/ui/toast';
-import { BRAND, SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_TITLE, SITE_URL } from '@/lib/site';
+import { BRAND, SHARE_DESCRIPTION, SHARE_TITLE, SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_TITLE, SITE_URL } from '@/lib/site';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -21,15 +21,15 @@ export const metadata: Metadata = {
     type: 'website',
     url: '/',
     siteName: SITE_NAME,
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
+    title: SHARE_TITLE,
+    description: SHARE_DESCRIPTION,
     locale: 'uz_UZ',
     alternateLocale: ['ru_RU', 'en_US'],
   },
   twitter: {
     card: 'summary_large_image',
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
+    title: SHARE_TITLE,
+    description: SHARE_DESCRIPTION,
   },
   robots: {
     index: true,

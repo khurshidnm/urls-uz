@@ -12,12 +12,15 @@ interface DeepLinkRedirectorProps {
   matchedDevice?: 'ios' | 'android' | 'huawei' | 'desktop' | 'fallback';
 }
 
+import { useLanguage } from '@/lib/language-context';
+
 export default function DeepLinkRedirector({
   deepLink,
   title,
   targetUrl,
   matchedDevice = 'fallback',
 }: DeepLinkRedirectorProps) {
+  const { tr } = useLanguage();
   const [seconds, setSeconds] = useState(2);
   const [schemeFired, setSchemeFired] = useState(false);
 
@@ -65,7 +68,8 @@ export default function DeepLinkRedirector({
 
         <h2 className="text-base sm:text-lg font-semibold text-white mb-1 tracking-tight">{title}</h2>
         <p className="text-zinc-400 text-xs mb-4">
-          <span className="text-zinc-200 font-medium">{deepLink.appName}</span> ilovasi ochilmoqda... Agar ilova avtomatik ochilmasa, pastdagi tugmani bosing.
+          {tr('Ilova ochilmoqda:', 'Открываем приложение', 'Opening')} <span className="text-zinc-200 font-medium">{deepLink.appName}</span>.{' '}
+          {tr('Agar ilova avtomatik ochilmasa, pastdagi tugmani bosing.', 'Если оно не открылось само, нажмите кнопку ниже.', 'If it doesn’t open by itself, tap the button below.')}
         </p>
 
         {/* Monospace Deep Link Scheme Preview */}
@@ -85,7 +89,7 @@ export default function DeepLinkRedirector({
             href={deepLink.nativeScheme}
             className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-white hover:bg-zinc-200 text-zinc-950 font-medium rounded-lg transition-colors text-xs"
           >
-            <span>{deepLink.appName} ilovasida ochish</span>
+            <span>{tr(`${deepLink.appName} ilovasida ochish`, `Открыть в ${deepLink.appName}`, `Open in ${deepLink.appName}`)}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </a>
 
@@ -94,7 +98,7 @@ export default function DeepLinkRedirector({
             className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-zinc-950 hover:bg-zinc-800 text-zinc-400 hover:text-white font-medium rounded-lg border border-zinc-800 transition-colors text-xs font-mono"
           >
             <ExternalLink className="w-3 h-3" />
-            <span>Brauzer orqali davom etish</span>
+            <span>{tr('Brauzer orqali davom etish', 'Продолжить в браузере', 'Continue in the browser')}</span>
           </a>
         </div>
 

@@ -6,8 +6,12 @@ import { requireWorkspace } from '@/lib/auth';
 import { toClientJson } from '@/lib/serialize';
 import { qrRepo } from '@/lib/qr/qr-repo';
 import LinkDetailClient, { type LinkTab } from './link-detail-client';
+import { getTr } from '@/lib/locale';
 
-export const metadata: Metadata = { title: 'Havola' };
+export async function generateMetadata(): Promise<Metadata> {
+  const tr = await getTr();
+  return { title: tr('Havola', 'Ссылка', 'Link') };
+}
 
 interface Props {
   params: Promise<{ id: string }>;

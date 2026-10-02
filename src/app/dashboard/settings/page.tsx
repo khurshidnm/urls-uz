@@ -9,8 +9,12 @@ import LoginMethods from './login-methods';
 import { connectMessage } from './connect-message';
 import TwoFactorSettings from './two-factor-settings';
 import { isTwoFactorEnabled } from '@/lib/two-factor/service';
+import { getTr } from '@/lib/locale';
 
-export const metadata: Metadata = { title: 'Sozlamalar' };
+export async function generateMetadata(): Promise<Metadata> {
+  const tr = await getTr();
+  return { title: tr('Sozlamalar', 'Настройки', 'Settings') };
+}
 
 interface Props {
   searchParams: Promise<{ connected?: string; outcome?: string; connect_error?: string }>;
@@ -19,12 +23,13 @@ interface Props {
 export default async function SettingsPage({ searchParams }: Props) {
   const [{ connected, outcome, connect_error }, user] = await Promise.all([searchParams, getSessionUser()]);
   const methods = user ? await listIdentities(user.id) : [];
+  const tr = await getTr();
 
   // Connecting Google comes back here from a redirect, with its outcome in the URL
   const notice = connect_error
     ? { kind: 'error' as const, text: connect_error }
     : connected === 'google'
-      ? { kind: 'success' as const, text: connectMessage('Google', outcome) }
+      ? { kind: 'success' as const, text: connectMessage('Google', outcome, tr) }
       : null;
 
   return (

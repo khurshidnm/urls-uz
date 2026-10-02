@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Loader2, RotateCcw, Save, Wand2 } from 'lucide-react';
 import { BUILTIN_LOGOS, QrCanvas } from '@/components/ui/qr-canvas';
 import { useToast } from '@/components/ui/toast';
+import { useLanguage } from '@/lib/language-context';
 import { shortUrl } from '@/lib/utils';
 import type { ClientLink } from '@/lib/client-types';
 
@@ -24,23 +25,23 @@ const DEFAULT_CONFIG: QrConfig = {
 };
 
 const BODY_SHAPES = [
-  ['square', 'Kvadrat'],
-  ['rounded', 'Yumaloq'],
-  ['dots', 'Nuqtalar'],
-  ['diamond', 'Olmos'],
-  ['mosaic', 'Mozaika'],
+  ['square', ['Kvadrat', 'Квадрат', 'Square']],
+  ['rounded', ['Yumaloq', 'Скруглённые', 'Rounded']],
+  ['dots', ['Nuqtalar', 'Точки', 'Dots']],
+  ['diamond', ['Olmos', 'Ромб', 'Diamond']],
+  ['mosaic', ['Mozaika', 'Мозаика', 'Mosaic']],
 ] as const;
 const EYE_FRAMES = [
-  ['square', 'Kvadrat'],
-  ['rounded', 'Yumaloq'],
-  ['circle', 'Doira'],
-  ['leaf', 'Barg'],
+  ['square', ['Kvadrat', 'Квадрат', 'Square']],
+  ['rounded', ['Yumaloq', 'Скруглённые', 'Rounded']],
+  ['circle', ['Doira', 'Круг', 'Circle']],
+  ['leaf', ['Barg', 'Лист', 'Leaf']],
 ] as const;
 const EYE_BALLS = [
-  ['square', 'Kvadrat'],
-  ['rounded', 'Yumaloq'],
-  ['circle', 'Doira'],
-  ['diamond', 'Olmos'],
+  ['square', ['Kvadrat', 'Квадрат', 'Square']],
+  ['rounded', ['Yumaloq', 'Скруглённые', 'Rounded']],
+  ['circle', ['Doira', 'Круг', 'Circle']],
+  ['diamond', ['Olmos', 'Ромб', 'Diamond']],
 ] as const;
 
 const selectClass =
@@ -61,6 +62,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
  */
 export default function QrTab({ link, canWrite, onSaved }: { link: ClientLink; canWrite: boolean; onSaved: (link: ClientLink) => void }) {
   const { showToast } = useToast();
+  const { tr } = useLanguage();
   const saved: QrConfig = { ...DEFAULT_CONFIG, ...(link.qr_config ?? {}) };
   const [config, setConfig] = useState<QrConfig>(saved);
   const [saving, setSaving] = useState(false);
@@ -79,9 +81,9 @@ export default function QrTab({ link, canWrite, onSaved }: { link: ClientLink; c
       const data = await res.json();
       if (data.success) {
         onSaved(data.link);
-        showToast('success', 'QR dizayn saqlandi');
+        showToast('success', tr('QR dizayn saqlandi', 'Дизайн QR сохранён', 'QR design saved'));
       } else {
-        showToast('error', data.error || 'Saqlashda xatolik');
+        showToast('error', data.error || tr('Saqlashda xatolik', 'Ошибка сохранения', 'Couldn’t save'));
       }
     } catch {
       showToast('error', 'Tarmoq xatosi yuz berdi');
@@ -95,9 +97,9 @@ export default function QrTab({ link, canWrite, onSaved }: { link: ClientLink; c
       <div className="glass-card-static p-5 rounded-2xl border border-[var(--border-subtle)] space-y-5">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-bold text-white">QR kod dizayni</h3>
+            <h3 className="text-sm font-bold text-white">{tr('QR kod dizayni', 'Дизайн QR-кода', 'QR code design')}</h3>
             <p className="text-[11px] text-zinc-400 mt-0.5">
-              QR har doim qisqa havolaga olib boradi — manzilni keyin o‘zgartirsangiz ham chop etilgan QR ishlayveradi.
+              {tr('QR har doim qisqa havolaga olib boradi — manzilni keyin o‘zgartirsangiz ham chop etilgan QR ishlayveradi.', 'QR всегда ведёт на короткую ссылку — напечатанный QR работает, даже если позже сменить адрес.', 'The QR always points to the short link, so a printed QR keeps working if you change the destination later.')}
             </p>
           </div>
           <Link
@@ -109,19 +111,19 @@ export default function QrTab({ link, canWrite, onSaved }: { link: ClientLink; c
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Field label="Asosiy rang">
+          <Field label={tr('Asosiy rang', 'Основной цвет', 'Main colour')}>
             <input type="color" value={config.fgColor} onChange={(e) => set('fgColor', e.target.value)} className="w-full h-9 rounded-lg bg-zinc-950 border border-zinc-800 cursor-pointer" />
           </Field>
-          <Field label="Fon rangi">
+          <Field label={tr('Fon rangi', 'Цвет фона', 'Background')}>
             <input type="color" value={config.bgColor} onChange={(e) => set('bgColor', e.target.value)} className="w-full h-9 rounded-lg bg-zinc-950 border border-zinc-800 cursor-pointer" />
           </Field>
-          <Field label="Gradient">
+          <Field label={tr('Gradient', 'Градиент', 'Gradient')}>
             <select value={config.colorMode} onChange={(e) => set('colorMode', e.target.value as QrConfig['colorMode'])} className={selectClass}>
-              <option value="single">Yo‘q</option>
-              <option value="gradient">Bor</option>
+              <option value="single">{tr('Yo‘q', 'Нет', 'No')}</option>
+              <option value="gradient">{tr('Bor', 'Да', 'Yes')}</option>
             </select>
           </Field>
-          <Field label="Gradient rangi">
+          <Field label={tr('Gradient rangi', 'Цвет градиента', 'Gradient colour')}>
             <input
               type="color"
               value={config.gradientColor2}
@@ -133,33 +135,33 @@ export default function QrTab({ link, canWrite, onSaved }: { link: ClientLink; c
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Field label="Nuqtalar shakli">
+          <Field label={tr('Nuqtalar shakli', 'Форма точек', 'Dot shape')}>
             <select value={config.bodyShape} onChange={(e) => set('bodyShape', e.target.value as QrConfig['bodyShape'])} className={selectClass}>
-              {BODY_SHAPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              {BODY_SHAPES.map(([v, l]) => <option key={v} value={v}>{tr(l[0], l[1], l[2])}</option>)}
             </select>
           </Field>
-          <Field label="Ko‘z ramkasi">
+          <Field label={tr('Ko‘z ramkasi', 'Рамка «глаза»', 'Eye frame')}>
             <select value={config.eyeFrameShape} onChange={(e) => set('eyeFrameShape', e.target.value as QrConfig['eyeFrameShape'])} className={selectClass}>
-              {EYE_FRAMES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              {EYE_FRAMES.map(([v, l]) => <option key={v} value={v}>{tr(l[0], l[1], l[2])}</option>)}
             </select>
           </Field>
-          <Field label="Ko‘z markazi">
+          <Field label={tr('Ko‘z markazi', 'Центр «глаза»', 'Eye centre')}>
             <select value={config.eyeBallShape} onChange={(e) => set('eyeBallShape', e.target.value as QrConfig['eyeBallShape'])} className={selectClass}>
-              {EYE_BALLS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              {EYE_BALLS.map(([v, l]) => <option key={v} value={v}>{tr(l[0], l[1], l[2])}</option>)}
             </select>
           </Field>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Field label="Markaziy logotip">
+          <Field label={tr('Markaziy logotip', 'Логотип в центре', 'Centre logo')}>
             <select value={config.centerLogo} onChange={(e) => set('centerLogo', e.target.value)} className={selectClass}>
-              <option value="none">Logotipsiz</option>
+              <option value="none">{tr('Logotipsiz', 'Без логотипа', 'No logo')}</option>
               {Object.entries(BUILTIN_LOGOS).map(([key, logo]) => (
-                <option key={key} value={key}>{logo.label}</option>
+                <option key={key} value={key}>{logo.labels ? tr(logo.labels[0], logo.labels[1], logo.labels[2]) : logo.label}</option>
               ))}
             </select>
           </Field>
-          <Field label="Ramka matni">
+          <Field label={tr('Ramka matni', 'Текст рамки', 'Frame text')}>
             <input
               type="text"
               value={config.frameText}
@@ -168,11 +170,11 @@ export default function QrTab({ link, canWrite, onSaved }: { link: ClientLink; c
               className={selectClass}
             />
           </Field>
-          <Field label="Ramka joyi">
+          <Field label={tr('Ramka joyi', 'Положение рамки', 'Frame position')}>
             <select value={config.frameStyle} onChange={(e) => set('frameStyle', e.target.value as QrConfig['frameStyle'])} className={selectClass}>
-              <option value="bottom">Pastda</option>
-              <option value="top">Tepada</option>
-              <option value="none">Ramkasiz</option>
+              <option value="bottom">{tr('Pastda', 'Снизу', 'Bottom')}</option>
+              <option value="top">{tr('Tepada', 'Сверху', 'Top')}</option>
+              <option value="none">{tr('Ramkasiz', 'Без рамки', 'No frame')}</option>
             </select>
           </Field>
         </div>
@@ -185,7 +187,7 @@ export default function QrTab({ link, canWrite, onSaved }: { link: ClientLink; c
               onClick={() => setConfig(saved)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-40 transition-colors"
             >
-              <RotateCcw className="w-3.5 h-3.5" /> Bekor qilish
+              <RotateCcw className="w-3.5 h-3.5" /> {tr('Bekor qilish', 'Отмена', 'Cancel')}
             </button>
             <button
               type="button"
@@ -194,7 +196,7 @@ export default function QrTab({ link, canWrite, onSaved }: { link: ClientLink; c
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 text-xs font-semibold disabled:opacity-50 transition-colors"
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-              Saqlash
+              {tr('Saqlash', 'Сохранить', 'Save')}
             </button>
           </div>
         )}

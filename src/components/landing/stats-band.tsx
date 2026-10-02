@@ -1,5 +1,8 @@
+'use client';
+
 import { ArrowUpRight, Radio } from 'lucide-react';
-import { getCountryInfo } from '@/lib/geo';
+import { useLanguage } from '@/lib/language-context';
+import { getCountryInfo, regionName } from '@/lib/geo';
 import { formatNumber } from '@/lib/utils';
 import { SITE_HOST } from '@/lib/site';
 
@@ -13,34 +16,36 @@ export interface PublicStats {
   recentClicks: { country: string; region: string; os: string; browser: string; created_at: Date }[];
 }
 
-function timeAgo(date: Date): string {
-  const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
-  if (seconds < 60) return `${seconds}s ago`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
+type Tr = (uz: string, ru: string, en: string) => string;
+
+function timeAgo(date: Date, tr: Tr): string {
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 1000));
+  const [n, uz, ru, en] =
+    seconds < 60 ? [seconds, 'soniya', 'с', 's'] : seconds < 3600 ? [Math.floor(seconds / 60), 'daqiqa', 'мин', 'm'] : seconds < 86400 ? [Math.floor(seconds / 3600), 'soat', 'ч', 'h'] : [Math.floor(seconds / 86400), 'kun', 'дн', 'd'];
+  return tr(`${n} ${uz} oldin`, `${n} ${ru} назад`, `${n}${en} ago`);
 }
 
 /** Live platform numbers. Every value here comes from the database. */
 export default function StatsBand({ stats }: { stats: PublicStats }) {
+  const { locale, tr } = useLanguage();
   const metrics = [
     {
-      label: 'TOTAL REDIRECTS',
+      label: tr('JAMI O‘TISHLAR', 'ВСЕГО ПЕРЕХОДОВ', 'TOTAL REDIRECTS'),
       value: formatNumber(stats.totalRedirects),
-      change: `+${formatNumber(stats.redirectsLast7Days)} in the last 7 days`,
+      change: tr(`so‘nggi 7 kunda +${formatNumber(stats.redirectsLast7Days)}`, `+${formatNumber(stats.redirectsLast7Days)} за 7 дней`, `+${formatNumber(stats.redirectsLast7Days)} in the last 7 days`),
     },
     {
-      label: 'SHORT LINKS',
+      label: tr('QISQA HAVOLALAR', 'КОРОТКИЕ ССЫЛКИ', 'SHORT LINKS'),
       value: formatNumber(stats.totalLinks),
-      change: `+${formatNumber(stats.linksLast7Days)} in the last 7 days`,
+      change: tr(`so‘nggi 7 kunda +${formatNumber(stats.linksLast7Days)}`, `+${formatNumber(stats.linksLast7Days)} за 7 дней`, `+${formatNumber(stats.linksLast7Days)} in the last 7 days`),
     },
     {
-      label: 'USERS',
+      label: tr('FOYDALANUVCHILAR', 'ПОЛЬЗОВАТЕЛИ', 'USERS'),
       value: formatNumber(stats.totalUsers),
-      change: 'Telegram & Google accounts',
+      change: tr('Email, Google va Telegram', 'Email, Google и Telegram', 'Email, Google & Telegram'),
     },
     {
-      label: 'BIO PAGES',
+      label: tr('BIO SAHIFALAR', 'BIO-СТРАНИЦЫ', 'BIO PAGES'),
       value: formatNumber(stats.totalBioPages),
       change: `${SITE_HOST}/b/@handle`,
     },
@@ -77,21 +82,21 @@ export default function StatsBand({ stats }: { stats: PublicStats }) {
           <div className="px-4 py-2.5 bg-zinc-900/70 border-b border-zinc-800 flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-mono text-zinc-300">
               <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-              <span className="font-semibold text-zinc-200">RECENT REDIRECTS</span>
+              <span className="font-semibold text-zinc-200">{tr('SO‘NGGI O‘TISHLAR', 'ПОСЛЕДНИЕ ПЕРЕХОДЫ', 'RECENT REDIRECTS')}</span>
               <span className="text-zinc-600 hidden sm:inline">·</span>
-              <span className="text-zinc-500 hidden sm:inline text-[11px]">Anonymized · updates every minute</span>
+              <span className="text-zinc-500 hidden sm:inline text-[11px]">{tr('Anonim · har daqiqada yangilanadi', 'Анонимно · обновляется каждую минуту', 'Anonymized · updates every minute')}</span>
             </div>
           </div>
 
           {stats.recentClicks.length === 0 ? (
             <div className="px-4 py-6 text-center text-xs font-mono text-zinc-500">
-              No redirects yet — shorten your first link above.
+              {tr('Hali o‘tishlar yo‘q — yuqorida birinchi havolani qisqartiring.', 'Переходов пока нет — сократите первую ссылку выше.', 'No redirects yet — shorten your first link above.')}
             </div>
           ) : (
             <div className="divide-y divide-zinc-800/60 font-mono text-xs overflow-x-auto">
               {stats.recentClicks.map((evt, idx) => {
                 const country = getCountryInfo(evt.country);
-                const region = evt.region !== 'Unknown' ? evt.region : country.nameEn;
+                const region = evt.region !== 'Unknown' ? regionName(evt.region, locale) : tr(country.nameUz, country.nameRu, country.nameEn);
                 return (
                   <div
                     key={idx}
@@ -105,8 +110,8 @@ export default function StatsBand({ stats }: { stats: PublicStats }) {
                     <div className="w-40 shrink-0 text-zinc-500 text-[11px] truncate">
                       {evt.os} · {evt.browser}
                     </div>
-                    <div className="w-20 text-right shrink-0 text-zinc-500 text-[11px] tabular-nums">
-                      {timeAgo(evt.created_at)}
+                    <div className="w-24 text-right shrink-0 text-zinc-500 text-[11px] tabular-nums" suppressHydrationWarning>
+                      {timeAgo(evt.created_at, tr)}
                     </div>
                   </div>
                 );

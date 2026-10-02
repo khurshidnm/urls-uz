@@ -14,6 +14,7 @@ import {
   verifyEmailLogin,
 } from '@/lib/email-auth';
 import { emailLoginAvailable, MailError } from '@/lib/mail';
+import { getLocale } from '@/lib/locale';
 import { passwordSchema } from '@/lib/passwords';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 import { parseJson } from '@/lib/validation';
@@ -72,7 +73,8 @@ export async function POST(request: NextRequest) {
         // Sending email costs money and can be abused: per address and per network
         const tooMany = (await limit(`email-send:${body.email}`, 5, 10 * 60_000)) ?? (await limit(`email-send-ip:${ip}`, 30, 60 * 60_000));
         if (tooMany) return tooMany;
-        const result = body.action === 'signup' ? await requestSignup(body) : await requestPasswordReset(body.email);
+        const locale = await getLocale();
+        const result = body.action === 'signup' ? await requestSignup(body, locale) : await requestPasswordReset(body.email, locale);
         if (!result.ok) return fail(result.error, result.code);
         // The same answer whether or not the email is registered
         return json({ success: true, sent: true, ...('devCode' in result && result.devCode ? { devCode: result.devCode } : {}) });
@@ -105,7 +107,7 @@ export async function POST(request: NextRequest) {
         const tooMany = await limit(`email-settings:${user.id}`, 5, 10 * 60_000);
         if (tooMany) return tooMany;
         if (body.action === 'connect-request') {
-          const result = await requestEmailConnect(user.id, body.email, body.password);
+          const result = await requestEmailConnect(user.id, body.email, body.password, await getLocale());
           if (!result.ok) return fail(result.error, result.code);
           return json({ success: true, sent: true, ...(result.devCode ? { devCode: result.devCode } : {}) });
         }

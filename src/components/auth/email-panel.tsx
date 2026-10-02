@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useAuth, type AuthView } from '@/lib/auth-context';
+import { useLanguage } from '@/lib/language-context';
 
 /** Steps inside a view: the form, then (sign-up) the emailed code, or (sign-in) the password reset. */
 type Step = 'form' | 'code' | 'reset' | 'reset-code';
@@ -24,6 +25,7 @@ async function postEmail(body: Record<string, unknown>) {
  */
 export default function EmailPanel({ view, emailAvailable }: { view: AuthView; emailAvailable: boolean }) {
   const { loginWithEmail, loginWithPassword, confirmEmailSignup } = useAuth();
+  const { tr, tm } = useLanguage();
   const [step, setStep] = useState<Step>('form');
   const [shownView, setShownView] = useState(view);
   const [identifier, setIdentifier] = useState('');
@@ -67,30 +69,30 @@ export default function EmailPanel({ view, emailAvailable }: { view: AuthView; e
       if (view === 'signin' && step === 'form') {
         // An address with "@" is an email account; anything else is a login
         const result = identifier.includes('@') ? await loginWithEmail(email, password) : await loginWithPassword(identifier.trim(), password);
-        if (!result.ok) setError(result.error || 'Email yoki parol noto‘g‘ri');
+        if (!result.ok) setError(result.error || tr('Email yoki parol noto‘g‘ri', 'Неверный email или пароль', 'Wrong email or password'));
       } else if (view === 'signup' && step === 'form') {
         const data = await postEmail({ action: 'signup', email, password, name });
-        if (!data.success) return setError(data.error || 'Bajarilmadi');
+        if (!data.success) return setError(data.error || tr('Bajarilmadi', 'Не удалось', 'Something went wrong'));
         setDevCode(data.devCode || '');
         setStep('code');
       } else if (step === 'code') {
         const result = await confirmEmailSignup(email, code);
-        if (!result.ok) setError(result.error || 'Kod noto‘g‘ri');
+        if (!result.ok) setError(result.error || tr('Kod noto‘g‘ri', 'Неверный код', 'Wrong code'));
       } else if (step === 'reset') {
         const data = await postEmail({ action: 'reset-request', email });
-        if (!data.success) return setError(data.error || 'Bajarilmadi');
+        if (!data.success) return setError(data.error || tr('Bajarilmadi', 'Не удалось', 'Something went wrong'));
         setDevCode(data.devCode || '');
         setStep('reset-code');
       } else {
         const data = await postEmail({ action: 'reset', email, code, password });
-        if (!data.success) return setError(data.error || 'Kod noto‘g‘ri');
+        if (!data.success) return setError(data.error || tr('Kod noto‘g‘ri', 'Неверный код', 'Wrong code'));
         goTo('form');
         setPassword('');
         setRepeat('');
-        setNotice('Parol yangilandi. Endi yangi parol bilan kiring.');
+        setNotice(tr('Parol yangilandi. Endi yangi parol bilan kiring.', 'Пароль обновлён. Войдите с новым паролем.', 'Password updated. Sign in with your new password.'));
       }
     } catch {
-      setError('Tarmoq xatosi yuz berdi');
+      setError(tr('Tarmoq xatosi yuz berdi', 'Ошибка сети', 'Network error'));
     } finally {
       setLoading(false);
     }
@@ -102,39 +104,44 @@ export default function EmailPanel({ view, emailAvailable }: { view: AuthView; e
   const codeStep = step === 'code' || step === 'reset-code';
   const newPassword = (view === 'signup' && step === 'form') || step === 'reset-code';
   const buttonText =
-    view === 'signin' && step === 'form' ? 'Kirish' : step === 'form' ? 'Ro‘yxatdan o‘tish' : step === 'code' ? 'Tasdiqlash' : step === 'reset' ? 'Tiklash kodini yuborish' : 'Parolni yangilash';
+    view === 'signin' && step === 'form' ? tr('Kirish', 'Войти', 'Sign in') : step === 'form' ? tr('Ro‘yxatdan o‘tish', 'Зарегистрироваться', 'Sign up') : step === 'code' ? tr('Tasdiqlash', 'Подтвердить', 'Confirm') : step === 'reset' ? tr('Tiklash kodini yuborish', 'Отправить код', 'Send reset code') : tr('Parolni yangilash', 'Обновить пароль', 'Update password');
 
   return (
     <form onSubmit={submit} className="space-y-3.5">
       {step !== 'form' && (
         <button type="button" onClick={() => goTo('form')} className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-white">
-          <ArrowLeft className="w-3 h-3" /> Orqaga
+          <ArrowLeft className="w-3 h-3" /> {tr('Orqaga', 'Назад', 'Back')}
         </button>
       )}
 
       {step === 'code' && (
         <p className="text-xs text-slate-300 leading-relaxed">
-          <strong className="text-white">{email}</strong> manziliga 6 xonali kod yuborildi. Xat kelmasa, «Spam» papkasini tekshiring.
+          {tr('Kod yuborildi:', 'Код отправлен на', 'We sent a 6-digit code to')} <strong className="text-white">{email}</strong>.{' '}
+          {tr('6 xonali kodni kiriting. Xat kelmasa, «Spam» papkasini tekshiring.', 'Введите 6-значный код. Если письма нет, проверьте «Спам».', 'Enter it below. No email? Check your spam folder.')}
         </p>
       )}
       {step === 'reset-code' && (
         <p className="text-xs text-slate-300 leading-relaxed">
-          Agar <strong className="text-white">{email}</strong> bilan akkaunt bo‘lsa, unga 6 xonali kod yuborildi. Akkaunt Google orqali ochilgan bo‘lsa, xatda
-          nima qilish kerakligi yozilgan. Xat kelmasa, «Spam» papkasini tekshiring.
+          {tr('Agar', 'Если для', 'If')} <strong className="text-white">{email}</strong>{' '}
+          {tr(
+            'bilan akkaunt bo‘lsa, unga 6 xonali kod yuborildi. Akkaunt Google orqali ochilgan bo‘lsa, xatda nima qilish kerakligi yozilgan. Xat kelmasa, «Spam» papkasini tekshiring.',
+            'есть аккаунт, на него отправлен 6-значный код. Если аккаунт создан через Google, в письме сказано, что делать. Если письма нет, проверьте «Спам».',
+            'has an account, we sent a 6-digit code to it. If the account was created with Google, the email explains what to do. No email? Check your spam folder.'
+          )}
         </p>
       )}
-      {step === 'reset' && <p className="text-xs text-slate-400">Emailingizni kiriting: parolni tiklash kodi yuboriladi.</p>}
+      {step === 'reset' && <p className="text-xs text-slate-400">{tr('Emailingizni kiriting: parolni tiklash kodi yuboriladi.', 'Введите email: мы отправим код для сброса пароля.', 'Enter your email and we’ll send a password reset code.')}</p>}
 
       {view === 'signup' && step === 'form' && (
         <div>
-          <label htmlFor="auth-name" className={label}>Ismingiz</label>
+          <label htmlFor="auth-name" className={label}>{tr('Ismingiz', 'Ваше имя', 'Your name')}</label>
           <input id="auth-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required maxLength={80} className={input} />
         </div>
       )}
 
       {(step === 'form' || step === 'reset') && (
         <div>
-          <label htmlFor="auth-email" className={label}>{view === 'signin' && step === 'form' ? 'Email yoki login' : 'Email'}</label>
+          <label htmlFor="auth-email" className={label}>{view === 'signin' && step === 'form' ? tr('Email yoki login', 'Email или логин', 'Email or login') : 'Email'}</label>
           <input
             id="auth-email"
             type={view === 'signin' && step === 'form' ? 'text' : 'email'}
@@ -150,7 +157,7 @@ export default function EmailPanel({ view, emailAvailable }: { view: AuthView; e
 
       {codeStep && (
         <div>
-          <label htmlFor="auth-code" className={label}>Tasdiqlash kodi</label>
+          <label htmlFor="auth-code" className={label}>{tr('Tasdiqlash kodi', 'Код подтверждения', 'Verification code')}</label>
           <input
             id="auth-code"
             value={code}
@@ -167,10 +174,10 @@ export default function EmailPanel({ view, emailAvailable }: { view: AuthView; e
       {(step === 'form' || step === 'reset-code') && (
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label htmlFor="auth-password" className="text-xs font-semibold text-slate-300">{step === 'reset-code' ? 'Yangi parol' : 'Parol'}</label>
+            <label htmlFor="auth-password" className="text-xs font-semibold text-slate-300">{step === 'reset-code' ? tr('Yangi parol', 'Новый пароль', 'New password') : tr('Parol', 'Пароль', 'Password')}</label>
             {view === 'signin' && step === 'form' && emailAvailable && (
               <button type="button" onClick={() => goTo('reset')} className="text-[11px] text-indigo-400 hover:text-indigo-300">
-                Parolni unutdingizmi?
+                {tr('Parolni unutdingizmi?', 'Забыли пароль?', 'Forgot password?')}
               </button>
             )}
           </div>
@@ -189,15 +196,15 @@ export default function EmailPanel({ view, emailAvailable }: { view: AuthView; e
 
       {newPassword && (
         <div>
-          <label htmlFor="auth-password-repeat" className={label}>Parolni takrorlang</label>
+          <label htmlFor="auth-password-repeat" className={label}>{tr('Parolni takrorlang', 'Повторите пароль', 'Repeat password')}</label>
           <input id="auth-password-repeat" type="password" value={repeat} onChange={(e) => setRepeat(e.target.value)} autoComplete="new-password" required className={input} />
-          <p className={`mt-1 text-[11px] ${mismatch ? 'text-rose-400' : 'text-slate-500'}`}>{mismatch ? 'Parollar mos emas' : 'Kamida 8 ta belgi'}</p>
+          <p className={`mt-1 text-[11px] ${mismatch ? 'text-rose-400' : 'text-slate-500'}`}>{mismatch ? tr('Parollar mos emas', 'Пароли не совпадают', 'Passwords don’t match') : tr('Kamida 8 ta belgi', 'Минимум 8 символов', 'At least 8 characters')}</p>
         </div>
       )}
 
-      {devCode && <p className="text-[11px] text-amber-300/90">Dev rejimi (ZeptoMail sozlanmagan), kod: {devCode}</p>}
+      {devCode && <p className="text-[11px] text-amber-300/90">{tr('Dev rejimi (ZeptoMail sozlanmagan), kod', 'Режим разработки (ZeptoMail не настроен), код', 'Dev mode (ZeptoMail not set up), code')}: {devCode}</p>}
       {notice && <p className="text-xs text-emerald-300 bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/20">{notice}</p>}
-      {error && <p className="text-xs text-rose-400 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">{error}</p>}
+      {error && <p className="text-xs text-rose-400 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">{tm(error)}</p>}
 
       <button
         type="submit"

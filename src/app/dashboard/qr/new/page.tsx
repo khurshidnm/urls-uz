@@ -5,8 +5,12 @@ import { requireWorkspace } from '@/lib/auth';
 import { toClientJson } from '@/lib/serialize';
 import QrStudioClient from '@/components/qr-studio/qr-studio';
 import type { QrDataType } from '@/lib/qr-payloads';
+import { getTr } from '@/lib/locale';
 
-export const metadata: Metadata = { title: 'Yangi QR kod' };
+export async function generateMetadata(): Promise<Metadata> {
+  const tr = await getTr();
+  return { title: tr('Yangi QR kod', 'Новый QR-код', 'New QR code') };
+}
 
 interface Props {
   searchParams: Promise<{ link?: string; type?: string }>;

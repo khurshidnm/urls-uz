@@ -4,19 +4,21 @@ import React from 'react';
 import { Globe } from 'lucide-react';
 import { TelegramIcon, InstagramIcon, YouTubeIcon, LinkedInIcon, GitHubIcon, TikTokIcon, TwitterXIcon } from '@/components/ui/icons';
 import type { BioBuilder } from './use-bio-builder';
+import { useLanguage } from '@/lib/language-context';
 
 /** Social network handles shown as icons. */
 export default function SocialTab({ b }: { b: BioBuilder }) {
+  const { tr } = useLanguage();
   const { socialTelegram, setSocialTelegram, socialInstagram, setSocialInstagram, socialYoutube, setSocialYoutube, socialTiktok, setSocialTiktok, socialGithub, setSocialGithub, socialLinkedin, setSocialLinkedin, socialTwitter, setSocialTwitter, socialWebsite, setSocialWebsite } = b;
   return (
     <div className="space-y-4">
       <div className="p-5 rounded-2xl bg-zinc-900/40 border border-zinc-800 space-y-4">
         <div>
           <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider font-mono">
-            Ijtimoiy Tarmoq Havolalari
+            {tr('Ijtimoiy Tarmoq Havolalari', 'Ссылки на соцсети', 'Social links')}
           </h3>
           <p className="text-[11px] text-zinc-500 mt-0.5">
-            Sahifangiz tepasida chiroyli nishon ko‘rinishida aks etadi
+            {tr('Sahifangiz tepasida chiroyli nishon ko‘rinishida aks etadi', 'Показываются значками вверху страницы', 'Shown as icons at the top of your page')}
           </p>
         </div>
 
@@ -28,7 +30,7 @@ export default function SocialTab({ b }: { b: BioBuilder }) {
               type="text"
               value={socialTelegram}
               onChange={(e) => setSocialTelegram(e.target.value)}
-              placeholder="Telegram (kanal_nomi)"
+              placeholder={tr('Telegram (kanal_nomi)', 'Telegram (имя_канала)', 'Telegram (channel_name)')}
               className="w-full bg-transparent text-white focus:outline-none font-mono"
             />
           </div>
@@ -40,7 +42,7 @@ export default function SocialTab({ b }: { b: BioBuilder }) {
               type="text"
               value={socialInstagram}
               onChange={(e) => setSocialInstagram(e.target.value)}
-              placeholder="Instagram (profil_nomi)"
+              placeholder={tr('Instagram (profil_nomi)', 'Instagram (имя_профиля)', 'Instagram (profile_name)')}
               className="w-full bg-transparent text-white focus:outline-none font-mono"
             />
           </div>
@@ -52,7 +54,7 @@ export default function SocialTab({ b }: { b: BioBuilder }) {
               type="text"
               value={socialYoutube}
               onChange={(e) => setSocialYoutube(e.target.value)}
-              placeholder="YouTube (@kanal_nomi)"
+              placeholder={tr('YouTube (@kanal_nomi)', 'YouTube (@канал)', 'YouTube (@channel)')}
               className="w-full bg-transparent text-white focus:outline-none font-mono"
             />
           </div>
@@ -64,7 +66,7 @@ export default function SocialTab({ b }: { b: BioBuilder }) {
               type="text"
               value={socialTiktok}
               onChange={(e) => setSocialTiktok(e.target.value)}
-              placeholder="TikTok (@foydalanuvchi)"
+              placeholder={tr('TikTok (@foydalanuvchi)', 'TikTok (@пользователь)', 'TikTok (@user)')}
               className="w-full bg-transparent text-white focus:outline-none font-mono"
             />
           </div>
@@ -112,7 +114,7 @@ export default function SocialTab({ b }: { b: BioBuilder }) {
               type="text"
               value={socialWebsite}
               onChange={(e) => setSocialWebsite(e.target.value)}
-              placeholder="Shaxsiy veb-sayt (https://...)"
+              placeholder={tr('Shaxsiy veb-sayt (https://...)', 'Личный сайт (https://...)', 'Personal website (https://...)')}
               className="w-full bg-transparent text-white focus:outline-none font-mono"
             />
           </div>

@@ -16,6 +16,8 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
   use: {
+    // The site follows the browser's language on a first visit; tests read the Uzbek UI
+    locale: 'uz-UZ',
     baseURL: E2E_ENV.NEXT_PUBLIC_APP_URL,
     trace: 'retain-on-failure',
   },

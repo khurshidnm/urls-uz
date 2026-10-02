@@ -18,7 +18,7 @@ import { Modal } from '@/components/ui/modal';
 
 export default function BillingClient() {
   const { user } = useAuth();
-  const { t, locale } = useLanguage();
+  const { locale, tr } = useLanguage();
 
   const [infoModalOpen, setInfoModalOpen] = useState(false);
   const [selectedPlanName, setSelectedPlanName] = useState('Pro');
@@ -26,45 +26,39 @@ export default function BillingClient() {
   const plans = [
     {
       id: 'free',
-      name: locale === 'uz' ? 'Free (Hobby)' : locale === 'ru' ? 'Базовый (Free)' : 'Free (Hobby)',
-      badge: 'HOZIR FAOL',
+      name: tr('Free (Hobby)', 'Базовый (Free)', 'Free (Hobby)'),
+      badge: tr('HOZIR FAOL', 'ДОСТУПЕН', 'AVAILABLE NOW'),
       badgeColor: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25',
       price: '0 UZS',
-      period: '/ abadiy',
+      period: tr('/ abadiy', '/ навсегда', '/ forever'),
       comingSoon: false,
       popular: false,
-      description: locale === 'uz'
-        ? 'Shaxsiy foydalanish va qisqa havolalar uchun asosiy imkoniyatlar'
-        : 'Для личных нужд и сокращения ссылок',
-      features: PLAN_FEATURES.free,
+      description: tr('Shaxsiy foydalanish va qisqa havolalar uchun asosiy imkoniyatlar', 'Для личных нужд и сокращения ссылок', 'The essentials for personal use and short links'),
+      features: PLAN_FEATURES[locale].free,
     },
     {
       id: 'pro',
       name: 'Pro (Growth)',
-      badge: 'TEZ KUNDA',
+      badge: tr('TEZ KUNDA', 'СКОРО', 'COMING SOON'),
       badgeColor: 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30',
-      price: 'Tez kunda',
-      period: '/ pullik tarif',
+      price: tr('Tez kunda', 'Скоро', 'Soon'),
+      period: tr('/ pullik tarif', '/ платный тариф', '/ paid plan'),
       comingSoon: true,
       popular: true,
-      description: locale === 'uz'
-        ? 'Katta auditoriya, blogerlar va marketing kampaniyalari uchun'
-        : 'Для блогеров и масштабных кампаний',
-      features: PLAN_FEATURES.pro,
+      description: tr('Katta auditoriya, blogerlar va marketing kampaniyalari uchun', 'Для блогеров и масштабных кампаний', 'For creators, marketers and large campaigns'),
+      features: PLAN_FEATURES[locale].pro,
     },
     {
       id: 'enterprise',
-      name: locale === 'uz' ? 'Biznes' : 'Business',
-      badge: 'TEZ KUNDA',
+      name: tr('Biznes', 'Бизнес', 'Business'),
+      badge: tr('TEZ KUNDA', 'СКОРО', 'COMING SOON'),
       badgeColor: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
-      price: 'Tez kunda',
-      period: '/ korporativ',
+      price: tr('Tez kunda', 'Скоро', 'Soon'),
+      period: tr('/ korporativ', '/ корпоративный', '/ corporate'),
       comingSoon: true,
       popular: false,
-      description: locale === 'uz'
-        ? 'Tashkilotlar uchun: Pro imkoniyatlari va alohida shartlar'
-        : 'Для корпоративных клиентов и интеграций',
-      features: PLAN_FEATURES.enterprise,
+      description: tr('Tashkilotlar uchun: Pro imkoniyatlari va alohida shartlar', 'Для организаций: возможности Pro и особые условия', 'For organisations: everything in Pro and custom terms'),
+      features: PLAN_FEATURES[locale].enterprise,
     },
   ];
 
@@ -79,9 +73,9 @@ export default function BillingClient() {
     <div className="space-y-8">
       {/* Title */}
       <div>
-        <h1 className="text-2xl font-semibold text-white tracking-tight">Tarif & Xizmatlar</h1>
+        <h1 className="text-2xl font-semibold text-white tracking-tight">{tr('Tarif & Xizmatlar', 'Тариф и услуги', 'Plan & billing')}</h1>
         <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-          Hozirda bepul versiya barcha uchun 10 ta faol havola bilan faol. Kengaytirilgan pulli tariflar tez kunda ishga tushadi.
+          {tr('Hozirda bepul versiya barcha uchun 10 ta faol havola bilan faol. Kengaytirilgan pulli tariflar tez kunda ishga tushadi.', 'Сейчас всем доступна бесплатная версия с 10 активными ссылками. Платные тарифы скоро появятся.', 'The free plan with 10 active links is available to everyone. Paid plans launch soon.')}
         </p>
       </div>
 
@@ -94,21 +88,21 @@ export default function BillingClient() {
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-semibold text-white">
-                {isFreePlan ? 'Bepul (Free) Tarif' : `${user?.plan} Tarif`}
+                {isFreePlan ? tr('Bepul (Free) tarif', 'Бесплатный тариф (Free)', 'Free plan') : tr(`${user?.plan} tarif`, `Тариф ${user?.plan}`, `${user?.plan} plan`)}
               </h3>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
                 HOZIR FAOL
               </span>
             </div>
             <p className="text-xs text-zinc-400 mt-1 font-mono">
-              Limit: 10 ta faol havola · Abadiy bepul · To‘lov talab etilmaydi
+              {tr('Limit: 10 ta faol havola · Abadiy bepul · To‘lov talab etilmaydi', 'Лимит: 10 активных ссылок · Бесплатно навсегда · Без оплаты', 'Limit: 10 active links · Free forever · No payment needed')}
             </p>
           </div>
         </div>
 
         <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-mono">
           <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-          <span>Pullik tariflar tez kunda ulanadi</span>
+          <span>{tr('Pullik tariflar tez kunda ulanadi', 'Платные тарифы скоро появятся', 'Paid plans coming soon')}</span>
         </div>
       </div>
 
@@ -177,16 +171,16 @@ export default function BillingClient() {
                   className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 bg-zinc-950 border border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition-colors"
                 >
                   <Lock className="w-3.5 h-3.5 text-zinc-500" />
-                  <span>Tez kunda ishga tushadi</span>
+                  <span>{tr('Tez kunda ishga tushadi', 'Скоро появится', 'Coming soon')}</span>
                 </button>
               ) : isCurrent ? (
                 <div className="w-full py-2.5 px-3 text-center text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-xl font-mono flex items-center justify-center gap-1.5">
                   <Check className="w-3.5 h-3.5" />
-                  <span>Amaldagi faol tarif</span>
+                  <span>{tr('Amaldagi faol tarif', 'Ваш текущий тариф', 'Your current plan')}</span>
                 </div>
               ) : (
                 <div className="w-full py-2.5 text-center text-xs text-zinc-500 font-semibold bg-zinc-900 rounded-xl">
-                  Tanlangan
+                  {tr('Tanlangan', 'Выбран', 'Selected')}
                 </div>
               )}
             </div>
@@ -195,13 +189,13 @@ export default function BillingClient() {
       </div>
 
       {/* Not built yet: listed as planned, never as included in a plan */}
-      <p className="text-[11px] font-mono text-zinc-500">Rejada (hali mavjud emas): {PLANNED_FEATURES.join(' · ')}</p>
+      <p className="text-[11px] font-mono text-zinc-500">{tr('Rejada (hali mavjud emas)', 'В планах (пока нет)', 'Planned (not available yet)')}: {PLANNED_FEATURES[locale].join(' · ')}</p>
 
       {/* Info Modal for Coming Soon Plans */}
       <Modal
         isOpen={infoModalOpen}
         onClose={() => setInfoModalOpen(false)}
-        title="Pullik tariflar haqida"
+        title={tr('Pullik tariflar haqida', 'О платных тарифах', 'About paid plans')}
       >
         <div className="space-y-4 text-center py-2">
           <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto">
@@ -210,21 +204,24 @@ export default function BillingClient() {
 
           <div>
             <h3 className="text-base font-bold text-white mb-1.5">
-              {selectedPlanName} — Tez kunda ishga tushadi!
+              {selectedPlanName} — {tr('Tez kunda ishga tushadi!', 'Скоро появится!', 'Coming soon!')}
             </h3>
             <p className="text-xs text-zinc-400 leading-relaxed max-w-sm mx-auto">
-              Hozirda barcha foydalanuvchilar uchun bepul versiya 10 ta havola bilan to‘liq ochiq.
-              Payme, Click va Uzum Bank orqali rasmiy to‘lov shlyuzlari integratsiya qilingach, pullik tariflar taqdim etiladi.
+              {tr(
+                'Hozirda barcha foydalanuvchilar uchun bepul versiya 10 ta havola bilan to‘liq ochiq. Payme, Click va Uzum Bank orqali rasmiy to‘lov shlyuzlari integratsiya qilingach, pullik tariflar taqdim etiladi.',
+                'Сейчас всем пользователям полностью доступна бесплатная версия с 10 ссылками. Платные тарифы появятся после подключения Payme, Click и Uzum Bank.',
+                'The free plan with 10 links is fully open to everyone. Paid plans arrive once Payme, Click and Uzum Bank payments are connected.'
+              )}
             </p>
           </div>
 
           <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-left text-xs space-y-1.5 text-zinc-300">
             <div className="font-semibold text-white flex items-center gap-1.5">
               <Zap className="w-3.5 h-3.5 text-amber-400" />
-              <span>Pro tarif imkoniyatlari:</span>
+              <span>{tr('Pro tarif imkoniyatlari:', 'Возможности тарифа Pro:', 'What Pro includes:')}</span>
             </div>
             <ul className="text-[11px] text-zinc-400 list-disc list-inside">
-              {PLAN_FEATURES.pro.map((f) => (
+              {PLAN_FEATURES[locale].pro.map((f) => (
                 <li key={f}>{f}</li>
               ))}
             </ul>
@@ -234,7 +231,7 @@ export default function BillingClient() {
             onClick={() => setInfoModalOpen(false)}
             className="w-full py-2.5 bg-white text-zinc-950 hover:bg-zinc-200 text-xs font-semibold rounded-xl transition-colors"
           >
-            Tushundim
+            {tr('Tushundim', 'Понятно', 'Got it')}
           </button>
         </div>
       </Modal>

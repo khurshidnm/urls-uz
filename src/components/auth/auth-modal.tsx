@@ -45,7 +45,7 @@ const TelegramIcon = () => (
  */
 export default function AuthModal() {
   const { isAuthModalOpen, closeAuthModal, pendingUrl, loginMethods, authView, setAuthView } = useAuth();
-  const { locale } = useLanguage();
+  const { locale, tr } = useLanguage();
   const [phoneMode, setPhoneMode] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const t = TEXT[authView][locale] ?? TEXT[authView].uz;
@@ -85,7 +85,7 @@ export default function AuthModal() {
             {emailForm && (
               <div className="flex items-center gap-3" aria-hidden>
                 <div className="flex-grow border-t border-[var(--border-subtle)]" />
-                <span className="text-[11px] text-slate-500 font-medium">yoki</span>
+                <span className="text-[11px] text-slate-500 font-medium">{tr('yoki', 'или', 'or')}</span>
                 <div className="flex-grow border-t border-[var(--border-subtle)]" />
               </div>
             )}
@@ -135,7 +135,7 @@ export default function AuthModal() {
 
         <div className="pt-3 border-t border-[var(--border-subtle)] text-center flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
           <Lock className="w-3 h-3 text-emerald-400" />
-          <span>Havolalarni faqat tasdiqlangan foydalanuvchilar yaratadi: fishingdan himoya</span>
+          <span>{tr('Havolalarni faqat tasdiqlangan foydalanuvchilar yaratadi: fishingdan himoya', 'Ссылки создают только подтверждённые пользователи: защита от фишинга', 'Only verified users can create links: phishing protection')}</span>
         </div>
       </div>
     </Modal>

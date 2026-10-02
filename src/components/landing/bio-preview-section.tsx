@@ -29,7 +29,7 @@ const FALLBACK_AVATAR =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%236366f1'/><stop offset='50%' stop-color='%23a855f7'/><stop offset='100%' stop-color='%23ec4899'/></linearGradient></defs><circle cx='50' cy='50' r='50' fill='url(%23g)'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M18 86c0-17.7 14.3-32 32-32s32 14.3 32 32' fill='%23ffffff' opacity='0.95'/></svg>";
 
 export default function BioPreviewSection() {
-  const { locale, t } = useLanguage();
+  const { locale, t, tr } = useLanguage();
   const [device, setDevice] = useState<'phone' | 'tablet'>('phone');
   const [theme, setTheme] = useState<'midnight' | 'emerald' | 'indigo'>('midnight');
   const [copied, setCopied] = useState(false);
@@ -176,7 +176,7 @@ export default function BioPreviewSection() {
 
                       {/* Bio Description */}
                       <p className="text-[11px] text-zinc-400 leading-relaxed max-w-[240px] mx-auto">
-                        Tadbirkor & Veb Dasturchi. Toshkent shahrida startaplar va raqamli marketing loyihalari 🚀
+                        {tr('Tadbirkor & Veb Dasturchi. Toshkent shahrida startaplar va raqamli marketing loyihalari 🚀', 'Предприниматель и веб-разработчик. Стартапы и digital-маркетинг в Ташкенте 🚀', 'Entrepreneur & web developer. Startups and digital marketing in Tashkent 🚀')}
                       </p>
 
                       {/* Social Channels */}
@@ -203,7 +203,7 @@ export default function BioPreviewSection() {
                           </div>
                           <div className="min-w-0">
                             <div className="text-xs font-semibold text-white truncate">
-                              🔥 Yangi Kurs & Loyihalarim
+                              {tr('🔥 Yangi Kurs & Loyihalarim', '🔥 Новый курс и мои проекты', '🔥 New course & my projects')}
                             </div>
                             <div className="text-[10px] font-mono text-zinc-400 truncate">
                               Startup Academy 2026
@@ -226,10 +226,10 @@ export default function BioPreviewSection() {
                           </div>
                           <div className="min-w-0">
                             <div className="text-xs font-semibold text-white truncate">
-                              Telegram Kanalga Qo‘shilish
+                              {tr('Telegram Kanalga Qo‘shilish', 'Подписаться на Telegram-канал', 'Join the Telegram channel')}
                             </div>
                             <div className="text-[10px] font-mono text-zinc-400 truncate">
-                              @khurshid_notes — Eksklyuziv
+                              {tr('@khurshid_notes — Eksklyuziv', '@khurshid_notes — эксклюзив', '@khurshid_notes — exclusive')}
                             </div>
                           </div>
                         </div>
@@ -249,10 +249,10 @@ export default function BioPreviewSection() {
                           </div>
                           <div className="min-w-0">
                             <div className="text-xs font-semibold text-white truncate">
-                              Portfolio & Aloqa
+                              {tr('Portfolio & Aloqa', 'Портфолио и контакты', 'Portfolio & contact')}
                             </div>
                             <div className="text-[10px] font-mono text-zinc-400 truncate">
-                              Startaplar va hamkorlik
+                              {tr('Startaplar va hamkorlik', 'Стартапы и сотрудничество', 'Startups and partnerships')}
                             </div>
                           </div>
                         </div>
@@ -266,7 +266,7 @@ export default function BioPreviewSection() {
                         <TrendingUp className="w-3 h-3" />
                         <span>LIVE TELEMETRY</span>
                       </span>
-                      <span>3,420 bosish</span>
+                      <span>3,420 {tr('bosish', 'переходов', 'clicks')}</span>
                     </div>
                   </div>
 
@@ -294,7 +294,7 @@ export default function BioPreviewSection() {
                         type="button"
                         onClick={handleCopyLink}
                         className="ml-1 text-zinc-500 hover:text-zinc-300 transition-colors"
-                        title="Havolani nusxalash"
+                        title={tr('Havolani nusxalash', 'Скопировать ссылку', 'Copy link')}
                       >
                         {copied ? <Check className="w-2.5 h-2.5 text-emerald-400" /> : <Copy className="w-2.5 h-2.5" />}
                       </button>
@@ -336,7 +336,7 @@ export default function BioPreviewSection() {
                         </div>
 
                         <p className="text-[10px] text-zinc-400 leading-tight">
-                          Tadbirkor & Veb Dasturchi. Toshkent shahrida startaplar 🚀
+                          {tr('Tadbirkor & Veb Dasturchi. Toshkent shahrida startaplar 🚀', 'Предприниматель и веб-разработчик. Стартапы в Ташкенте 🚀', 'Entrepreneur & web developer. Startups in Tashkent 🚀')}
                         </p>
 
                         {/* Social Buttons */}
@@ -361,7 +361,7 @@ export default function BioPreviewSection() {
                             <Flame className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                             <div className="min-w-0">
                               <div className="text-xs font-semibold text-white truncate">
-                                🔥 Yangi Kurs & Loyihalarim
+                                {tr('🔥 Yangi Kurs & Loyihalarim', '🔥 Новый курс и мои проекты', '🔥 New course & my projects')}
                               </div>
                               <div className="text-[10px] font-mono text-zinc-400 truncate">
                                 Startup Academy
@@ -379,7 +379,7 @@ export default function BioPreviewSection() {
                             <MessageCircle className="w-3.5 h-3.5 text-[#229ED9] shrink-0" />
                             <div className="min-w-0">
                               <div className="text-xs font-semibold text-white truncate">
-                                Telegram Kanalga Qo‘shilish
+                                {tr('Telegram Kanalga Qo‘shilish', 'Подписаться на Telegram-канал', 'Join the Telegram channel')}
                               </div>
                               <div className="text-[10px] font-mono text-zinc-400 truncate">
                                 @khurshid_notes
@@ -397,10 +397,10 @@ export default function BioPreviewSection() {
                             <Briefcase className="w-3.5 h-3.5 text-zinc-300 shrink-0" />
                             <div className="min-w-0">
                               <div className="text-xs font-semibold text-white truncate">
-                                Portfolio & Hamkorlik
+                                {tr('Portfolio & Hamkorlik', 'Портфолио и сотрудничество', 'Portfolio & partnerships')}
                               </div>
                               <div className="text-[10px] font-mono text-zinc-400 truncate">
-                                Rezyume va keyslar
+                                {tr('Rezyume va keyslar', 'Резюме и кейсы', 'CV and case studies')}
                               </div>
                             </div>
                           </div>
@@ -411,9 +411,9 @@ export default function BioPreviewSection() {
                         <div className="pt-1.5 flex items-center justify-between text-[10px] text-zinc-400 px-1 border-t border-zinc-800/80 font-mono">
                           <span className="flex items-center gap-1 text-emerald-400">
                             <TrendingUp className="w-3 h-3" />
-                            <span>+38% konversiya</span>
+                            <span>+38% {tr('konversiya', 'конверсия', 'conversion')}</span>
                           </span>
-                          <span>3,420 bosishlar</span>
+                          <span>3,420 {tr('bosish', 'переходов', 'clicks')}</span>
                         </div>
                       </div>
                     </div>
@@ -432,7 +432,7 @@ export default function BioPreviewSection() {
             <div className="flex items-center gap-2 mt-5 font-mono text-xs">
               <span className="text-[11px] text-zinc-500 flex items-center gap-1">
                 <Palette className="w-3 h-3 text-zinc-400" />
-                <span>PALITRA:</span>
+                <span>{tr('PALITRA:', 'ПАЛИТРА:', 'PALETTE:')}</span>
               </span>
               {[
                 { id: 'midnight' as const, label: 'Obsidian', color: 'bg-zinc-700' },
@@ -467,14 +467,14 @@ export default function BioPreviewSection() {
                   ? 'Barcha havolalaringiz uchun bitta mukammal portal'
                   : locale === 'ru'
                   ? 'Единая страница для всех ваших соцсетей и ссылок'
-                  : 'High-converting responsive bio portal'}
+                  : 'One page for all your links'}
               </h2>
               <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed max-w-xl">
                 {locale === 'uz'
                   ? `Instagram yoki TikTok profilida bitta havola bilan cheklanmang. ${SITE_HOST}/b/@nomingiz orqali kanallaringiz, xizmatlaringiz va kontaktlaringizni mobil va planshetda mukammal ko‘rsating.`
                   : locale === 'ru'
-                  ? 'Объедините все важные ссылки с удобной аналитикой и адаптивным отображением на телефонах и планшетах.'
-                  : 'Convert profile traffic into direct channel subscribers and sales with custom branding and real-time conversion telemetry.'}
+                  ? `Не ограничивайтесь одной ссылкой в профиле Instagram или TikTok. Покажите каналы, услуги и контакты на ${SITE_HOST}/b/@имя — на телефоне и планшете.`
+                  : `Don’t settle for a single link in your Instagram or TikTok profile. Show your channels, services and contacts at ${SITE_HOST}/b/@yourname, on phones and tablets alike.`}
               </p>
             </div>
 
@@ -485,9 +485,9 @@ export default function BioPreviewSection() {
                   <ShieldCheck className="w-3.5 h-3.5 text-zinc-200" />
                 </div>
                 <div>
-                  <strong className="text-zinc-200 font-medium block">Shaxsiy brend domeni</strong>
+                  <strong className="text-zinc-200 font-medium block">{tr('Shaxsiy brend domeni', 'Личный адрес страницы', 'Your own page address')}</strong>
                   <span className="text-[11px] text-zinc-500 font-mono">
-                    {SITE_HOST}/b/@username formati
+                    {SITE_HOST}/b/@username
                   </span>
                 </div>
               </div>
@@ -497,9 +497,9 @@ export default function BioPreviewSection() {
                   <BarChart3 className="w-3.5 h-3.5 text-zinc-200" />
                 </div>
                 <div>
-                  <strong className="text-zinc-200 font-medium block">Alohida havola tahlillari</strong>
+                  <strong className="text-zinc-200 font-medium block">{tr('Alohida havola tahlillari', 'Аналитика по каждой ссылке', 'Per-link analytics')}</strong>
                   <span className="text-[11px] text-zinc-500 font-mono">
-                    Har bir havola bo‘yicha aniq CTR va konversiya
+                    {tr('Har bir havola bo‘yicha aniq CTR va konversiya', 'Точный CTR и конверсия по каждой ссылке', 'Exact CTR and conversion for every link')}
                   </span>
                 </div>
               </div>
@@ -509,9 +509,9 @@ export default function BioPreviewSection() {
                   <Palette className="w-3.5 h-3.5 text-zinc-200" />
                 </div>
                 <div>
-                  <strong className="text-zinc-200 font-medium block">Moslashuvchan mavzular</strong>
+                  <strong className="text-zinc-200 font-medium block">{tr('Moslashuvchan mavzular', 'Гибкие темы', 'Flexible themes')}</strong>
                   <span className="text-[11px] text-zinc-500 font-mono">
-                    Obsidian, Emerald va Indigo kontrast ranglar
+                    {tr('Obsidian, Emerald va Indigo kontrast ranglar', 'Контрастные темы Obsidian, Emerald и Indigo', 'Obsidian, Emerald and Indigo high-contrast themes')}
                   </span>
                 </div>
               </div>

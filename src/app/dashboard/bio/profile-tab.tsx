@@ -7,24 +7,26 @@ import { Check, Upload, Crop } from 'lucide-react';
 import { AVATAR_PRESETS } from './bio-builder-constants';
 import type { BioBuilder } from './use-bio-builder';
 import { SITE_HOST } from '@/lib/site';
+import { useLanguage } from '@/lib/language-context';
 
 /** Handle, title, bio text and avatar. */
 export default function ProfileTab({ b }: { b: BioBuilder }) {
+  const { tr, tm } = useLanguage();
   const { handle, savedHandle, setHandle, title, setTitle, bio, setBio, avatarUrl, setAvatarUrl, setCropModalOpen, rawImageSrc, avatarSizeKb, setAvatarSizeKb, fileInputRef, handleFileSelect } = b;
   // The saved handle stays valid even if it predates the current rules
   const problem = handle && handle !== savedHandle ? handleProblem(handle) : null;
   const handleHint = problem
-    ? { error: true, text: problem.message }
-    : { error: false, text: `Kamida ${HANDLE_MIN_LENGTH} ta belgi: faqat lotin harflari va raqamlar.` };
+    ? { error: true, text: tm(problem.message) }
+    : { error: false, text: tr(`Kamida ${HANDLE_MIN_LENGTH} ta belgi: faqat lotin harflari va raqamlar.`, `Минимум ${HANDLE_MIN_LENGTH} символов: только латинские буквы и цифры.`, `At least ${HANDLE_MIN_LENGTH} characters: Latin letters and digits only.`) };
   return (
     <div className="space-y-4">
       <div className="p-5 rounded-2xl bg-zinc-900/40 border border-zinc-800 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider font-mono">
-            Asosiy Profil Ma’lumotlari
+            {tr('Asosiy Profil Ma’lumotlari', 'Основные данные профиля', 'Profile details')}
           </h3>
           <span className="text-[11px] font-mono text-zinc-500">
-            Tasdiqlangan nishon (Pro tez kunda)
+            {tr('Tasdiqlangan nishon (Pro tez kunda)', 'Значок подтверждения (скоро в Pro)', 'Verified badge (coming with Pro)')}
           </span>
         </div>
 
@@ -32,7 +34,7 @@ export default function ProfileTab({ b }: { b: BioBuilder }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium text-zinc-400 mb-1.5">
-              Shaxsiy Handle / Slug
+              {tr('Shaxsiy Handle / Slug', 'Имя страницы (handle)', 'Page handle')}
             </label>
             <div className="flex items-center bg-zinc-950 border border-zinc-800 focus-within:border-zinc-600 rounded-xl px-3 py-2 text-xs font-mono transition-colors">
               <span className="text-zinc-500 select-none">{SITE_HOST}/b/</span>
@@ -53,14 +55,14 @@ export default function ProfileTab({ b }: { b: BioBuilder }) {
 
           <div>
             <label className="block text-xs font-medium text-zinc-400 mb-1.5">
-              Sarlavha (Ism yoki Brend)
+              {tr('Sarlavha (Ism yoki Brend)', 'Заголовок (имя или бренд)', 'Title (name or brand)')}
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 focus:border-zinc-600 rounded-xl text-white text-xs focus:outline-none transition-colors"
-              placeholder="Ismingiz yoki brend nomi"
+              placeholder={tr('Ismingiz yoki brend nomi', 'Ваше имя или название бренда', 'Your name or brand')}
             />
           </div>
         </div>
@@ -69,7 +71,7 @@ export default function ProfileTab({ b }: { b: BioBuilder }) {
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="block text-xs font-medium text-zinc-400">
-              Bio / Qisqa tavsif
+              {tr('Bio / Qisqa tavsif', 'Bio / краткое описание', 'Bio / short description')}
             </label>
             <span className="text-[10px] font-mono text-zinc-500">
               {bio.length}/160 belgi
@@ -80,7 +82,7 @@ export default function ProfileTab({ b }: { b: BioBuilder }) {
             onChange={(e) => setBio(e.target.value.slice(0, 160))}
             rows={2}
             className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 focus:border-zinc-600 rounded-xl text-white text-xs focus:outline-none resize-none transition-colors"
-            placeholder="O‘zingiz yoki loyihangiz haqida 1-2 jumlalik qiziqarli ta’rif"
+            placeholder={tr('O‘zingiz yoki loyihangiz haqida 1-2 jumlalik qiziqarli ta’rif', '1–2 предложения о вас или вашем проекте', 'One or two sentences about you or your project')}
           />
         </div>
 
@@ -123,7 +125,7 @@ export default function ProfileTab({ b }: { b: BioBuilder }) {
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-semibold shadow-sm transition-all cursor-pointer"
                 >
                   <Upload className="w-3.5 h-3.5 text-zinc-950" />
-                  <span>Qurilmadan rasm yuklash</span>
+                  <span>{tr('Qurilmadan rasm yuklash', 'Загрузить с устройства', 'Upload from device')}</span>
                 </button>
 
                 {rawImageSrc && (
@@ -133,7 +135,7 @@ export default function ProfileTab({ b }: { b: BioBuilder }) {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-medium text-zinc-300 transition-colors cursor-pointer"
                   >
                     <Crop className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Qayta qirqish</span>
+                    <span>{tr('Qayta qirqish', 'Обрезать заново', 'Crop again')}</span>
                   </button>
                 )}
               </div>
@@ -146,7 +148,7 @@ export default function ProfileTab({ b }: { b: BioBuilder }) {
                   </span>
                 ) : (
                   <span className="text-zinc-500 text-[11px]">
-                    Istalgan joyini qirqib, 100 KB gacha avtomatik siqib yuklaydi
+                    {tr('Istalgan joyini qirqib, 100 KB gacha avtomatik siqib yuklaydi', 'Обрежьте нужную часть — изображение сожмётся до 100 КБ', 'Crop any part; the image is compressed to 100 KB automatically')}
                   </span>
                 )}
               </div>
@@ -156,7 +158,7 @@ export default function ProfileTab({ b }: { b: BioBuilder }) {
           {/* Quick Presets */}
           <div className="space-y-1.5">
             <span className="text-[11px] text-zinc-400 block font-mono">
-              Yoki tayyor avatarlardan birini tanlang:
+              {tr('Yoki tayyor avatarlardan birini tanlang:', 'Или выберите готовый аватар:', 'Or pick a ready-made avatar:')}
             </span>
             <div className="flex items-center gap-2">
               {AVATAR_PRESETS.map((p, idx) => (

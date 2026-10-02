@@ -4,10 +4,12 @@ import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { AnalyticsPanels, RangeSwitch, type AnalyticsRangeValue } from '@/components/analytics/analytics-panels';
 import { useToast } from '@/components/ui/toast';
+import { useLanguage } from '@/lib/language-context';
 import type { ClientLink, LinkAnalytics } from '@/lib/client-types';
 
 export default function AnalyticsTab({ link, initialData }: { link: ClientLink; initialData: LinkAnalytics }) {
   const { showToast } = useToast();
+  const { tr } = useLanguage();
   const [range, setRange] = useState<AnalyticsRangeValue>('30d');
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(false);
@@ -31,14 +33,14 @@ export default function AnalyticsTab({ link, initialData }: { link: ClientLink; 
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-zinc-400">
-          Tanlangan davrda <span className="font-mono font-bold text-white">{data.totalClicks}</span> ta bosish
+          {tr('Tanlangan davrda bosishlar:', 'Переходов за период:', 'Clicks in this period:')} <span className="font-mono font-bold text-white">{data.totalClicks}</span>
         </p>
         <div className="flex items-center gap-2">
           {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />}
           <RangeSwitch value={range} onChange={changeRange} />
         </div>
       </div>
-      <AnalyticsPanels data={data} totalClicks={data.totalClicks} timelineTitle="Bosishlar dinamikasi" />
+      <AnalyticsPanels data={data} totalClicks={data.totalClicks} timelineTitle={tr('Bosishlar dinamikasi', 'Динамика переходов', 'Clicks over time')} />
     </div>
   );
 }

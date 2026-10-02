@@ -8,6 +8,7 @@ import { signIn } from '@/lib/accounts';
 import { alreadyRegisteredEmail, codeEmail, resetForGoogleAccountEmail, resetNoAccountEmail, sendMail } from '@/lib/mail';
 import { dummyPasswordHash, hashPassword, verifyPassword } from '@/lib/passwords';
 import { sign } from '@/lib/two-factor/secrets';
+import type { Locale } from '@/lib/translations';
 
 /**
  * Email accounts: sign up with a code sent by email, sign in with email +
@@ -26,7 +27,7 @@ export type EmailResult<T = object> = ({ ok: true } & T) | { ok: false; code: st
 const codeHash = (email: string, code: string) => sign(`email-code:${email}:${code}`);
 
 /** A new code for this email and purpose; older unused ones stop working. In development it's also returned. */
-async function issueCode(email: string, purpose: Purpose, extra: { userId?: string; name?: string; passwordHash?: string } = {}) {
+async function issueCode(email: string, purpose: Purpose, locale: Locale, extra: { userId?: string; name?: string; passwordHash?: string } = {}) {
   const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
   await pg.transaction(async (tx) => {
     await tx
@@ -44,7 +45,7 @@ async function issueCode(email: string, purpose: Purpose, extra: { userId?: stri
       expires_at: new Date(Date.now() + CODE_TTL_MINUTES * 60_000),
     });
   });
-  await sendMail({ to: email, ...codeEmail(purpose, code, CODE_TTL_MINUTES) });
+  await sendMail({ to: email, ...codeEmail(purpose, code, CODE_TTL_MINUTES, locale) });
   return process.env.NODE_ENV === 'production' ? undefined : code;
 }
 
@@ -94,12 +95,12 @@ async function setIdentityPassword(email: string, passwordHash: string) {
  * "you already have an account" email instead, and the response is the same,
  * so the form can't be used to find out who is registered.
  */
-export async function requestSignup(input: { email: string; password: string; name: string }): Promise<EmailResult<{ devCode?: string }>> {
+export async function requestSignup(input: { email: string; password: string; name: string }, locale: Locale = 'uz'): Promise<EmailResult<{ devCode?: string }>> {
   if (await emailIdentity(input.email)) {
-    await sendMail({ to: input.email, ...alreadyRegisteredEmail() });
+    await sendMail({ to: input.email, ...alreadyRegisteredEmail(locale) });
     return { ok: true };
   }
-  const devCode = await issueCode(input.email, 'signup', { name: input.name, passwordHash: await hashPassword(input.password) });
+  const devCode = await issueCode(input.email, 'signup', locale, { name: input.name, passwordHash: await hashPassword(input.password) });
   return { ok: true, devCode };
 }
 
@@ -143,10 +144,10 @@ export async function verifyEmailLogin(email: string, password: string): Promise
  * what to do instead (sign in with Google, or sign up), so the person isn't
  * left waiting. The response is the same in every case: no account enumeration.
  */
-export async function requestPasswordReset(email: string): Promise<EmailResult<{ devCode?: string }>> {
-  if (await emailIdentity(email)) return { ok: true, devCode: await issueCode(email, 'reset') };
+export async function requestPasswordReset(email: string, locale: Locale = 'uz'): Promise<EmailResult<{ devCode?: string }>> {
+  if (await emailIdentity(email)) return { ok: true, devCode: await issueCode(email, 'reset', locale) };
   const [google] = await pg.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
-  await sendMail({ to: email, ...(google ? resetForGoogleAccountEmail() : resetNoAccountEmail()) });
+  await sendMail({ to: email, ...(google ? resetForGoogleAccountEmail(locale) : resetNoAccountEmail(locale)) });
   return { ok: true };
 }
 
@@ -162,10 +163,10 @@ export async function confirmPasswordReset(email: string, code: string, password
 // --- Settings ---------------------------------------------------------------
 
 /** Emails a code to add this email (with a password) to the logged-in account. */
-export async function requestEmailConnect(userId: string, email: string, password: string): Promise<EmailResult<{ devCode?: string }>> {
+export async function requestEmailConnect(userId: string, email: string, password: string, locale: Locale = 'uz'): Promise<EmailResult<{ devCode?: string }>> {
   const existing = await emailIdentity(email);
   if (existing?.user_id === userId) return { ok: false, code: 'ALREADY_CONNECTED', error: 'Bu email akkauntingizga allaqachon ulangan' };
-  const devCode = await issueCode(email, 'connect', { userId, passwordHash: await hashPassword(password) });
+  const devCode = await issueCode(email, 'connect', locale, { userId, passwordHash: await hashPassword(password) });
   return { ok: true, devCode };
 }
 

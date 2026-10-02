@@ -15,7 +15,7 @@ test('QR studio saves designs to existing links', async ({ page }) => {
 
   // Change the shape and frame text, then save to the link
   await page.getByRole('button', { name: /4\. Shakllar/ }).click();
-  await page.getByRole('button', { name: 'Dots (Circles)' }).click();
+  await page.getByRole('button', { name: 'Nuqtalar', exact: true }).click();
   await page.getByRole('button', { name: 'VISIT LINK' }).click();
   await page.getByRole('button', { name: 'Dizaynni havolaga saqlash' }).click();
   await expect(page.getByText('QR dizayn havolaga saqlandi')).toBeVisible();

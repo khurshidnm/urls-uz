@@ -85,7 +85,7 @@ export default function Navbar() {
               </Link>
               <button
                 onClick={logout}
-                title="Chiqish"
+                title={t.logout}
                 className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 rounded-md border border-zinc-800 transition-colors"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -134,7 +134,7 @@ export default function Navbar() {
               onClick={() => openAuthModal()}
               className="px-2.5 py-1 text-xs font-medium text-zinc-950 bg-white rounded-md"
             >
-              Kirish
+              {t.login}
             </button>
           )}
           <button
@@ -198,7 +198,7 @@ export default function Navbar() {
                 }}
                 className="px-3 py-1 bg-white text-zinc-950 rounded text-xs font-medium"
               >
-                Kirish
+                {t.login}
               </button>
             )}
           </div>

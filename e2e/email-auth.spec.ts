@@ -18,7 +18,8 @@ test('sign up with email from the login window, then sign in with email and pass
   await page.getByLabel('Parol', { exact: true }).fill('mustahkam-parol-1');
   await page.getByLabel('Parolni takrorlang').fill('mustahkam-parol-1');
   await page.getByRole('button', { name: 'Ro‘yxatdan o‘tish', exact: true }).click();
-  await expect(page.getByText(`${email} manziliga 6 xonali kod yuborildi`)).toBeVisible();
+  await expect(page.getByText('Kod yuborildi:')).toBeVisible();
+  await expect(page.getByText(email, { exact: true })).toBeVisible();
 
   // The message went to ZeptoMail's API in its format
   const mail = mailsTo(email).at(-1)!;

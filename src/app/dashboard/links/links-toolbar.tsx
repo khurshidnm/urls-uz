@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import type { LinksFilterState } from './types';
+import { useLanguage } from '@/lib/language-context';
 
 interface Props {
   filter: LinksFilterState;
@@ -16,6 +17,7 @@ const selectClass =
 
 /** Search, status, tag and sort controls. Changes are applied to the URL by the parent. */
 export default function LinksToolbar({ filter, tags, counts, onChange }: Props) {
+  const { tr } = useLanguage();
   const [search, setSearch] = useState(filter.q);
 
   // Debounce typing so every keystroke doesn't trigger a server round-trip
@@ -26,9 +28,9 @@ export default function LinksToolbar({ filter, tags, counts, onChange }: Props) 
   }, [search, filter.q, onChange]);
 
   const statuses: { value: LinksFilterState['status']; label: string }[] = [
-    { value: 'active', label: counts.active === null ? 'Faol' : `Faol (${counts.active})` },
-    { value: 'archived', label: `Arxiv (${counts.archived})` },
-    { value: 'all', label: 'Barchasi' },
+    { value: 'active', label: tr('Faol', 'Активные', 'Active') + (counts.active === null ? '' : ` (${counts.active})`) },
+    { value: 'archived', label: `${tr('Arxiv', 'Архив', 'Archive')} (${counts.archived})` },
+    { value: 'all', label: tr('Barchasi', 'Все', 'All') },
   ];
 
   return (
@@ -39,8 +41,8 @@ export default function LinksToolbar({ filter, tags, counts, onChange }: Props) 
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Qidirish: nom, slug, manzil yoki teg..."
-          aria-label="Havolalarni qidirish"
+          placeholder={tr('Qidirish: nom, slug, manzil yoki teg...', 'Поиск: название, адрес, ссылка или тег...', 'Search: title, slug, URL or tag...')}
+          aria-label={tr('Havolalarni qidirish', 'Поиск ссылок', 'Search links')}
           className="w-full pl-10 pr-9 py-2 bg-zinc-950 border border-zinc-800 focus:border-zinc-600 rounded-xl text-white text-xs focus:outline-none placeholder:text-zinc-600"
         />
         {search && (
@@ -48,7 +50,7 @@ export default function LinksToolbar({ filter, tags, counts, onChange }: Props) 
             type="button"
             onClick={() => setSearch('')}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
-            aria-label="Qidiruvni tozalash"
+            aria-label={tr('Qidiruvni tozalash', 'Очистить поиск', 'Clear search')}
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -71,8 +73,8 @@ export default function LinksToolbar({ filter, tags, counts, onChange }: Props) 
           ))}
         </div>
 
-        <select value={filter.tag} onChange={(e) => onChange({ tag: e.target.value, page: 1 })} className={selectClass} aria-label="Teg bo‘yicha filtr">
-          <option value="">Barcha teglar</option>
+        <select value={filter.tag} onChange={(e) => onChange({ tag: e.target.value, page: 1 })} className={selectClass} aria-label={tr('Teg bo‘yicha filtr', 'Фильтр по тегу', 'Filter by tag')}>
+          <option value="">{tr('Barcha teglar', 'Все теги', 'All tags')}</option>
           {tags.map((t) => (
             <option key={t.tag} value={t.tag}>
               #{t.tag} ({t.count})
@@ -80,10 +82,10 @@ export default function LinksToolbar({ filter, tags, counts, onChange }: Props) 
           ))}
         </select>
 
-        <select value={filter.sort} onChange={(e) => onChange({ sort: e.target.value as LinksFilterState['sort'], page: 1 })} className={selectClass} aria-label="Saralash">
-          <option value="newest">Eng yangilari</option>
-          <option value="oldest">Eng eskilari</option>
-          <option value="clicks">Ko‘p bosilgan</option>
+        <select value={filter.sort} onChange={(e) => onChange({ sort: e.target.value as LinksFilterState['sort'], page: 1 })} className={selectClass} aria-label={tr('Saralash', 'Сортировка', 'Sort')}>
+          <option value="newest">{tr('Eng yangilari', 'Сначала новые', 'Newest first')}</option>
+          <option value="oldest">{tr('Eng eskilari', 'Сначала старые', 'Oldest first')}</option>
+          <option value="clicks">{tr('Ko‘p bosilgan', 'Больше переходов', 'Most clicked')}</option>
         </select>
       </div>
     </div>

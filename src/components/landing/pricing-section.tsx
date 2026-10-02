@@ -7,57 +7,57 @@ import { Check, Sparkles, Zap, Lock } from 'lucide-react';
 import Link from 'next/link';
 
 export default function PricingSection() {
-  const { locale } = useLanguage();
+  const { locale, tr } = useLanguage();
 
   const plans = [
     {
-      name: locale === 'uz' ? 'Free (Hobby)' : locale === 'ru' ? 'Базовый (Free)' : 'Free (Hobby)',
-      badge: 'HOZIR FAOL',
+      name: tr('Free (Hobby)', 'Базовый (Free)', 'Free (Hobby)'),
+      badge: tr('HOZIR FAOL', 'ДОСТУПЕН', 'AVAILABLE NOW'),
       badgeColor: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
       price: '0 UZS',
-      period: '/ abadiy',
+      period: tr('/ abadiy', '/ навсегда', '/ forever'),
       comingSoon: false,
-      description: locale === 'uz'
-        ? 'Shaxsiy foydalanish, loyihalar va qisqa havolalar uchun to‘liq funksiyalar'
-        : locale === 'ru'
-        ? 'Для личных нужд, проектов и тестирования'
-        : 'For individuals, projects, and link shortening',
-      specs: PLAN_FEATURES.free,
-      cta: locale === 'uz' ? 'Bepul boshlash' : locale === 'ru' ? 'Начать бесплатно' : 'Start Free',
+      description: tr(
+        'Shaxsiy foydalanish, loyihalar va qisqa havolalar uchun to‘liq funksiyalar',
+        'Для личных нужд, проектов и коротких ссылок',
+        'For individuals, projects, and link shortening'
+      ),
+      specs: PLAN_FEATURES[locale].free,
+      cta: tr('Bepul boshlash', 'Начать бесплатно', 'Start Free'),
       ctaHref: '/dashboard',
       popular: false,
     },
     {
       name: 'Pro (Growth)',
-      badge: 'TEZ KUNDA',
+      badge: tr('TEZ KUNDA', 'СКОРО', 'COMING SOON'),
       badgeColor: 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30',
-      price: 'Tez kunda',
-      period: '/ pullik tarif',
+      price: tr('Tez kunda', 'Скоро', 'Soon'),
+      period: tr('/ pullik tarif', '/ платный тариф', '/ paid plan'),
       comingSoon: true,
-      description: locale === 'uz'
-        ? 'Katta auditoriya, blogerlar va marketing kampaniyalari uchun kengaytirilgan imkoniyatlar'
-        : locale === 'ru'
-        ? 'Для блогеров, маркетологов и масштабных рекламных кампаний'
-        : 'For content creators, marketers, and high-scale campaigns',
-      specs: PLAN_FEATURES.pro,
-      cta: locale === 'uz' ? 'Tez kunda ishga tushadi' : locale === 'ru' ? 'Скоро появится' : 'Coming Soon',
+      description: tr(
+        'Katta auditoriya, blogerlar va marketing kampaniyalari uchun kengaytirilgan imkoniyatlar',
+        'Для блогеров, маркетологов и масштабных рекламных кампаний',
+        'For content creators, marketers, and high-scale campaigns'
+      ),
+      specs: PLAN_FEATURES[locale].pro,
+      cta: tr('Tez kunda ishga tushadi', 'Скоро появится', 'Coming soon'),
       ctaHref: '#',
       popular: true,
     },
     {
-      name: locale === 'uz' ? 'Biznes' : locale === 'ru' ? 'Бизнес' : 'Business',
-      badge: 'TEZ KUNDA',
+      name: tr('Biznes', 'Бизнес', 'Business'),
+      badge: tr('TEZ KUNDA', 'СКОРО', 'COMING SOON'),
       badgeColor: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
-      price: 'Tez kunda',
-      period: '/ korporativ',
+      price: tr('Tez kunda', 'Скоро', 'Soon'),
+      period: tr('/ korporativ', '/ корпоративный', '/ corporate'),
       comingSoon: true,
-      description: locale === 'uz'
-        ? 'Tashkilotlar uchun: Pro imkoniyatlari, uzoqroq tashriflar jurnali va alohida shartlar'
-        : locale === 'ru'
-        ? 'Для корпоративных клиентов, финтех и интеграций'
-        : 'For high-scale workloads and tech integrations',
-      specs: PLAN_FEATURES.enterprise,
-      cta: locale === 'uz' ? 'Tez kunda ishga tushadi' : locale === 'ru' ? 'Скоро появится' : 'Coming Soon',
+      description: tr(
+        'Tashkilotlar uchun: Pro imkoniyatlari, uzoqroq tashriflar jurnali va alohida shartlar',
+        'Для организаций: возможности Pro, более долгий журнал переходов и особые условия',
+        'For organisations: everything in Pro, a longer visit log and custom terms'
+      ),
+      specs: PLAN_FEATURES[locale].enterprise,
+      cta: tr('Tez kunda ishga tushadi', 'Скоро появится', 'Coming soon'),
       ctaHref: '#',
       popular: false,
     },
@@ -70,30 +70,26 @@ export default function PricingSection() {
         {/* Header & Status Indicator */}
         <div className="max-w-3xl mb-12 text-left">
           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 text-[11px] font-mono mb-3">
-            <span>TRANSPARENT SPECIFICATIONS</span>
+            <span>{tr('TARIFLAR', 'ТАРИФЫ', 'PRICING')}</span>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
               <h2 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight mb-2">
-                {locale === 'uz'
-                  ? 'Shaffof va aniq tariflar rejasi'
-                  : locale === 'ru'
-                  ? 'Прозрачные и понятные тарифы'
-                  : 'Transparent & Localized Pricing'}
+                {tr('Shaffof va aniq tariflar rejasi', 'Прозрачные и понятные тарифы', 'Transparent, simple pricing')}
               </h2>
               <p className="text-xs sm:text-sm text-zinc-400">
-                {locale === 'uz'
-                  ? 'Hozirda bepul tarif barcha uchun 10 ta havola bilan to‘liq faol. Kengaytirilgan pulli tariflar tez kunda ishga tushadi.'
-                  : locale === 'ru'
-                  ? 'Сейчас бесплатная версия полностью доступна с 10 ссылками. Платные тарифы запустятся в скором времени.'
-                  : 'Free tier is currently fully available with 10 links limit. Paid tiers will launch soon.'}
+                {tr(
+                  'Hozirda bepul tarif barcha uchun to‘liq faol. Kengaytirilgan pulli tariflar tez kunda ishga tushadi.',
+                  'Сейчас бесплатный тариф полностью доступен всем. Платные тарифы запустятся в скором времени.',
+                  'The free plan is fully available to everyone. Paid plans launch soon.'
+                )}
               </p>
             </div>
 
             {/* Launch Status Pill */}
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-mono shrink-0">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Hozirda Bepul versiya faol</span>
+              <span>{tr('Hozirda Bepul versiya faol', 'Сейчас доступна бесплатная версия', 'Free plan available now')}</span>
             </div>
           </div>
         </div>
@@ -131,7 +127,7 @@ export default function PricingSection() {
                         <span className="text-xs text-zinc-500 font-mono">{p.period}</span>
                       </div>
                       <p className="text-[11px] text-zinc-500 font-mono">
-                        To‘lov tizimlari orqali tez kunda ulanadi
+                        {tr('To‘lov tizimlari orqali tez kunda ulanadi', 'Оплата через платёжные системы скоро', 'Payments via local providers coming soon')}
                       </p>
                     </div>
                   ) : (
@@ -187,7 +183,7 @@ export default function PricingSection() {
 
         {/* Not built yet: listed as planned, never as included in a plan */}
         <p className="mt-6 text-[11px] font-mono text-zinc-500">
-          Rejada (hali mavjud emas): {PLANNED_FEATURES.join(' · ')}
+          {tr('Rejada (hali mavjud emas)', 'В планах (пока нет)', 'Planned (not available yet)')}: {PLANNED_FEATURES[locale].join(' · ')}
         </p>
       </div>
     </section>
