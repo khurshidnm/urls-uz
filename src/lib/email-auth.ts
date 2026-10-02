@@ -5,7 +5,7 @@ import { pg } from '@/db/client';
 import { emailCodes, sessions, userIdentities, users } from '@/db/schema';
 import { newId, type UserRecord } from '@/lib/db';
 import { signIn } from '@/lib/accounts';
-import { alreadyRegisteredEmail, codeEmail, sendMail } from '@/lib/mail';
+import { alreadyRegisteredEmail, codeEmail, resetForGoogleAccountEmail, resetNoAccountEmail, sendMail } from '@/lib/mail';
 import { dummyPasswordHash, hashPassword, verifyPassword } from '@/lib/passwords';
 import { sign } from '@/lib/two-factor/secrets';
 
@@ -138,10 +138,16 @@ export async function verifyEmailLogin(email: string, password: string): Promise
 
 // --- Forgotten password -----------------------------------------------------
 
-/** Emails a reset code if the email has an account; answers the same either way. */
+/**
+ * Emails a reset code if the email has an email account. Otherwise it emails
+ * what to do instead (sign in with Google, or sign up), so the person isn't
+ * left waiting. The response is the same in every case: no account enumeration.
+ */
 export async function requestPasswordReset(email: string): Promise<EmailResult<{ devCode?: string }>> {
-  if (!(await emailIdentity(email))) return { ok: true };
-  return { ok: true, devCode: await issueCode(email, 'reset') };
+  if (await emailIdentity(email)) return { ok: true, devCode: await issueCode(email, 'reset') };
+  const [google] = await pg.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  await sendMail({ to: email, ...(google ? resetForGoogleAccountEmail() : resetNoAccountEmail()) });
+  return { ok: true };
 }
 
 /** Sets the new password and signs the account out everywhere (someone else may have known the old one). */

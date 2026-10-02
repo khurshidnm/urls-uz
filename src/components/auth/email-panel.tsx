@@ -112,9 +112,15 @@ export default function EmailPanel({ view, emailAvailable }: { view: AuthView; e
         </button>
       )}
 
-      {codeStep && (
+      {step === 'code' && (
         <p className="text-xs text-slate-300 leading-relaxed">
           <strong className="text-white">{email}</strong> manziliga 6 xonali kod yuborildi. Xat kelmasa, «Spam» papkasini tekshiring.
+        </p>
+      )}
+      {step === 'reset-code' && (
+        <p className="text-xs text-slate-300 leading-relaxed">
+          Agar <strong className="text-white">{email}</strong> bilan akkaunt bo‘lsa, unga 6 xonali kod yuborildi. Akkaunt Google orqali ochilgan bo‘lsa, xatda
+          nima qilish kerakligi yozilgan. Xat kelmasa, «Spam» papkasini tekshiring.
         </p>
       )}
       {step === 'reset' && <p className="text-xs text-slate-400">Emailingizni kiriting: parolni tiklash kodi yuboriladi.</p>}

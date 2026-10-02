@@ -69,9 +69,10 @@ test('no account enumeration; codes expire after 5 wrong tries; reset signs out 
   const wrong = await (await post({ action: 'login', email, password: 'xato-parol-1' })).json();
   const unknown = await (await post({ action: 'login', email: 'yoq@example.com', password: 'xato-parol-1' })).json();
   expect(wrong.error).toBe(unknown.error);
-  // Reset for an unknown email: same answer, nothing sent
+  // Reset for an unknown email: same answer; the email says there's no account (no code)
   expect(await (await post({ action: 'reset-request', email: 'yoq@example.com' })).json()).toEqual({ success: true, sent: true });
-  expect(mailsTo('yoq@example.com')).toHaveLength(0);
+  expect(mailsTo('yoq@example.com').at(-1)!.body.subject).toContain('akkaunt yo‘q');
+  expect(mailsTo('yoq@example.com').at(-1)!.body.textbody).not.toMatch(/\b\d{6}\b/);
 
   // Forgotten password: the reset signs out existing sessions
   expect((await api.get('/api/auth/me').then((r) => r.json())).user?.name).toBe('Tiklovchi');
@@ -108,6 +109,14 @@ test('connect an email in settings; an email matching a Google account joins it;
   await anon.post('/api/auth/email', { data: { action: 'signup', email: 'google.egasi@example.com', password: 'qoshilish-parol-1', name: 'G' } });
   res = await (await anon.post('/api/auth/email', { data: { action: 'verify', email: 'google.egasi@example.com', code: lastCodeTo('google.egasi@example.com') } })).json();
   expect(res.user.id).toBe(googleUser.id);
+
+  // Reset for an address that signed up with Google: the email points to the Google button
+  const onlyGoogle = await playwright.request.newContext({ baseURL: BASE });
+  const onlyGoogleUser = await loginAsTelegramUser(onlyGoogle, 900000943, 'Faqat Google');
+  psql(`update users set email = 'faqat.google@example.com' where id = '${onlyGoogleUser.id}'`);
+  await anon.post('/api/auth/email', { data: { action: 'reset-request', email: 'faqat.google@example.com' } });
+  expect(mailsTo('faqat.google@example.com').at(-1)!.body.subject).toContain('Google orqali kiring');
+  await onlyGoogle.dispose();
 
   // 2FA: email sign-in stops at the code page
   const setup = await (await google.post('/api/auth/2fa', { data: { action: 'setup' } })).json();

@@ -91,3 +91,27 @@ export function alreadyRegisteredEmail(): Omit<Mail, 'to'> {
     html: `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#18181b"><p style="font-size:14px">${escapeHtml(text).replace(/\n/g, '<br>')}</p></div>`,
   };
 }
+
+function infoEmail(subject: string, text: string): Omit<Mail, 'to'> {
+  return {
+    subject,
+    text: `${text}\n\n${SITE_URL}`,
+    html: `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#18181b"><p style="font-size:15px;font-weight:600;margin:0 0 16px">${escapeHtml(SITE_NAME)}</p><p style="font-size:14px;line-height:1.5">${escapeHtml(text).replace(/\n/g, '<br>')}</p><p style="font-size:13px"><a href="${SITE_URL}">${escapeHtml(SITE_URL)}</a></p></div>`,
+  };
+}
+
+/** Password reset asked for an address that signed up with Google (no password to reset). */
+export function resetForGoogleAccountEmail(): Omit<Mail, 'to'> {
+  return infoEmail(
+    `${SITE_NAME}: Google orqali kiring`,
+    `Parolni tiklash so‘raldi, lekin bu email bilan akkauntingiz Google orqali ochilgan, shuning uchun parol yo‘q.\n\nKirish oynasida «Google orqali kirish» tugmasini bosing. Parol bilan ham kirmoqchi bo‘lsangiz, kirganingizdan keyin Sozlamalar → «Kirish usullari» → «Emailni ulash» bo‘limida parol o‘rnating.\n\nAgar bu so‘rovni siz yubormagan bo‘lsangiz, xatga e’tibor bermang.`
+  );
+}
+
+/** Password reset asked for an address with no account at all. */
+export function resetNoAccountEmail(): Omit<Mail, 'to'> {
+  return infoEmail(
+    `${SITE_NAME}: bu email bilan akkaunt yo‘q`,
+    `Parolni tiklash so‘raldi, lekin bu email bilan ${SITE_NAME} da akkaunt topilmadi. Boshqa email, Google yoki Telegram bilan ro‘yxatdan o‘tgan bo‘lishingiz mumkin. Yangi akkaunt ochish uchun kirish oynasida «Ro‘yxatdan o‘ting» ni bosing.\n\nAgar bu so‘rovni siz yubormagan bo‘lsangiz, xatga e’tibor bermang.`
+  );
+}
