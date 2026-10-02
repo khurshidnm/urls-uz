@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { SITE_NAME } from '@/lib/site';
 
 /**
  * Time-based one-time passwords (RFC 6238, as used by Google Authenticator,
@@ -77,7 +78,7 @@ export function verifyCode(secret: string, code: string, lastStep: number | null
 }
 
 /** What the QR code in settings encodes; authenticator apps read it. */
-export function otpauthUri(secret: string, account: string, issuer = 'urls.uz'): string {
+export function otpauthUri(secret: string, account: string, issuer = SITE_NAME): string {
   const label = encodeURIComponent(`${issuer}:${account}`);
   const params = new URLSearchParams({ secret, issuer, algorithm: 'SHA1', digits: String(DIGITS), period: String(STEP_SECONDS) });
   return `otpauth://totp/${label}?${params}`;

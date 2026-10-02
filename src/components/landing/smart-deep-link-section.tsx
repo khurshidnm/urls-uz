@@ -6,6 +6,7 @@ import { QrCanvas } from '@/components/ui/qr-canvas';
 import { detectDeviceFromUserAgent } from '@/lib/deep-link';
 import { DEVICE_DEMO_APPS, type DeviceDemoApp } from '@/lib/device-demo';
 import { copyToClipboard, shortUrl } from '@/lib/utils';
+import { SITE_NAME } from '@/lib/site';
 
 type Device = 'ios' | 'android' | 'huawei' | 'desktop';
 
@@ -70,7 +71,7 @@ export default function SmartDeepLinkSection() {
           </div>
           <h2 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">Bitta havola — har bir qurilma o‘z do‘koniga</h2>
           <p className="text-sm text-zinc-400 mt-2 max-w-2xl leading-relaxed">
-            Havolani kim ochganini urls.uz aniqlaydi: iPhone — App Store, Android — Google Play, Huawei — AppGallery, kompyuter — veb-sayt.
+            Havolani kim ochganini {SITE_NAME} aniqlaydi: iPhone — App Store, Android — Google Play, Huawei — AppGallery, kompyuter — veb-sayt.
             QR kodni telefoningiz bilan skanerlab, o‘zingiz sinab ko‘ring.
           </p>
         </div>

@@ -154,5 +154,5 @@ test('landing page QR studio works without an account and asks to sign up to sav
   await expect(studio.getByRole('button', { name: 'Mening havolam' })).toHaveCount(0);
   await studio.locator('#qr-url').fill('https://example.com/menu');
   await studio.getByRole('button', { name: 'Ro‘yxatdan o‘tib saqlash' }).click();
-  await expect(page.getByText('Xavfsiz Tizimga Kirish')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Kirish', exact: true })).toBeVisible();
 });

@@ -1,9 +1,9 @@
 import { ImageResponse } from 'next/og';
 import LogoMark from '@/components/brand/logo-mark';
-import { BRAND } from '@/lib/site';
+import {BRAND, BRAND_PARTS, SITE_NAME } from '@/lib/site';
 
 /** The preview shown when urls.uz is shared on Telegram, Facebook, X, LinkedIn, ... */
-export const alt = 'urls.uz — havolalarni qisqartirish, QR kodlar va Link-in-Bio';
+export const alt = `${SITE_NAME} — havolalarni qisqartirish, QR kodlar va Link-in-Bio`;
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -28,7 +28,7 @@ export default function OpenGraphImage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <LogoMark size={88} />
           <div style={{ display: 'flex', fontSize: 56, fontWeight: 700, letterSpacing: -1 }}>
-            urls<span style={{ color: '#71717a' }}>.uz</span>
+            {BRAND_PARTS.name}<span style={{ color: '#71717a' }}>{BRAND_PARTS.tld}</span>
           </div>
         </div>
 

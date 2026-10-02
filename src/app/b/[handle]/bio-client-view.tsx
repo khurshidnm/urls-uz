@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { TelegramIcon, InstagramIcon, YouTubeIcon, LinkedInIcon, GitHubIcon, TikTokIcon, TwitterXIcon } from '@/components/ui/icons';
 import { QrCanvas } from '@/components/ui/qr-canvas';
+import { SITE_URL, SITE_NAME } from '@/lib/site';
 
 interface BioClientViewProps {
   bioPage: {
@@ -104,7 +105,7 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
   };
 
   const currentTheme = themeClasses[bioPage.theme] || themeClasses.midnight;
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : `https://urls.uz/b/${bioPage.handle}`;
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : `${SITE_URL}/b/${bioPage.handle}`;
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -186,7 +187,7 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
           href="/"
           className="text-xs font-semibold tracking-wider text-slate-400 hover:text-white transition-colors bg-white/5 px-3 py-1.5 rounded-full border border-white/10"
         >
-          urls.uz
+          {SITE_NAME}
         </Link>
         <div className="flex items-center gap-2">
           <button
@@ -280,7 +281,7 @@ export default function BioClientView({ bioPage }: BioClientViewProps) {
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-slate-300 transition-colors shadow-sm"
           >
             <span>O‘zingizning bepul bio sahifangizni yarating —</span>
-            <span className="font-bold text-indigo-400">urls.uz</span>
+            <span className="font-bold text-indigo-400">{SITE_NAME}</span>
           </Link>
         </div>
       </div>

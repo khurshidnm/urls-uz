@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowLeft, Plus } from 'lucide-react';
 import LogoMark from '@/components/brand/logo-mark';
+import { SITE_NAME, BRAND_PARTS } from '@/lib/site';
 
 export const metadata: Metadata = { title: 'Sahifa topilmadi', robots: { index: false } };
 
@@ -11,10 +12,10 @@ export default function NotFound() {
   return (
     <main className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
       <div className="max-w-md w-full text-center space-y-6">
-        <Link href="/" className="inline-flex items-center gap-2" aria-label="urls.uz bosh sahifa">
+        <Link href="/" className="inline-flex items-center gap-2" aria-label={`${SITE_NAME} bosh sahifa`}>
           <LogoMark size={36} />
           <span className="font-semibold text-white font-mono">
-            urls<span className="text-zinc-500">.uz</span>
+            {BRAND_PARTS.name}<span className="text-zinc-500">{BRAND_PARTS.tld}</span>
           </span>
         </Link>
 

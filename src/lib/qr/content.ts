@@ -10,6 +10,7 @@ import {
   type VCardPayload,
   type WifiPayload,
 } from '@/lib/qr-payloads';
+import { SITE_URL, SITE_NAME } from '@/lib/site';
 
 /*
  * What a saved QR code holds for each type, shared by the studio and the API.
@@ -99,9 +100,9 @@ export const isHostedType = (type: QrDataType) => HOSTED_QR_TYPES.includes(type)
 export function staticPayload(type: QrDataType, content: Record<string, unknown>): string {
   switch (type) {
     case 'url':
-      return String(content.url || '').trim() || 'https://urls.uz';
+      return String(content.url || '').trim() || SITE_URL;
     case 'text':
-      return String(content.text || '') || 'urls.uz';
+      return String(content.text || '') || SITE_NAME;
     case 'vcard':
       return generateVCardString(content as unknown as VCardPayload);
     case 'wifi':

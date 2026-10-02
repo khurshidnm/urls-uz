@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Bot, Check, Copy, RefreshCw, ShieldCheck } from 'lucide-react';
 import { copyToClipboard as copyToClipboardUtil } from '@/lib/utils';
+import { SITE_URL } from '@/lib/site';
 
 /**
  * Where Telegram delivers messages for the platform's bot, and whether that's
@@ -72,11 +73,11 @@ export default function WebhookAdminPanel() {
               </label>
               <div className="flex items-center gap-2 bg-zinc-950 p-2.5 rounded-xl border border-zinc-800">
                 <span className="text-zinc-300 font-mono text-xs flex-1 truncate select-all">
-                  https://urls.uz/api/webhook/telegram
+                  {SITE_URL}/api/webhook/telegram
                 </span>
                 <button
                   onClick={async () => {
-                    await copyToClipboardUtil('https://urls.uz/api/webhook/telegram');
+                    await copyToClipboardUtil(`${SITE_URL}/api/webhook/telegram`);
                     setCopiedWebhook(true);
                     setTimeout(() => setCopiedWebhook(false), 2000);
                   }}
@@ -112,7 +113,7 @@ export default function WebhookAdminPanel() {
               </div>
               <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 text-[11px] text-zinc-300 leading-relaxed overflow-x-auto">
                 <code>
-                  curl -F &quot;url=https://urls.uz/api/webhook/telegram&quot; \<br />
+                  curl -F &quot;url={SITE_URL}/api/webhook/telegram&quot; \<br />
                   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;https://api.telegram.org/bot&lt;BOT_TOKEN&gt;/setWebhook
                 </code>
               </div>

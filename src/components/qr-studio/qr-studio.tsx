@@ -14,6 +14,7 @@ import { EventForm, LocationForm, TextForm, VCardForm, WifiForm } from './conten
 import { ColorsPane, LogoPane, ShapesPane } from './design-panes';
 import QrPreviewPanel, { type PreviewMode } from './qr-preview-panel';
 import { DEFAULT_DESIGN, designFrom, type QrDesign } from './qr-design';
+import { SITE_URL } from '@/lib/site';
 
 interface Props {
   links: ClientLink[];
@@ -143,7 +144,7 @@ export default function QrStudioClient({ links: initialLinks, initialLinkId, can
     : savedQr?.link
       ? shortUrl(savedQr.link.slug)
       : activeType === 'url' && urlMode === 'existing'
-        ? 'https://urls.uz'
+        ? SITE_URL
         : staticPayload(activeType, content);
 
   const namePlaceholder = describeContent(activeType, content) || `${TYPES.find((x) => x.id === activeType)?.label} QR`;

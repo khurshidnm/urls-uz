@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Compass, Eye, EyeOff, RotateCcw } from 'lucide-react';
 import { QR_SAMPLE_DATA, type EventPayload, type LocationPayload, type VCardPayload, type WifiPayload } from '@/lib/qr-payloads';
+import { SITE_URL, SITE_NAME } from '@/lib/site';
 
 /* Forms for static QR content. Their data is encoded into the QR itself. */
 
@@ -146,7 +147,7 @@ export function VCardForm({ vcard, setVcard }: { vcard: VCardPayload; setVcard: 
                 type="email"
                 value={vcard.email || ''}
                 onChange={(e) => setVcard({ ...vcard, email: e.target.value })}
-                placeholder="sherzod@urls.uz"
+                placeholder={`sherzod@${SITE_NAME}`}
                 className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-xs focus:outline-none focus:border-zinc-600"
               />
             </div>
@@ -156,7 +157,7 @@ export function VCardForm({ vcard, setVcard }: { vcard: VCardPayload; setVcard: 
                 type="text"
                 value={vcard.website || ''}
                 onChange={(e) => setVcard({ ...vcard, website: e.target.value })}
-                placeholder="https://urls.uz/sherzod"
+                placeholder={`${SITE_URL}/sherzod`}
                 className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-xs focus:outline-none focus:border-zinc-600"
               />
             </div>

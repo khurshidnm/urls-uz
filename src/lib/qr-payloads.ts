@@ -1,3 +1,4 @@
+import { SITE_URL, SITE_NAME } from '@/lib/site';
 /**
  * QR Code Multi-Type Payload Generators
  * Byte-by-byte conforming with QRCode Monkey (https://www.qrcode-monkey.com/#vcard)
@@ -219,8 +220,8 @@ export const QR_SAMPLE_DATA = {
     phoneMobile: '+998 90 123 45 67',
     faxWork: '+998 71 200 00 01',
     faxPrivate: '',
-    email: 'sherzod@urls.uz',
-    website: 'https://urls.uz/sherzod',
+    email: `sherzod@${SITE_NAME}`,
+    website: `${SITE_URL}/sherzod`,
     street: 'Amir Temur shoh ko‘chasi 107',
     zipCode: '100084',
     city: 'Toshkent',
@@ -249,5 +250,5 @@ export const QR_SAMPLE_DATA = {
     endTime: '18:00',
     allDay: false,
   },
-  text: 'urls.uz — O‘zbekiston uchun zamonaviy qisqa havolalar, dinamik QR-kodlar va Bio-sahifalar platformasi!',
+  text: `${SITE_NAME} — O‘zbekiston uchun zamonaviy qisqa havolalar, dinamik QR-kodlar va Bio-sahifalar platformasi!`,
 };

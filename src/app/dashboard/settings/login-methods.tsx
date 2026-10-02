@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/toast';
 import { connectMessage } from './connect-message';
 
 export interface LoginMethod {
-  provider: 'google' | 'telegram' | 'phone' | 'password';
+  provider: 'google' | 'telegram' | 'phone' | 'password' | 'email';
   providerId: string;
   label: string | null;
 }
@@ -17,12 +17,15 @@ interface Props {
   /** Result of connecting Google, which returns here from a redirect. */
   notice: { kind: 'success' | 'error'; text: string } | null;
   phoneLoginAvailable: boolean;
+  /** Email codes can be delivered (ZeptoMail configured), or this is development. */
+  emailLoginAvailable: boolean;
 }
 
 const PROVIDERS = [
   { id: 'google' as const, name: 'Google', hint: 'Google hisobingiz orqali kirish' },
   { id: 'telegram' as const, name: 'Telegram', hint: 'Telegram akkauntingiz orqali bir bosishda kirish' },
   { id: 'phone' as const, name: 'Telefon raqam', hint: 'Telegram’ga keladigan tasdiqlash kodi orqali kirish' },
+  { id: 'email' as const, name: 'Email va parol', hint: 'Email manzilingiz va parol bilan kirish' },
   { id: 'password' as const, name: 'Login va parol', hint: 'Har safar Telegram yoki Google so‘ramasdan, login va parol bilan kirish' },
 ];
 
@@ -30,7 +33,7 @@ const PROVIDERS = [
  * The account's login methods. Connecting another one means Google,
  * Telegram and the phone number all open this same account.
  */
-export default function LoginMethods({ methods, notice, phoneLoginAvailable }: Props) {
+export default function LoginMethods({ methods, notice, phoneLoginAvailable, emailLoginAvailable }: Props) {
   const router = useRouter();
   const { showToast } = useToast();
   const [connecting, setConnecting] = useState<LoginMethod['provider'] | null>(null);
@@ -84,7 +87,8 @@ export default function LoginMethods({ methods, notice, phoneLoginAvailable }: P
       <ul className="divide-y divide-slate-800/80">
         {PROVIDERS.map((provider) => {
           const connected = methods.filter((m) => m.provider === provider.id);
-          const unavailable = provider.id === 'phone' && !phoneLoginAvailable && connected.length === 0;
+          const unavailable =
+            connected.length === 0 && ((provider.id === 'phone' && !phoneLoginAvailable) || (provider.id === 'email' && !emailLoginAvailable));
           return (
             <li key={provider.id} className="py-3 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -95,10 +99,10 @@ export default function LoginMethods({ methods, notice, phoneLoginAvailable }: P
                       <div key={m.providerId} className="flex items-center gap-2 mt-1 text-[11px] text-emerald-300/90">
                         <Check className="w-3 h-3 shrink-0" />
                         <span className="truncate">{m.label || 'Ulangan'}</span>
-                        {m.provider === 'password' && connecting !== 'password' && (
+                        {(m.provider === 'password' || m.provider === 'email') && connecting !== m.provider && (
                           <button
                             type="button"
-                            onClick={() => setConnecting('password')}
+                            onClick={() => setConnecting(m.provider)}
                             className="ml-1 text-indigo-400 hover:text-indigo-300"
                           >
                             Parolni o‘zgartirish
@@ -137,7 +141,7 @@ export default function LoginMethods({ methods, notice, phoneLoginAvailable }: P
                       onClick={() => setConnecting(provider.id)}
                       className="shrink-0 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold border border-slate-700"
                     >
-                      {provider.id === 'password' ? 'Login va parol o‘rnatish' : `${provider.name}ni ulash`}
+                      {provider.id === 'password' ? 'Login va parol o‘rnatish' : provider.id === 'email' ? 'Emailni ulash' : `${provider.name}ni ulash`}
                     </button>
                   )
                 )}
@@ -146,6 +150,13 @@ export default function LoginMethods({ methods, notice, phoneLoginAvailable }: P
                 <ConnectTelegram onDone={done} onCancel={() => setConnecting(null)} />
               )}
               {connecting === 'phone' && provider.id === 'phone' && <ConnectPhone onDone={done} onCancel={() => setConnecting(null)} />}
+              {connecting === 'email' && provider.id === 'email' && (
+                connected.length > 0 ? (
+                  <EmailPasswordForm onDone={done} onCancel={() => setConnecting(null)} />
+                ) : (
+                  <EmailConnectForm onDone={done} onCancel={() => setConnecting(null)} />
+                )
+              )}
               {connecting === 'password' && provider.id === 'password' && (
                 <PasswordForm currentLogin={connected[0]?.providerId ?? null} onDone={done} onCancel={() => setConnecting(null)} />
               )}
@@ -357,6 +368,140 @@ function PasswordForm({ currentLogin, onDone, onCancel }: { currentLogin: string
       </p>
       <div className="flex items-center gap-2">
         <button type="submit" disabled={loading || mismatch || password.length < 8 || login.length < 3} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white hover:bg-slate-200 text-slate-900 text-xs font-semibold disabled:opacity-50">
+          {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+          Saqlash
+        </button>
+        <button type="button" onClick={onCancel} className="text-[11px] text-slate-400 hover:text-white px-1">
+          Bekor qilish
+        </button>
+      </div>
+    </form>
+  );
+}
+
+async function postEmailAuth(body: Record<string, unknown>) {
+  const res = await fetch('/api/auth/email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  return res.json();
+}
+
+const fieldClass = 'w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:outline-none focus:border-indigo-500';
+
+/** Adds an email (with a password) to this account: a code is emailed to prove the address. */
+function EmailConnectForm({ onDone, onCancel }: { onDone: (message: string) => void; onCancel: () => void }) {
+  const { showToast } = useToast();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [repeat, setRepeat] = useState('');
+  const [code, setCode] = useState('');
+  const [sent, setSent] = useState(false);
+  const [devCode, setDevCode] = useState('');
+  const [loading, setLoading] = useState(false);
+  const mismatch = repeat.length > 0 && repeat !== password;
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const data = sent
+        ? await postEmailAuth({ action: 'connect-verify', email, code })
+        : await postEmailAuth({ action: 'connect-request', email, password });
+      if (!data.success) return showToast('error', data.error || 'Bajarilmadi');
+      if (sent) onDone(connectMessage('Email', data.outcome));
+      else {
+        setSent(true);
+        setDevCode(data.devCode || '');
+      }
+    } catch {
+      showToast('error', 'Tarmoq xatosi yuz berdi');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+      {sent ? (
+        <label className="block text-[11px] text-slate-400 space-y-1">
+          <span>{email} manziliga yuborilgan 6 xonali kod</span>
+          <input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" autoFocus className={`${fieldClass} font-mono tracking-widest`} />
+        </label>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <label className="text-[11px] text-slate-400 space-y-1">
+            <span>Email</span>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required className={fieldClass} />
+          </label>
+          <label className="text-[11px] text-slate-400 space-y-1">
+            <span>Parol</span>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={8} required className={fieldClass} />
+          </label>
+          <label className="text-[11px] text-slate-400 space-y-1">
+            <span>Parolni takrorlang</span>
+            <input type="password" value={repeat} onChange={(e) => setRepeat(e.target.value)} autoComplete="new-password" required className={fieldClass} />
+          </label>
+        </div>
+      )}
+      {mismatch && !sent && <p className="text-[11px] text-rose-400">Parollar mos emas</p>}
+      {devCode && <p className="text-[11px] text-amber-300/90">Dev rejimi (ZeptoMail sozlanmagan): kod {devCode}</p>}
+      <div className="flex items-center gap-2">
+        <button
+          type="submit"
+          disabled={loading || (sent ? code.length !== 6 : mismatch || password.length < 8 || !email)}
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white hover:bg-slate-200 text-slate-900 text-xs font-semibold disabled:opacity-50"
+        >
+          {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+          {sent ? 'Tasdiqlash' : 'Kod yuborish'}
+        </button>
+        <button type="button" onClick={onCancel} className="text-[11px] text-slate-400 hover:text-white px-1">
+          Bekor qilish
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/** Changes the email login's password (asks for the current one). */
+function EmailPasswordForm({ onDone, onCancel }: { onDone: (message: string) => void; onCancel: () => void }) {
+  const { showToast } = useToast();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [password, setPassword] = useState('');
+  const [repeat, setRepeat] = useState('');
+  const [loading, setLoading] = useState(false);
+  const mismatch = repeat.length > 0 && repeat !== password;
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const data = await postEmailAuth({ action: 'change-password', currentPassword, password });
+      if (data.success) onDone('Email paroli yangilandi');
+      else showToast('error', data.error || 'Bajarilmadi');
+    } catch {
+      showToast('error', 'Tarmoq xatosi yuz berdi');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <label className="text-[11px] text-slate-400 space-y-1">
+          <span>Joriy parol</span>
+          <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" required className={fieldClass} />
+        </label>
+        <label className="text-[11px] text-slate-400 space-y-1">
+          <span>Yangi parol</span>
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={8} required className={fieldClass} />
+        </label>
+        <label className="text-[11px] text-slate-400 space-y-1">
+          <span>Parolni takrorlang</span>
+          <input type="password" value={repeat} onChange={(e) => setRepeat(e.target.value)} autoComplete="new-password" required className={fieldClass} />
+        </label>
+      </div>
+      {mismatch && <p className="text-[11px] text-rose-400">Parollar mos emas</p>}
+      <div className="flex items-center gap-2">
+        <button type="submit" disabled={loading || mismatch || password.length < 8} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white hover:bg-slate-200 text-slate-900 text-xs font-semibold disabled:opacity-50">
           {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
           Saqlash
         </button>

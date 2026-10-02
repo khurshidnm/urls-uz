@@ -21,6 +21,7 @@ import { formatNumber, formatDate, copyToClipboard } from '@/lib/utils';
 import { getCountryInfo } from '@/lib/geo';
 import { AnalyticsPanels, RangeSwitch, type AnalyticsRangeValue } from '@/components/analytics/analytics-panels';
 import type { AnalyticsOverview, AnalyticsView, ClientLink, LinkAnalytics } from '@/lib/client-types';
+import { SITE_URL, SITE_HOST } from '@/lib/site';
 
 interface Props {
   overview: AnalyticsOverview;
@@ -75,7 +76,7 @@ export default function AnalyticsViewClient({
   };
 
   const handleCopyShortUrl = async (slug: string) => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://urls.uz';
+    const origin = typeof window !== 'undefined' ? window.location.origin : SITE_URL;
     const fullUrl = `${origin}/${slug}`;
     const ok = await copyToClipboard(fullUrl);
     if (ok) {
@@ -226,7 +227,7 @@ export default function AnalyticsViewClient({
               {/* URLs info */}
               <div className="flex items-center gap-3 text-xs flex-wrap">
                 <span className="font-mono text-indigo-400 font-semibold">
-                  urls.uz/{selectedLink.slug}
+                  {SITE_HOST}/{selectedLink.slug}
                 </span>
                 <span className="text-zinc-600 hidden sm:inline">•</span>
                 <span className="text-zinc-400 truncate max-w-sm" title={selectedLink.destination_url}>

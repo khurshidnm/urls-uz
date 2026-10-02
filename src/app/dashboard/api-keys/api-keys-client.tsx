@@ -17,6 +17,7 @@ import { formatDate, copyToClipboard as copyToClipboardUtil } from '@/lib/utils'
 import { Modal } from '@/components/ui/modal';
 import type { ClientApiKey } from '@/lib/client-types';
 import WebhookAdminPanel from './webhook-admin-panel';
+import { SITE_URL, SITE_NAME } from '@/lib/site';
 
 interface Props {
   initialKeys: ClientApiKey[];
@@ -133,7 +134,7 @@ export default function ApiKeysClient({ initialKeys, apiAccess, isAdmin }: Props
     }
   };
 
-  const curlSnippet = `curl -X POST https://urls.uz/api/links \\
+  const curlSnippet = `curl -X POST ${SITE_URL}/api/links \\
   -H "Authorization: Bearer ${generatedKey || 'urls_live_YOUR_KEY'}" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -142,7 +143,7 @@ export default function ApiKeysClient({ initialKeys, apiAccess, isAdmin }: Props
     "open_in_app": true
   }'`;
 
-  const jsSnippet = `const res = await fetch('https://urls.uz/api/links', {
+  const jsSnippet = `const res = await fetch('${SITE_URL}/api/links', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer ${generatedKey || 'urls_live_YOUR_KEY'}',
@@ -159,7 +160,7 @@ console.log(data.link.slug);`;
 
   const pythonSnippet = `import requests
 
-url = "https://urls.uz/api/links"
+url = "${SITE_URL}/api/links"
 headers = {
     "Authorization": "Bearer ${generatedKey || 'urls_live_YOUR_KEY'}",
     "Content-Type": "application/json"
@@ -292,7 +293,7 @@ print(response.json())`;
             </div>
             <div className="text-xs font-semibold text-white mb-1">Hozircha faol API kalitlar yo‘q</div>
             <p className="text-[11px] text-zinc-400 mb-4 max-w-xs mx-auto leading-relaxed">
-              {apiAccess || !user ? 'urls.uz API dan foydalanish uchun birinchi xavfsiz kalitingizni yarating.' : 'API kalitlar Pro va Biznes tariflarida yaratiladi.'}
+              {apiAccess || !user ? `${SITE_NAME} API dan foydalanish uchun birinchi xavfsiz kalitingizni yarating.` : 'API kalitlar Pro va Biznes tariflarida yaratiladi.'}
             </p>
             {(apiAccess || !user) && (
               <button

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Smartphone, ExternalLink, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { DeepLinkResult } from '@/lib/deep-link';
+import { SITE_NAME } from '@/lib/site';
 
 interface DeepLinkRedirectorProps {
   deepLink: DeepLinkResult;
@@ -102,7 +103,7 @@ export default function DeepLinkRedirector({
             <ShieldCheck className="w-3 h-3 text-emerald-400" />
             <span>Anti-Phishing Verified</span>
           </span>
-          <span className="text-zinc-400">urls.uz engine</span>
+          <span className="text-zinc-400">{SITE_NAME}</span>
         </div>
       </div>
     </div>

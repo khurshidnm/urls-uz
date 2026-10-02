@@ -7,6 +7,7 @@ import LanguageMenu from '@/components/ui/language-menu';
 import { useAuth } from '@/lib/auth-context';
 import { ArrowRight, Menu, X, Link2, Terminal, Eye } from 'lucide-react';
 import { Locale } from '@/lib/translations';
+import { BRAND_PARTS } from '@/lib/site';
 
 export default function Navbar() {
   const { locale, setLocale, t } = useLanguage();
@@ -42,7 +43,7 @@ export default function Navbar() {
               <Link2 className="w-3 h-3 text-zinc-300" />
             </div>
             <span className="font-semibold text-sm tracking-tight text-white font-mono">
-              urls<span className="text-zinc-500">.uz</span>
+              {BRAND_PARTS.name}<span className="text-zinc-500">{BRAND_PARTS.tld}</span>
             </span>
           </Link>
 
@@ -108,7 +109,7 @@ export default function Navbar() {
                 {locale === 'uz' ? 'Kirish' : locale === 'ru' ? 'Войти' : 'Sign in'}
               </button>
               <button
-                onClick={() => openAuthModal()}
+                onClick={() => openAuthModal(undefined, undefined, 'signup')}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-950 bg-white hover:bg-zinc-200 rounded-md border border-white/20 transition-all active:scale-[0.98]"
               >
                 <span>{locale === 'uz' ? 'Boshlash' : locale === 'ru' ? 'Начать' : 'Get Started'}</span>

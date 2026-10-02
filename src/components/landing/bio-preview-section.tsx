@@ -22,6 +22,7 @@ import {
   Check,
 } from 'lucide-react';
 import { TelegramIcon, InstagramIcon, YouTubeIcon } from '@/components/ui/icons';
+import { SITE_URL, SITE_HOST } from '@/lib/site';
 
 // Bulletproof fallback avatar vector in case external CDN fails
 const FALLBACK_AVATAR =
@@ -38,7 +39,7 @@ export default function BioPreviewSection() {
 
   const handleCopyLink = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText('https://urls.uz/b/khurshid').catch(() => {});
+      navigator.clipboard.writeText(`${SITE_URL}/b/khurshid`).catch(() => {});
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -169,7 +170,7 @@ export default function BioPreviewSection() {
                           <CheckCircle2 className="w-3.5 h-3.5 text-sky-400 fill-sky-400/20 shrink-0" />
                         </div>
                         <p className="text-[11px] font-mono text-zinc-400 mt-0.5">
-                          @khurshid · urls.uz/b/khurshid
+                          @khurshid · {SITE_HOST}/b/khurshid
                         </p>
                       </div>
 
@@ -288,7 +289,7 @@ export default function BioPreviewSection() {
                     {/* URL Pill Bar */}
                     <div className="flex items-center gap-1.5 px-3 py-1 bg-zinc-950 rounded-md border border-zinc-800 text-[11px] font-mono text-zinc-300">
                       <Lock className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
-                      <span>urls.uz/b/khurshid</span>
+                      <span>{SITE_HOST}/b/khurshid</span>
                       <button
                         type="button"
                         onClick={handleCopyLink}
@@ -330,7 +331,7 @@ export default function BioPreviewSection() {
                             <CheckCircle2 className="w-3 h-3 text-sky-400 fill-sky-400/20" />
                           </div>
                           <p className="text-[10px] font-mono text-zinc-400">
-                            urls.uz/b/khurshid
+                            {SITE_HOST}/b/khurshid
                           </p>
                         </div>
 
@@ -470,7 +471,7 @@ export default function BioPreviewSection() {
               </h2>
               <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed max-w-xl">
                 {locale === 'uz'
-                  ? 'Instagram yoki TikTok profilida bitta havola bilan cheklanmang. urls.uz/b/@nomingiz orqali kanallaringiz, xizmatlaringiz va kontaktlaringizni mobil va planshetda mukammal ko‘rsating.'
+                  ? `Instagram yoki TikTok profilida bitta havola bilan cheklanmang. ${SITE_HOST}/b/@nomingiz orqali kanallaringiz, xizmatlaringiz va kontaktlaringizni mobil va planshetda mukammal ko‘rsating.`
                   : locale === 'ru'
                   ? 'Объедините все важные ссылки с удобной аналитикой и адаптивным отображением на телефонах и планшетах.'
                   : 'Convert profile traffic into direct channel subscribers and sales with custom branding and real-time conversion telemetry.'}
@@ -486,7 +487,7 @@ export default function BioPreviewSection() {
                 <div>
                   <strong className="text-zinc-200 font-medium block">Shaxsiy brend domeni</strong>
                   <span className="text-[11px] text-zinc-500 font-mono">
-                    urls.uz/b/@username formati
+                    {SITE_HOST}/b/@username formati
                   </span>
                 </div>
               </div>

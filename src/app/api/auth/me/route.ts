@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireWorkspace, toClientUser } from '@/lib/auth';
 import { routeError } from '@/lib/route-error';
+import { phoneLoginAvailable } from '@/lib/login-flow';
+import { emailLoginAvailable } from '@/lib/mail';
 
 export async function GET() {
   let ctx;
@@ -17,5 +19,7 @@ export async function GET() {
     workspace: { id: ctx.workspace.id, name: ctx.workspace.name, plan: ctx.workspace.plan, is_demo: ctx.workspace.is_demo, role: ctx.role },
     workspaces: workspaces.map((m) => ({ id: m.workspace.id, name: m.workspace.name, role: m.role })),
     demoEditMode: ctx.workspace.is_demo && ctx.isAdmin,
+    // Read at request time: depends on server settings (Telegram Gateway, ZeptoMail)
+    loginMethods: { phone: phoneLoginAvailable(), email: emailLoginAvailable() },
   });
 }

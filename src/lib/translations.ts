@@ -1,8 +1,9 @@
+import { SITE_NAME } from '@/lib/site';
 export type Locale = 'uz' | 'ru' | 'en';
 
 export const translations = {
   uz: {
-    brand: 'urls.uz',
+    brand: SITE_NAME,
     tagline: 'O‘zbekiston va butun dunyo uchun zamonaviy havola ekotizimi',
     heroTitle: 'Havolalarni qisqartiring, QR kodlar va Bio sahifalar yarating',
     heroSubtitle: 'Qisqa havolalar, mobil ilovalarga to‘g‘ridan-to‘g‘ri o‘tuvchi smart deep-linklar, brendli QR kodlar va O‘zbekiston viloyatlari bo‘yicha batafsil analitika.',
@@ -109,7 +110,7 @@ export const translations = {
     }
   },
   ru: {
-    brand: 'urls.uz',
+    brand: SITE_NAME,
     tagline: 'Современная экосистема ссылок для Узбекистана и всего мира',
     heroTitle: 'Сокращайте ссылки, создавайте QR-коды и страницы Link-in-Bio',
     heroSubtitle: 'Короткие ссылки, умные диплинки с прямым открытием мобильных приложений, брендовые QR-коды и глубокая аналитика по регионам Узбекистана.',
@@ -216,7 +217,7 @@ export const translations = {
     }
   },
   en: {
-    brand: 'urls.uz',
+    brand: SITE_NAME,
     tagline: 'Next-Generation Link Platform for Uzbekistan & Global Reach',
     heroTitle: 'Shorten Links, Generate Branded QR Codes & Build Bio Pages',
     heroSubtitle: 'High-speed short links, smart deep links that open mobile apps directly, dynamic QR studio, and regional Uzbekistan analytics.',

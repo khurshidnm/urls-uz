@@ -6,6 +6,7 @@ import { useLanguage } from '@/lib/language-context';
 import ShortenCard from './shorten-card';
 import { Zap, Smartphone, MapPin, Shield, Terminal, Sparkles } from 'lucide-react';
 import { formatNumber } from '@/lib/utils';
+import { SITE_NAME } from '@/lib/site';
 
 export default function Hero({ totalRedirects }: { totalRedirects: number }) {
   const { t, locale } = useLanguage();
@@ -24,7 +25,7 @@ export default function Hero({ totalRedirects }: { totalRedirects: number }) {
         <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 text-[11px] font-mono">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-zinc-300 font-semibold">urls.uz</span>
+            <span className="text-zinc-300 font-semibold">{SITE_NAME}</span>
             <span className="text-zinc-600">·</span>
             <span>{formatNumber(totalRedirects)} Redirects Processed</span>
           </div>

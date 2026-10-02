@@ -1,9 +1,10 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { SITE_URL } from '@/lib/site';
 
 /** Public short URL for a slug (what QR codes encode and users share). */
 export function shortUrl(slug: string): string {
-  return `${process.env.NEXT_PUBLIC_APP_URL || 'https://urls.uz'}/${slug}`;
+  return `${SITE_URL}/${slug}`;
 }
 
 export function cn(...inputs: ClassValue[]) {

@@ -97,7 +97,7 @@ export default function DashboardLayoutClient({
         />
         
         {/* Demo Mode Notice Banner */}
-        <DemoBanner onStartFree={() => { setDemoActionTitle('Bepul ro‘yxatdan o‘tish'); openAuthModal(); }} />
+        <DemoBanner onStartFree={() => { setDemoActionTitle('Bepul ro‘yxatdan o‘tish'); openAuthModal(undefined, undefined, 'signup'); }} />
 
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-dot-pattern">
           <div className="max-w-7xl mx-auto">
