@@ -1,25 +1,24 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Lock, Loader2, Smartphone } from 'lucide-react';
+import { Lock, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import LogoMark from '@/components/brand/logo-mark';
 import EmailPanel from './email-panel';
 import PhoneLogin from './phone-login';
-import TelegramLoginButton from './telegram-login-button';
 
 const TEXT = {
   signin: {
-    uz: { title: 'Kirish', subtitle: 'Akkauntingizga kiring', google: 'Google orqali kirish', switchQ: 'Akkauntingiz yo‘qmi?', switchA: 'Ro‘yxatdan o‘ting' },
-    ru: { title: 'Вход', subtitle: 'Войдите в свой аккаунт', google: 'Войти через Google', switchQ: 'Нет аккаунта?', switchA: 'Зарегистрируйтесь' },
-    en: { title: 'Sign in', subtitle: 'Sign in to your account', google: 'Continue with Google', switchQ: 'No account yet?', switchA: 'Sign up' },
+    uz: { title: 'Kirish', subtitle: 'Akkauntingizga kiring', google: 'Google orqali kirish', telegram: 'Telegram orqali kirish', switchQ: 'Akkauntingiz yo‘qmi?', switchA: 'Ro‘yxatdan o‘ting' },
+    ru: { title: 'Вход', subtitle: 'Войдите в свой аккаунт', google: 'Войти через Google', telegram: 'Войти через Telegram', switchQ: 'Нет аккаунта?', switchA: 'Зарегистрируйтесь' },
+    en: { title: 'Sign in', subtitle: 'Sign in to your account', google: 'Continue with Google', telegram: 'Continue with Telegram', switchQ: 'No account yet?', switchA: 'Sign up' },
   },
   signup: {
-    uz: { title: 'Ro‘yxatdan o‘tish', subtitle: 'Bepul akkaunt: havolalar, QR kodlar va analitika', google: 'Google orqali ro‘yxatdan o‘tish', switchQ: 'Akkauntingiz bormi?', switchA: 'Kiring' },
-    ru: { title: 'Регистрация', subtitle: 'Бесплатный аккаунт: ссылки, QR-коды и аналитика', google: 'Зарегистрироваться через Google', switchQ: 'Уже есть аккаунт?', switchA: 'Войдите' },
-    en: { title: 'Create an account', subtitle: 'Free: short links, QR codes and analytics', google: 'Sign up with Google', switchQ: 'Already have an account?', switchA: 'Sign in' },
+    uz: { title: 'Ro‘yxatdan o‘tish', subtitle: 'Bepul akkaunt: havolalar, QR kodlar va analitika', google: 'Google orqali ro‘yxatdan o‘tish', telegram: 'Telegram orqali ro‘yxatdan o‘tish', switchQ: 'Akkauntingiz bormi?', switchA: 'Kiring' },
+    ru: { title: 'Регистрация', subtitle: 'Бесплатный аккаунт: ссылки, QR-коды и аналитика', google: 'Зарегистрироваться через Google', telegram: 'Зарегистрироваться через Telegram', switchQ: 'Уже есть аккаунт?', switchA: 'Войдите' },
+    en: { title: 'Create an account', subtitle: 'Free: short links, QR codes and analytics', google: 'Sign up with Google', telegram: 'Sign up with Telegram', switchQ: 'Already have an account?', switchA: 'Sign in' },
   },
 } as const;
 
@@ -32,10 +31,17 @@ const GoogleIcon = () => (
   </svg>
 );
 
+const TelegramIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden>
+    <circle cx="12" cy="12" r="12" fill="#229ED9" />
+    <path fill="#fff" d="M5.4 11.8l11.6-4.5c.5-.2 1 .1.8.9l-2 9.3c-.1.6-.5.8-1.1.5l-3-2.2-1.4 1.4c-.2.2-.3.3-.6.3l.2-3.1 5.6-5c.2-.2 0-.3-.4-.1l-6.9 4.3-3-.9c-.6-.2-.7-.6.2-.9z" />
+  </svg>
+);
+
 /**
  * The login window, in the usual layout: email (or login) + password first,
- * then "or" Google and Telegram, and a link between signing in and signing
- * up. The phone-code login is a secondary option.
+ * then "or" Google and Telegram (a code sent to the user's Telegram by phone
+ * number), and a link between signing in and signing up.
  */
 export default function AuthModal() {
   const { isAuthModalOpen, closeAuthModal, pendingUrl, loginMethods, authView, setAuthView } = useAuth();
@@ -99,15 +105,14 @@ export default function AuthModal() {
                 {t.google}
               </button>
 
-              <TelegramLoginButton />
-
               {loginMethods.phone && (
                 <button
                   type="button"
                   onClick={() => setPhoneMode(true)}
-                  className="w-full flex items-center justify-center gap-1.5 text-[11px] text-slate-400 hover:text-white pt-1"
+                  className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 bg-[var(--surface-1)] hover:bg-[var(--surface-2)] border border-[var(--border-default)] text-white text-sm font-medium rounded-xl transition-colors"
                 >
-                  <Smartphone className="w-3.5 h-3.5" /> Telefon raqam orqali (kod Telegram’ga keladi)
+                  <TelegramIcon />
+                  {t.telegram}
                 </button>
               )}
             </div>
