@@ -22,6 +22,16 @@
   \set since '1970-01-01'
 \endif
 
+-- The table may sit in a schema other than public: find it
+SELECT coalesce(min(table_schema), '') AS legacy_schema, count(*) = 0 AS legacy_missing
+FROM information_schema.tables WHERE table_name = 'ur_short_link' \gset
+\if :legacy_missing
+  \echo 'Table ur_short_link is not in this database. List the databases with \\l and put the right one in the connection URL.'
+  \quit
+\endif
+\echo 'Reading' :legacy_schema'.ur_short_link'
+SET search_path TO :"legacy_schema";
+
 -- COPY ... TO STDOUT is written to the file opened with \o (psql variables don't work inside \copy)
 \o :out
 COPY (
