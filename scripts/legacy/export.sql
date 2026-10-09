@@ -7,6 +7,8 @@
 -- Final top-up after the DNS switch (only rows created since the first export):
 --   psql "<old database url>" -v out=legacy-delta.csv -v since='2026-10-10 09:00' -f scripts/legacy/export.sql
 --
+-- Only links opened more than N times:  -v min_opens=5
+--
 -- The same CSV can also be made from DataGrip: run the SELECT below, right-click
 -- the result → Export Data → CSV, "Add column header" on. The import script
 -- accepts the file with or without the header line.
@@ -20,6 +22,10 @@
 \if :{?since}
 \else
   \set since '1970-01-01'
+\endif
+\if :{?min_opens}
+\else
+  \set min_opens -1
 \endif
 
 -- The table may sit in a schema other than public: find it
@@ -41,6 +47,7 @@ COPY (
     AND state = 'ACTIVE'
     AND (type = 'FOREVER' OR expire_at > now())
     AND created_at >= :'since'::timestamp
+    AND open_count > :min_opens
   ORDER BY created_at
 ) TO STDOUT WITH (FORMAT csv, HEADER true);
 \o

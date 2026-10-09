@@ -12,6 +12,11 @@
 --
 -- Optional: -v tz=Asia/Tashkent  time zone of the old `timestamp` columns
 --           (they carry no zone; default Asia/Tashkent).
+--           -v workspace=ws_xxx -v owner=usr_xxx  put the links in that
+--           workspace, created by that user, instead of the "Legacy links"
+--           workspace (the workspace must exist; the plan is not checked, so
+--           give it an unlimited plan first or the dashboard will show the
+--           limit as exceeded).
 --
 -- Safe to re-run, and the same command loads the delta CSV after the DNS
 -- switch: links already imported (same id) are skipped. A short code that is
@@ -23,7 +28,17 @@
 \else
   \set tz 'Asia/Tashkent'
 \endif
-SELECT set_config('legacy.tz', :'tz', false);
+\if :{?workspace}
+\else
+  \set workspace ws_legacy
+\endif
+\if :{?owner}
+\else
+  \set owner ''
+\endif
+SELECT set_config('legacy.tz', :'tz', false),
+       set_config('legacy.workspace', :'workspace', false),
+       set_config('legacy.owner', :'owner', false);
 
 -- 1. The CSV goes into a staging table as text (unlogged: fast, and dropped at the end)
 DROP TABLE IF EXISTS legacy_import;
@@ -37,8 +52,20 @@ DELETE FROM legacy_import WHERE old_id = 'id';  -- the header line, if the file 
 SELECT count(*) AS rows_in_csv FROM legacy_import \gset
 \echo 'Rows in CSV:' :rows_in_csv
 
--- 2. The workspace that owns links nobody can log in to (the old service was anonymous)
-INSERT INTO workspaces (id, name, slug) VALUES ('ws_legacy', 'Legacy links', 'legacy') ON CONFLICT DO NOTHING;
+-- 2. The target workspace: the member-less "Legacy links" one is created on demand; any other must exist
+INSERT INTO workspaces (id, name, slug)
+SELECT 'ws_legacy', 'Legacy links', 'legacy' WHERE :'workspace' = 'ws_legacy'
+ON CONFLICT DO NOTHING;
+SELECT count(*) = 0 AS workspace_missing FROM workspaces WHERE id = :'workspace' \gset
+\if :workspace_missing
+  \echo 'Workspace' :workspace 'does not exist. Find it with: SELECT w.id, w.name FROM workspaces w JOIN memberships m ON m.workspace_id = w.id WHERE m.user_id = ''<user id>'';'
+  \quit
+\endif
+SELECT :'owner' <> '' AND count(*) = 0 AS owner_missing FROM users WHERE id = :'owner' \gset
+\if :owner_missing
+  \echo 'User' :owner 'does not exist. Find users with: SELECT id, name, email, phone FROM users;'
+  \quit
+\endif
 
 -- 3. Codes already used by a link created in the new system: reported, not overwritten
 DROP TABLE IF EXISTS legacy_conflicts;
@@ -58,13 +85,16 @@ DECLARE
   added bigint;
   added_total bigint := 0;
   tz text := current_setting('legacy.tz');
+  ws text := current_setting('legacy.workspace');
+  owner text := nullif(current_setting('legacy.owner'), '');
 BEGIN
   SELECT max(n) INTO total FROM legacy_import;
   WHILE done < coalesce(total, 0) LOOP
-    INSERT INTO links (id, workspace_id, title, destination_url, slug, expires_at, click_count, source, created_at, updated_at)
+    INSERT INTO links (id, workspace_id, created_by, title, destination_url, slug, expires_at, click_count, source, created_at, updated_at)
     SELECT
       'lnk_' || replace(i.old_id, '-', ''),
-      'ws_legacy',
+      ws,
+      owner,
       coalesce(substring(i.url from '^https?://([^/?#]+)'), i.short_id),
       i.url,
       i.short_id,
@@ -92,6 +122,6 @@ END $$;
 ANALYZE links;
 DROP TABLE legacy_import;
 
-SELECT count(*) AS legacy_links_total FROM links WHERE workspace_id = 'ws_legacy';
+SELECT count(*) AS links_in_workspace FROM links WHERE workspace_id = :'workspace';
 SELECT count(*) AS conflicts FROM legacy_conflicts;
 \echo 'Conflicting codes (if any): SELECT * FROM legacy_conflicts;'
